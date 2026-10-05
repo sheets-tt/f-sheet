@@ -1,0 +1,231 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  sheets-tt frontend web: bucket S3 privado (OAC) + distribución CloudFront.
+  /* -> S3 (CachingOptimized + compresión); /api/* -> API Gateway (CachingDisabled,
+  AllViewerExceptHostHeader) quitando el prefijo /api con una CloudFront Function.
+  Las rutas de la SPA usan hash (#/login), por eso NO hay custom error responses
+  403/404 -> /index.html (que en CloudFront son globales y ocultarían errores de /api/*).
+
+Parameters:
+  ApiGatewayDomainName:
+    Type: String
+    Description: >-
+      Dominio del API Gateway HTTP API, sin https:// ni ruta
+      (p. ej. abc123.execute-api.us-east-1.amazonaws.com).
+    AllowedPattern: '^[a-zA-Z0-9.-]+$'
+  ApiOriginPath:
+    Type: String
+    Default: ''
+    Description: >-
+      Ruta del stage si NO usas el stage $default (p. ej. /prod). Vacío para $default.
+      CloudFront la antepone tras quitar /api: /api/me -> {ApiOriginPath}/me.
+    AllowedPattern: '^$|^/[a-zA-Z0-9_/-]*[a-zA-Z0-9_-]$'
+  AliasDomainName:
+    Type: String
+    Default: ''
+    Description: Dominio propio opcional (p. ej. app.sheets.tt). Requiere AcmCertificateArn.
+  AcmCertificateArn:
+    Type: String
+    Default: ''
+    Description: ARN de certificado ACM en us-east-1 para AliasDomainName (opcional).
+  PriceClass:
+    Type: String
+    Default: PriceClass_100
+    AllowedValues: [PriceClass_100, PriceClass_200, PriceClass_All]
+
+Conditions:
+  HasAlias: !And
+    - !Not [!Equals [!Ref AliasDomainName, '']]
+    - !Not [!Equals [!Ref AcmCertificateArn, '']]
+
+Mappings:
+  # IDs de políticas gestionadas por AWS (estables, documentados).
+  ManagedPolicies:
+    Cache:
+      CachingOptimized: 658327ea-f89d-4fab-a63d-7e88639e58f6
+      CachingDisabled: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+    OriginRequest:
+      AllViewerExceptHostHeader: b689b0a8-53d0-40ab-baf2-68738e2966ac
+
+Resources:
+  SiteBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-old-versions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+
+  SiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SiteBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontOAC
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${SiteBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt SiteBucket.Arn
+              - !Sub '${SiteBucket.Arn}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  SiteOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AWS::StackName}-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # /api/me -> /me (el backend expone las rutas sin prefijo, ver API_CONTRACT.md).
+  StripApiPrefixFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${AWS::StackName}-strip-api'
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Quita el prefijo /api antes de enviar a API Gateway
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var req = event.request;
+          var uri = req.uri.replace(/^\/api(?=\/|$)/, '');
+          req.uri = uri === '' ? '/' : uri;
+          return req;
+        }
+
+  SecurityHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub '${AWS::StackName}-security-headers'
+        SecurityHeadersConfig:
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 63072000
+            IncludeSubdomains: true
+            Preload: false
+            Override: true
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: strict-origin-when-cross-origin
+            Override: true
+          ContentSecurityPolicy:
+            # La app no usa scripts ni estilos inline; la API va por el mismo origen (/api).
+            ContentSecurityPolicy: >-
+              default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;
+              font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self';
+              form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+            Override: true
+        CustomHeadersConfig:
+          Items:
+            - Header: Permissions-Policy
+              Value: camera=(), microphone=(), geolocation=(), interest-cohort=()
+              Override: true
+            - Header: Cross-Origin-Opener-Policy
+              Value: same-origin
+              Override: true
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub 'sheets-tt web (${AWS::StackName})'
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: !Ref PriceClass
+        DefaultRootObject: index.html
+        Aliases: !If [HasAlias, [!Ref AliasDomainName], !Ref 'AWS::NoValue']
+        ViewerCertificate: !If
+          - HasAlias
+          - AcmCertificateArn: !Ref AcmCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        Origins:
+          - Id: s3-site
+            DomainName: !GetAtt SiteBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt SiteOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+          - Id: api-gateway
+            DomainName: !Ref ApiGatewayDomainName
+            OriginPath: !Ref ApiOriginPath
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+              HTTPSPort: 443
+        DefaultCacheBehavior:
+          TargetOriginId: s3-site
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: !FindInMap [ManagedPolicies, Cache, CachingOptimized]
+          ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: api-gateway
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: !FindInMap [ManagedPolicies, Cache, CachingDisabled]
+            OriginRequestPolicyId: !FindInMap [ManagedPolicies, OriginRequest, AllViewerExceptHostHeader]
+            ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt StripApiPrefixFunction.FunctionMetadata.FunctionARN
+
+Outputs:
+  BucketName:
+    Description: Bucket destino de `npm run deploy` (S3_BUCKET)
+    Value: !Ref SiteBucket
+  DistributionId:
+    Description: ID para invalidaciones (CLOUDFRONT_DISTRIBUTION_ID)
+    Value: !Ref Distribution
+  DistributionDomainName:
+    Description: URL pública de la app
+    Value: !Sub 'https://${Distribution.DomainName}'
+  CorsOrigin:
+    Description: Origen a añadir en CORS_ALLOWED_ORIGINS del backend (solo si se llama a la API sin pasar por /api)
+    Value: !If [HasAlias, !Sub 'https://${AliasDomainName}', !Sub 'https://${Distribution.DomainName}']
