@@ -1,0 +1,189 @@
+name: Pipeline
+
+# Pipeline único:
+#   - Cualquier rama que no sea main  -> build + test.
+#   - main (al mezclar)                -> build + test -> versión y tag (imagen de respaldo en ECR)
+#                                         -> deploy en S3 + CloudFront.
+#
+# Versión semántica según el prefijo de la rama que se mezcló a main (se busca el PR del commit):
+#   major/* major-* breaking/* breaking-*   -> major   (v1.4.2 -> v2.0.0)
+#   feature/* feature-* feat/* feat-*       -> minor   (v1.4.2 -> v1.5.0)
+#   cualquier otra                          -> patch   (v1.4.2 -> v1.4.3)
+# "#major", "#minor" o "#patch" en el mensaje del commit tienen prioridad; "#none" no publica.
+# La versión la calcula anothrNick/github-tag-action; el tag se crea solo si la imagen se publicó.
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Tipo de versión (solo en main)
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+concurrency:
+  # En ramas se cancela la ejecución anterior; en main se encolan para no repetir versiones.
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'sheets-tt/f-sheet' }}
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Build de la imagen (sin publicar)
+        if: github.ref != 'refs/heads/main'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+
+  release:
+    # Solo main: versión, imagen de respaldo en ECR, tag y GitHub Release.
+    needs: build-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # tag y release
+      pull-requests: read    # buscar la rama del PR mezclado
+      id-token: write        # OIDC hacia AWS
+    outputs:
+      version: ${{ steps.version.outputs.new_tag }}
+      released: ${{ steps.check.outputs.skip == 'false' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Tipo de versión según el prefijo de la rama
+        id: bump
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MANUAL_BUMP: ${{ inputs.bump }}
+        run: |
+          if [ -n "$MANUAL_BUMP" ]; then
+            head_ref="manual"; bump="$MANUAL_BUMP"
+          else
+            head_ref=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].head.ref // ""' || true)
+            case "$head_ref" in
+              major/*|major-*|breaking/*|breaking-*)   bump="major" ;;
+              feature/*|feature-*|feat/*|feat-*)       bump="minor" ;;
+              *)                                       bump="patch" ;;
+            esac
+          fi
+          echo "Rama '${head_ref:-sin PR}' -> $bump"
+          echo "bump=$bump" >> "$GITHUB_OUTPUT"
+
+      - name: Calcular versión
+        id: version
+        uses: anothrNick/github-tag-action@1.75.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DEFAULT_BUMP: ${{ steps.bump.outputs.bump }}
+          TAG_PREFIX: v
+          RELEASE_BRANCHES: main
+          DRY_RUN: true
+
+      - name: ¿Hay versión nueva?
+        id: check
+        env:
+          OLD: ${{ steps.version.outputs.old_tag }}
+          NEW: ${{ steps.version.outputs.new_tag }}
+        run: |
+          if [ -z "$NEW" ] || [ "$OLD" = "$NEW" ]; then
+            echo "Sin versión nueva (#none o sin commits nuevos)"; echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Versión: ${OLD:-ninguna} -> $NEW"; echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        if: steps.check.outputs.skip == 'false'
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        if: steps.check.outputs.skip == 'false'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - id: meta
+        if: steps.check.outputs.skip == 'false'
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.version.outputs.new_tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.version.outputs.new_tag }}
+            type=sha,prefix=sha-
+          flavor: latest=true
+
+      - uses: docker/setup-qemu-action@v4
+        if: steps.check.outputs.skip == 'false'
+      - uses: docker/setup-buildx-action@v4
+        if: steps.check.outputs.skip == 'false'
+
+      - name: Build y publicación de la imagen
+        if: steps.check.outputs.skip == 'false'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Tag y GitHub Release
+        if: steps.check.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.new_tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          body: |
+            Imagen de respaldo: `${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.meta.outputs.version }}`
+
+  deploy:
+    # Solo main: publica la web en S3 + CloudFront (hosting real).
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Publicar en S3 e invalidar CloudFront
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || '/api' }}
+        run: npm run deploy
