@@ -1,0 +1,164 @@
+name: Release
+
+# Al mezclar un PR a main:
+#   1. El prefijo de la rama decide el tipo de versión:
+#        major/* | breaking/*  -> major   (v1.4.2 -> v2.0.0)
+#        feature/* | feat/*    -> minor   (v1.4.2 -> v1.5.0)
+#        cualquier otro         -> patch   (v1.4.2 -> v1.4.3)
+#      Un "#major", "#minor" o "#patch" en el mensaje del merge tiene prioridad; "#none" no publica.
+#   2. anothrNick/github-tag-action calcula la siguiente versión.
+#   3. Se publica la imagen de respaldo (nginx) en ECR con los tags de la versión.
+#   4. Se crea el tag git y el GitHub Release.
+#   5. Si S3_BUCKET y CLOUDFRONT_DISTRIBUTION_ID están definidos, se publica la web en S3 + CloudFront
+#      (el hosting real).
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Tipo de versión
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # crear tag y release
+  id-token: write   # OIDC hacia AWS
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'sheets-tt/f-sheet' }}
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.new_tag }}
+      released: ${{ steps.check.outputs.skip == 'false' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Tipo de versión según el prefijo de la rama
+        id: bump
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          MANUAL_BUMP: ${{ inputs.bump }}
+        run: |
+          if [ -n "$MANUAL_BUMP" ]; then bump="$MANUAL_BUMP"; else
+            case "$HEAD_REF" in
+              major/*|breaking/*) bump="major" ;;
+              feature/*|feat/*)   bump="minor" ;;
+              *)                  bump="patch" ;;
+            esac
+          fi
+          echo "Rama '${HEAD_REF:-manual}' -> $bump"
+          echo "bump=$bump" >> "$GITHUB_OUTPUT"
+
+      - name: Calcular versión
+        id: version
+        uses: anothrNick/github-tag-action@1.75.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BUMP: ${{ steps.bump.outputs.bump }}
+          TAG_PREFIX: v
+          RELEASE_BRANCHES: main
+          DRY_RUN: true   # el tag se crea al final, solo si la imagen se publicó
+
+      - name: ¿Hay versión nueva?
+        id: check
+        env:
+          OLD: ${{ steps.version.outputs.old_tag }}
+          NEW: ${{ steps.version.outputs.new_tag }}
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [ -z "$NEW" ] || [ "$OLD" = "$NEW" ]; then
+            echo "Sin versión nueva (#none o sin commits nuevos)"; echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Versión: $OLD -> $NEW"; echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        if: steps.check.outputs.skip == 'false'
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        if: steps.check.outputs.skip == 'false'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - id: meta
+        if: steps.check.outputs.skip == 'false'
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.version.outputs.new_tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.version.outputs.new_tag }}
+            type=sha,prefix=sha-
+          flavor: latest=true
+
+      - uses: docker/setup-qemu-action@v4
+        if: steps.check.outputs.skip == 'false'
+      - uses: docker/setup-buildx-action@v4
+        if: steps.check.outputs.skip == 'false'
+
+      - name: Construir y publicar imagen
+        id: push
+        if: steps.check.outputs.skip == 'false'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Tag y GitHub Release
+        if: steps.check.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.new_tag }}
+          target_commitish: ${{ steps.check.outputs.sha }}
+          generate_release_notes: true
+          body: |
+            Imagen de respaldo: `${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.meta.outputs.version }}`
+
+  deploy:
+    # Hosting real: S3 + CloudFront (infra/cloudfront.yaml).
+    needs: release
+    if: needs.release.outputs.released == 'true' && vars.S3_BUCKET != '' && vars.CLOUDFRONT_DISTRIBUTION_ID != ''
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.version }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Publicar en S3 e invalidar CloudFront
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || '/api' }}
+        run: npm run deploy
