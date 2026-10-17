@@ -49,34 +49,38 @@ prompt = f"""Analiza el siguiente diff de cambios y genera un reporte en Markdow
 
 Diff del Pull Request:
 ```diff
-i{truncated_diff}
+{truncated_diff}
+```
+"""
 
 try:
-response = client.models.generate_content(
-model="gemini-2.5-flash",
-contents=prompt,
-config=types.GenerateContentConfig(
-system_instruction=system_instruction,
-temperature=0.2,
-),
-)
-analysis_text = response.text
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.2,
+        ),
+    )
+    analysis_text = response.text
 except Exception as e:
-print(f"Error al invocar Gemini: {e}")
-sys.exit(1)
+    print(f"Error al invocar Gemini: {e}")
+    sys.exit(1)
+
+# Publicar el análisis como comentario en el PR
 comment_url = f"https://api.github.com/repos/{REPO_NAME}/issues/{PR_NUMBER}/comments"
 comment_headers = {
-"Authorization": f"Bearer {GITHUB_TOKEN}",
-"Accept": "application/vnd.github.v3+json",
+    "Authorization": f"Bearer {GITHUB_TOKEN}",
+    "Accept": "application/vnd.github.v3+json",
 }
 comment_payload = {
-"body": f"### 🤖 Análisis Automatizado del PR (Gemini AI)\n\n{analysis_text}"
+    "body": f"### 🤖 Análisis Automatizado del PR (Gemini AI)\n\n{analysis_text}"
 }
 
 post_res = requests.post(comment_url, headers=comment_headers, json=comment_payload)
 
 if post_res.status_code == 201:
-print("Comentario publicado exitosamente en el PR.")
+    print("Comentario publicado exitosamente en el PR.")
 else:
-print(f"Error al publicar comentario: {post_res.status_code} - {post_res.text}")
-sys.exit(1)
+    print(f"Error al publicar comentario: {post_res.status_code} - {post_res.text}")
+    sys.exit(1)
