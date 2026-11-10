@@ -6,6 +6,7 @@ export interface Session {
   accessToken: string
   tokenType: string
   username: string
+  roles: string[]
   /** Epoch ms en que expira el token (según expires_in). */
   expiresAt: number
 }
@@ -34,7 +35,8 @@ export function loadSession(): Session | null {
     clearSession()
     return null
   }
-  return s
+  // Sesiones guardadas antes de que existieran los roles.
+  return Array.isArray(s.roles) ? s : { ...s, roles: [] }
 }
 
 export function clearSession(): void {
@@ -44,4 +46,9 @@ export function clearSession(): void {
   } catch {
     /* nada que hacer */
   }
+}
+
+/** Solo controla qué se muestra; quien autoriza de verdad es el backend (403). */
+export function esAdministrador(session: Session | null): boolean {
+  return session?.roles.includes('ADMINISTRADOR') ?? false
 }

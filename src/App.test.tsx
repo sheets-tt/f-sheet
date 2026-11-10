@@ -2,13 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-
-function json(status: number, body?: unknown): Response {
-  return new Response(body === undefined ? null : JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
+import { json, mockBackend } from './test/backend'
 
 const fetchMock = vi.fn<typeof fetch>()
 
@@ -38,25 +32,22 @@ describe('flujo de login', () => {
     expect(window.location.hash).toBe('#/login')
   })
 
-  it('login OK → muestra la bienvenida con displayName de /me', async () => {
-    fetchMock.mockImplementation(async (input) => {
-      const url = String(input)
-      if (url === '/api/auth/login')
-        return json(200, {
-          access_token: 'jwt-123',
-          token_type: 'Bearer',
-          expires_in: 3600,
-          username: 'demo@sheets.tt',
-          roles: [],
-        })
-      if (url === '/api/me') return json(200, { username: 'demo@sheets.tt', displayName: 'Usuario Demo' })
-      return json(404)
+  it('login OK → abre el resumen con el displayName de /me en el encabezado', async () => {
+    mockBackend(fetchMock, {
+      '/auth/login': json(200, {
+        access_token: 'jwt-123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+        username: 'demo@sheets.tt',
+        roles: ['EXPERTO_CAMPO'],
+      }),
     })
 
     render(<App />)
     await fillAndSubmit('demo@sheets.tt', 'Demo1234!')
 
-    expect(await screen.findByRole('heading', { name: 'Hola, Usuario Demo' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Resumen' })).toBeInTheDocument()
+    expect(await screen.findByText('Usuario Demo')).toBeInTheDocument()
     expect(window.location.hash).toBe('#/')
 
     const [loginUrl, loginInit] = fetchMock.mock.calls[0]
@@ -109,11 +100,11 @@ describe('flujo de login', () => {
       'sheets-tt.session',
       JSON.stringify({ accessToken: 't', tokenType: 'Bearer', username: 'demo@sheets.tt', expiresAt: Date.now() + 60_000 }),
     )
-    fetchMock.mockResolvedValue(json(200, { username: 'demo@sheets.tt', displayName: 'Usuario Demo' }))
+    mockBackend(fetchMock)
 
     render(<App />)
     const user = userEvent.setup()
-    await screen.findByRole('heading', { name: 'Hola, Usuario Demo' })
+    await screen.findByText('Usuario Demo')
     await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument())

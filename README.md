@@ -1,11 +1,40 @@
 # f-sheet — frontend web de sheets-tt
 
-SPA mínima (Vite + React 19 + TypeScript) con dos pantallas:
+SPA (Vite + React 19 + TypeScript, sin librerías de UI ni de mapas) para consultar los datos de
+monitoreo fitosanitario que la app móvil captura. Solo lectura: todas las pantallas son `GET` a b-sheet.
 
-- **Login** (`#/login`): `POST /auth/login` y guarda el JWT en `sessionStorage`.
-- **Bienvenida** (`#/`): `GET /me`, muestra `displayName` y tiene un botón para cerrar sesión.
+| Ruta | Pantalla | Datos |
+|---|---|---|
+| `#/login` | Inicio de sesión; guarda el JWT y los `roles` en `sessionStorage` | `POST /auth/login` |
+| `#/` | **Resumen**: focos de infestación, totales, resultado de los análisis, cromático promedio y sincronización | `GET /estadisticas` |
+| `#/mapa` | **Mapa**: plano de campo en SVG a escala real (metros), con el último resultado de cada árbol y zona; al elegir un punto pide su historial | `GET /arboles` y `/zonas` en paralelo; `GET /analisis?arbol=…` o `?zona=…` al elegir |
+| `#/analisis` | **Análisis**: tabla con filtros por fechas, tipo, resultado y sincronización; "Ver foto" abre la evidencia en un diálogo | `GET /analisis?…&limite=100`, `GET /analisis/{id}/evidencia` |
+| `#/admin` | **Administración** (solo `ADMINISTRADOR`): cuentas y dispositivos | `GET /cuentas`, `/dispositivos` |
+
+El encabezado muestra el nombre de `GET /me`. Sin sesión todo redirige a `#/login`; un experto de campo
+que abre `#/admin` vuelve al resumen (y el backend responde 403 de todos modos).
 
 Está pensada para servirse desde **S3 + CloudFront**. El contrato de API está en `../API_CONTRACT.md` (v1).
+
+Las fotos se muestran con la URL firmada (5 min) que entrega b-sheet. La CSP de `infra/cloudfront.yaml`
+permite `img-src` solo para ese bucket (parámetros `EvidenciasBucket` y `EvidenciasRegion`).
+
+### Colores de estado
+
+Validados con el script de la skill de dataviz (CVD protan/deutan/tritan, contraste y luminosidad) en
+modo claro y oscuro. Ningún estado depende solo del color: cada uno lleva **forma + etiqueta**
+(círculo = bien, triángulo = alerta, cuadrado = aviso, rombo = neutro, anillo = sin datos).
+
+| Significado | Claro | Oscuro |
+|---|---|---|
+| Sano / sincronizado / cromático sano | `#2a78d6` | `#3987e5` |
+| Regular / pendiente | `#eda100` | `#c98500` |
+| Infestado / con error / dañado | `#d9466f` | `#d9466f` |
+| No determinado / incierto (neutro) | `#a6a9b0` | `#9a9da4` |
+
+"Sano" es azul y no verde a propósito: verde contra carmín no se distingue con deuteranopia.
+Las fechas se muestran en hora del centro de México (UTC−6, sin horario de verano) y los filtros por
+día cubren el día completo en esa hora.
 
 ## Requisitos
 
@@ -41,7 +70,31 @@ Copia `.env.example` a `.env.local` si necesitas cambiarlas.
 | `npm run preview`   | Sirve `dist/` localmente. |
 | `npm run lint`      | ESLint (0 warnings permitidos). |
 | `npm test`          | Vitest + Testing Library (fetch mockeado). |
+| `npm run test:e2e`  | E2E con Playwright contra b-sheet y Postgres reales (ver abajo). |
 | `npm run deploy`    | Build + subida a S3 + invalidación de CloudFront (ver abajo). |
+
+## Pruebas de punta a punta (E2E)
+
+`npm run test:e2e` levanta todo y lo recorre como una persona en Chromium:
+
+```
+Chromium ──► vite preview (build de producción, proxy /api como CloudFront) :5174
+                └──► b-sheet real (mn:run, perfil dev) :8082 ──► Postgres local (BD sheets_e2e, nueva en cada corrida)
+```
+
+- **Requisitos:** Docker (el Postgres de `b-sheet/docker-compose.yml`), JDK 25 y el repo `b-sheet` al
+  lado de este (o `B_SHEET_DIR=/ruta/a/b-sheet`). La primera vez: `npx playwright install chromium`.
+- **Datos:** Flyway carga la réplica del esquema de TT_BKN y `db/demo` (3 árboles, 2 zonas, 5 análisis,
+  cuentas `demo@`, `admin@` y `baja@sheets.tt` con `Demo1234!`).
+- **S3 sin AWS:** b-sheet firma las fotos con credenciales ficticias y el navegador intercepta la
+  descarga; el test revisa que la URL sea la firmada (bucket, clave, `X-Amz-Expires=300`, credencial).
+- **Proyectos:** `escritorio` (sesión, recorridos de experto y administrador, 403 del backend) y
+  `movil` (Pixel 7: nada desborda a lo ancho, la foto cabe, las marcas del plano miden ≥ 8 px y su área
+  de toque ≥ 24 px).
+- Fallos: captura y traza en `test-results/`; reporte con `npx playwright show-report`.
+
+No cubre la CSP de CloudFront (vite preview no la envía) ni `StrictMode` (solo existe en desarrollo;
+lo cubre `FotoEvidencia.test.tsx`).
 
 ## Decisiones de diseño
 

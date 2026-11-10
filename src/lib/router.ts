@@ -1,13 +1,26 @@
 import { useSyncExternalStore } from 'react'
 
-// Routing por hash (#/login, #/). Elegido a propósito para S3 + CloudFront:
+// Routing por hash (#/login, #/, #/mapa…). Elegido a propósito para S3 + CloudFront:
 // no necesita reescrituras ni "custom error responses" 403/404 → index.html,
 // que en CloudFront son globales y también enmascararían los 401/403/404 de /api/*.
-export type Route = 'login' | 'welcome'
+export type Route = 'login' | 'resumen' | 'mapa' | 'analisis' | 'admin'
 
-function parse(hash: string): Route {
+const HASH: Record<Route, string> = {
+  login: '#/login',
+  resumen: '#/',
+  mapa: '#/mapa',
+  analisis: '#/analisis',
+  admin: '#/admin',
+}
+
+export function hrefDe(route: Route): string {
+  return HASH[route]
+}
+
+export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#/, '') || '/'
-  return path === '/login' ? 'login' : 'welcome'
+  const ruta = (Object.keys(HASH) as Route[]).find((r) => HASH[r] === `#${path}`)
+  return ruta ?? 'resumen'
 }
 
 function subscribe(cb: () => void): () => void {
@@ -16,11 +29,11 @@ function subscribe(cb: () => void): () => void {
 }
 
 export function useRoute(): Route {
-  return useSyncExternalStore(subscribe, () => parse(window.location.hash), () => 'login' as Route)
+  return useSyncExternalStore(subscribe, () => parseRoute(window.location.hash), () => 'login' as Route)
 }
 
 export function navigate(route: Route, { replace = false } = {}): void {
-  const hash = route === 'login' ? '#/login' : '#/'
+  const hash = hrefDe(route)
   if (window.location.hash === hash) return
   if (replace) {
     window.history.replaceState(null, '', hash)
