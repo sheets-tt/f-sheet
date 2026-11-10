@@ -28,6 +28,16 @@ Parameters:
     Type: String
     Default: ''
     Description: ARN de certificado ACM en us-east-1 para AliasDomainName (opcional).
+  EvidenciasBucket:
+    Type: String
+    Default: descortezadores-archivos-prod
+    Description: >
+      Bucket privado con las fotos de evidencia. La web las muestra con URLs firmadas que entrega
+      b-sheet; la CSP solo permite imágenes de este bucket (endpoint global y regional).
+  EvidenciasRegion:
+    Type: String
+    Default: us-east-1
+    Description: Región del bucket de evidencias (no necesariamente la de este stack).
   PriceClass:
     Type: String
     Default: PriceClass_100
@@ -150,8 +160,10 @@ Resources:
             Override: true
           ContentSecurityPolicy:
             # La app no usa scripts ni estilos inline; la API va por el mismo origen (/api).
-            ContentSecurityPolicy: >-
-              default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;
+            # img-src: fotos de evidencia por URL firmada de S3, solo de ese bucket.
+            ContentSecurityPolicy: !Sub >-
+              default-src 'self'; script-src 'self'; style-src 'self';
+              img-src 'self' data: https://${EvidenciasBucket}.s3.amazonaws.com https://${EvidenciasBucket}.s3.${EvidenciasRegion}.amazonaws.com;
               font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self';
               form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
             Override: true
