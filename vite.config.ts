@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => {
   return {
     base: '/',
     plugins: [react()],
+    // El worker de MapLibre se construye como módulo ES y se sirve desde el propio sitio.
+    worker: { format: 'es' },
     server: {
       port: 5173,
       strictPort: true,
@@ -35,12 +37,18 @@ export default defineConfig(({ mode }) => {
       // Los SVG/fuentes pequeñas se incrustan; evita peticiones extra.
       assetsInlineLimit: 4096,
       reportCompressedSize: true,
+      // El chunk de MapLibre mide ~1 MB sin comprimir; es una librería, no código de la app.
+      chunkSizeWarningLimit: 1100,
       modulePreload: { polyfill: false },
       rolldownOptions: {
         output: {
           // React en su propio chunk: cambia poco, así sobrevive en caché entre despliegues de la app.
           codeSplitting: {
-            groups: [{ name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ }],
+            groups: [
+              { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+              // MapLibre (~300 kB gzip) solo lo bajan el mapa y el seguimiento, y cambia poco.
+              { name: 'maplibre', test: /node_modules[\\/].*maplibre-gl[\\/]/ },
+            ],
           },
         },
       },

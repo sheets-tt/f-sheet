@@ -1,242 +1,373 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ErrorCarga } from '../components/EstadoCarga'
 import { EsqueletoLista, EsqueletoMapa } from '../components/Esqueleto'
 import FotoEvidencia, { IconoFoto } from '../components/FotoEvidencia'
-import { Estado, Forma, TONO_RESULTADO, type Tono } from '../components/Simbolo'
+import MapaCampo, { type ControlMapa, type MarcaMapa, type ZonaMapa } from '../components/MapaCampo'
+import Simbolo, { Estado, TONO_RESULTADO, type Tono } from '../components/Simbolo'
 import { buscarAnalisis, getArboles, getZonas, type Analisis, type Arbol, type UltimoAnalisis, type Zona } from '../lib/api'
-import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha, formatPorcentaje } from '../lib/format'
-import { escalaGrafica, proyectar } from '../lib/geo'
+import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha, formatPorcentaje, haceCuanto } from '../lib/format'
+import { formatCoordenadas, limitesDe, type Limites } from '../lib/geo'
+import { hrefDe, navigate, useRutaId } from '../lib/router'
 import { useCarga } from '../lib/useCarga'
 
-const LIENZO = { ancho: 1000, alto: 620, margen: 60 }
-
-interface Punto {
+export interface Punto {
   clave: string
   tipo: 'arbol' | 'zona'
+  id: string
   nombre: string
   detalle: string
-  /** Nombre accesible en el plano: "Oyamel del lago (Abies religiosa): Infestado". */
+  /** Nombre accesible en el mapa: "Oyamel del lago (Abies religiosa): Infestado". */
   etiqueta: string
   lat: number | null
   lon: number | null
   radioMetros: number | null
   ultimo: UltimoAnalisis | null
-  arbol?: Arbol
-  zona?: Zona
+  descripcion: string | null
+  fechaRegistro: string | null
 }
 
-function tonoDe(p: Punto): Tono {
+export function tonoDe(p: { ultimo: UltimoAnalisis | null }): Tono {
   return p.ultimo ? TONO_RESULTADO[p.ultimo.resultado] : 'vacio'
 }
 
-function estadoDe(p: Punto): string {
+export function estadoDe(p: { ultimo: UltimoAnalisis | null }): string {
   return p.ultimo ? ETIQUETA_RESULTADO[p.ultimo.resultado] : 'Sin análisis'
 }
 
-/** El backend ya trae el último análisis de cada árbol y zona: el historial se pide al elegir un punto. */
-function armarPuntos(arboles: Arbol[], zonas: Zona[]): Punto[] {
-  const deArboles = arboles.map<Punto>((a) => {
-    const p: Punto = {
-      clave: `a-${a.id}`, tipo: 'arbol', nombre: a.nombreEspecifico, detalle: a.especie, etiqueta: '',
-      lat: a.latitud, lon: a.longitud, radioMetros: null, ultimo: a.ultimoAnalisis, arbol: a,
-    }
-    p.etiqueta = `${a.nombreEspecifico} (${a.especie}): ${estadoDe(p)}`
-    return p
-  })
-  const deZonas = zonas.map<Punto>((z) => {
-    const radio = z.radioMetros ? `radio ${z.radioMetros} m` : 'sin radio'
-    const p: Punto = {
-      clave: `z-${z.id}`, tipo: 'zona', nombre: z.nombreZona, detalle: `Zona de follaje, ${radio}`, etiqueta: '',
-      lat: z.latitudCentro, lon: z.longitudCentro, radioMetros: z.radioMetros, ultimo: z.ultimoAnalisis, zona: z,
-    }
-    p.etiqueta = `${z.nombreZona}, ${radio}: ${estadoDe(p)}`
-    return p
-  })
-  // Zonas primero en el SVG: sus círculos quedan debajo de los árboles.
-  return [...deZonas, ...deArboles]
+export function puntoDeArbol(a: Arbol): Punto {
+  return {
+    clave: `a-${a.id}`, tipo: 'arbol', id: a.id, nombre: a.nombreEspecifico, detalle: a.especie,
+    etiqueta: `${a.nombreEspecifico} (${a.especie}): ${estadoDe({ ultimo: a.ultimoAnalisis })}`,
+    lat: a.latitud, lon: a.longitud, radioMetros: null, ultimo: a.ultimoAnalisis,
+    descripcion: a.descripcion, fechaRegistro: a.fechaRegistro,
+  }
+}
+
+export function puntoDeZona(z: Zona): Punto {
+  const radio = z.radioMetros ? `radio ${z.radioMetros} m` : 'sin radio'
+  return {
+    clave: `z-${z.id}`, tipo: 'zona', id: z.id, nombre: z.nombreZona, detalle: `Zona de follaje, ${radio}`,
+    etiqueta: `${z.nombreZona}, ${radio}: ${estadoDe({ ultimo: z.ultimoAnalisis })}`,
+    lat: z.latitudCentro, lon: z.longitudCentro, radioMetros: z.radioMetros, ultimo: z.ultimoAnalisis,
+    descripcion: z.descripcion, fechaRegistro: z.fechaRegistro,
+  }
+}
+
+type Ubicado = Punto & { lat: number; lon: number }
+const ubicado = (p: Punto): p is Ubicado => p.lat !== null && p.lon !== null
+
+export function marcaDe(p: Ubicado): MarcaMapa {
+  return { clave: p.clave, tipo: p.tipo, lngLat: [p.lon, p.lat], tono: tonoDe(p), nombre: p.nombre, etiqueta: p.etiqueta }
+}
+
+export function zonaDe(p: Ubicado): ZonaMapa | null {
+  return p.tipo === 'zona' && p.radioMetros ? { clave: p.clave, centro: [p.lon, p.lat], radioMetros: p.radioMetros, tono: tonoDe(p) } : null
+}
+
+/** Centro de CDMX: solo si no hay ningún punto con coordenadas. */
+const SIN_PUNTOS: Limites = [[-99.19, 19.415], [-99.175, 19.425]]
+
+const ESTADOS: { tono: Tono; etiqueta: string }[] = [
+  { tono: 'alerta', etiqueta: 'Infestado' },
+  { tono: 'neutro', etiqueta: 'No determinado' },
+  { tono: 'bien', etiqueta: 'Sano' },
+  { tono: 'vacio', etiqueta: 'Sin análisis' },
+]
+
+function normalizar(t: string): string {
+  return t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim()
 }
 
 export default function MapaScreen() {
   // Consultas independientes: en paralelo, no en cascada.
   const carga = useCarga((signal) => Promise.all([getArboles(signal), getZonas(signal)]), [])
-  const [seleccion, setSeleccion] = useState<string | null>(null)
+  // El punto elegido vive en la URL (#/mapa/a-<id>): se puede recargar, compartir y volver a él.
+  const seleccion = useRutaId()
 
   useEffect(() => {
     document.title = 'Mapa · Sheets TT'
   }, [])
 
-  const puntos = useMemo(() => (carga.datos ? armarPuntos(...carga.datos) : []), [carga.datos])
-  const elegido = puntos.find((p) => p.clave === seleccion) ?? null
+  const puntos = useMemo(
+    () => (carga.datos ? [...carga.datos[1].map(puntoDeZona), ...carga.datos[0].map(puntoDeArbol)] : []),
+    [carga.datos],
+  )
 
   return (
     <div className="pagina">
       <header className="pagina-encabezado">
         <h1>Mapa</h1>
-        <p className="muted">Árboles y zonas de follaje registrados, con el resultado de su análisis más reciente.</p>
+        <p className="muted">
+          Elige un árbol o una zona para ver su último análisis y abrir su seguimiento completo.
+        </p>
       </header>
 
       {carga.estado === 'cargando' && <EsqueletoMapa />}
       {carga.estado === 'error' && <ErrorCarga mensaje={carga.error} onReintentar={carga.reintentar} />}
-
-      {carga.datos && (
-        <div className="mapa">
-          <Plano puntos={puntos} seleccion={seleccion} onElegir={setSeleccion} />
-          <aside className="mapa-panel panel">
-            {elegido ? (
-              <Detalle punto={elegido} onCerrar={() => setSeleccion(null)} />
-            ) : (
-              <ListaPuntos puntos={puntos} onElegir={setSeleccion} />
-            )}
-          </aside>
-        </div>
-      )}
+      {carga.datos && <Explorador puntos={puntos} seleccion={seleccion} />}
     </div>
   )
 }
 
-function Plano({ puntos, seleccion, onElegir }: { puntos: Punto[]; seleccion: string | null; onElegir: (c: string) => void }) {
-  const ubicados = useMemo(
-    () => puntos.filter((p): p is Punto & { lat: number; lon: number } => p.lat !== null && p.lon !== null),
-    [puntos],
+function Explorador({ puntos, seleccion }: { puntos: Punto[]; seleccion: string | null }) {
+  const [ocultos, setOcultos] = useState<Set<string>>(() => new Set())
+  const [busqueda, setBusqueda] = useState('')
+  const [nombres, setNombres] = useState(true)
+  const [resaltada, setResaltada] = useState<string | null>(null)
+  const mapa = useRef<ControlMapa>(null)
+
+  // Elegir (en el mapa, la lista o la búsqueda) lleva el foco al detalle; abrir desde la URL no.
+  const pedirFoco = useRef(false)
+  const elegir = (clave: string) => {
+    pedirFoco.current = true
+    navigate('mapa', { id: clave, replace: true })
+  }
+  const tomarFoco = () => {
+    const pedido = pedirFoco.current
+    pedirFoco.current = false
+    return pedido
+  }
+  const cerrar = () => navigate('mapa', { replace: true })
+
+  // Esc cierra el detalle y vuelve a la lista.
+  useEffect(() => {
+    if (!seleccion) return
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !document.querySelector('dialog[open]')) navigate('mapa', { replace: true })
+    }
+    window.addEventListener('keydown', tecla)
+    return () => window.removeEventListener('keydown', tecla)
+  }, [seleccion])
+
+  const conteo = useMemo(() => {
+    const c: Record<string, number> = { arbol: 0, zona: 0, bien: 0, alerta: 0, neutro: 0, vacio: 0 }
+    for (const p of puntos) {
+      c[p.tipo]++
+      c[tonoDe(p)]++
+    }
+    return c
+  }, [puntos])
+
+  const q = normalizar(busqueda)
+  const visibles = useMemo(
+    () =>
+      puntos.filter(
+        (p) =>
+          !ocultos.has(p.tipo) &&
+          !ocultos.has(tonoDe(p)) &&
+          (!q || normalizar(`${p.nombre} ${p.detalle}`).includes(q)),
+      ),
+    [puntos, ocultos, q],
   )
-  const proy = useMemo(
-    () => proyectar(ubicados.map((p) => ({ lat: p.lat, lon: p.lon, radioMetros: p.radioMetros })), LIENZO),
+
+  const ubicados = useMemo(() => puntos.filter(ubicado), [puntos])
+  const encuadre = useMemo(
+    () => limitesDe(ubicados.map((p) => ({ lon: p.lon, lat: p.lat, radioMetros: p.radioMetros }))) ?? SIN_PUNTOS,
     [ubicados],
   )
-  const escala = escalaGrafica(proy.metros(1), LIENZO.ancho - 2 * LIENZO.margen)
-  const arboles = ubicados.filter((p) => p.tipo === 'arbol').length
+  // El punto elegido se ve aunque los filtros lo oculten.
+  const enMapa = useMemo(
+    () => ubicados.filter((p) => p.clave === seleccion || visibles.includes(p)),
+    [ubicados, visibles, seleccion],
+  )
+  const marcas = useMemo(() => enMapa.map(marcaDe), [enMapa])
+  const zonas = useMemo(() => enMapa.map(zonaDe).filter((z): z is ZonaMapa => z !== null), [enMapa])
 
-  function teclado(e: KeyboardEvent, clave: string) {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      onElegir(clave)
-    }
+  const elegido = puntos.find((p) => p.clave === seleccion) ?? null
+  const arboles = ubicados.filter((p) => p.tipo === 'arbol').length
+  const nZonas = ubicados.length - arboles
+
+  function alternar(clave: string) {
+    setOcultos((prev) => {
+      const sig = new Set(prev)
+      if (sig.has(clave)) sig.delete(clave)
+      else sig.add(clave)
+      return sig
+    })
   }
 
   return (
-    <figure className="plano">
-      <svg
-        viewBox={`0 0 ${LIENZO.ancho} ${LIENZO.alto}`}
-        role="group"
-        aria-label={`Plano de campo: ${arboles} ${arboles === 1 ? 'árbol' : 'árboles'} y ${ubicados.length - arboles} ${ubicados.length - arboles === 1 ? 'zona' : 'zonas'}`}
-      >
-        <defs>
-          <pattern id="plano-rejilla" width="50" height="50" patternUnits="userSpaceOnUse">
-            <path d="M50 0H0V50" className="plano-rejilla" />
-          </pattern>
-        </defs>
-        <rect className="plano-fondo" x="0.5" y="0.5" width={LIENZO.ancho - 1} height={LIENZO.alto - 1} rx="16" />
-        <rect x="0.5" y="0.5" width={LIENZO.ancho - 1} height={LIENZO.alto - 1} rx="16" fill="url(#plano-rejilla)" />
-
-        {ubicados.map((p) => {
-          const { x, y } = proy.punto(p)
-          const tono = tonoDe(p)
-          const activo = p.clave === seleccion
-          return (
-            <g
-              key={p.clave}
-              className={`punto punto-${p.tipo}${activo ? ' activo' : ''}`}
-              transform={`translate(${x} ${y})`}
-              role="button"
-              tabIndex={0}
-              aria-label={p.etiqueta}
-              aria-pressed={activo}
-              onClick={() => onElegir(p.clave)}
-              onKeyDown={(e) => teclado(e, p.clave)}
-            >
-              <title>{p.etiqueta}</title>
-              {/* El radio va a escala real; lo demás es símbolo y crece en pantallas angostas (CSS). */}
-              {p.tipo === 'zona' && p.radioMetros ? (
-                <circle className={`zona zona-${tono}`} r={proy.metros(p.radioMetros)} />
-              ) : null}
-              <g className="punto-cuerpo">
-                {p.tipo === 'zona' && !p.radioMetros && (
-                  <circle className={`zona zona-${tono} zona-sin-radio`} r={16} />
-                )}
-                {/* Área de toque mayor que la marca (≥ 24px). */}
-                <circle className="punto-toque" r={16} />
-                <g className="punto-marca">
-                  <Forma tono={tono} r={p.tipo === 'arbol' ? 7 : 6} />
-                </g>
-                {/* En la mitad derecha el nombre va a la izquierda para no salirse del plano. */}
-                <text
-                  className="punto-nombre"
-                  x={x > LIENZO.ancho / 2 ? -12 : 12}
-                  y={4}
-                  textAnchor={x > LIENZO.ancho / 2 ? 'end' : 'start'}
-                >
-                  {p.nombre}
-                </text>
-              </g>
-            </g>
-          )
-        })}
-
-        {/* Barra de escala y norte: el plano está a escala real. */}
-        <g className="plano-escala" transform={`translate(${LIENZO.margen} ${LIENZO.alto - 28})`} aria-hidden="true">
-          <line x1="0" x2={escala.ancho} y1="0" y2="0" />
-          <line x1="0" x2="0" y1="-5" y2="5" />
-          <line x1={escala.ancho} x2={escala.ancho} y1="-5" y2="5" />
-          <text x={escala.ancho / 2} y="-9">{escala.metros} m</text>
-        </g>
-        <g className="plano-norte" transform={`translate(${LIENZO.ancho - 40} 46)`} aria-hidden="true">
-          <path d="M0 -18 L7 6 L0 1 L-7 6 Z" />
-          <text y="22">N</text>
-        </g>
-      </svg>
-      <figcaption>
-        <ul className="leyenda leyenda-plano">
-          <li><Leyenda tono="bien" />Sano</li>
-          <li><Leyenda tono="alerta" />Infestado</li>
-          <li><Leyenda tono="neutro" />No determinado</li>
-          <li><Leyenda tono="vacio" />Sin análisis</li>
-          <li><svg viewBox="-8 -8 16 16" width="14" height="14" aria-hidden="true"><circle className="zona zona-vacio" r="6" /></svg>Zona de follaje, radio a escala</li>
-        </ul>
-      </figcaption>
-    </figure>
-  )
-}
-
-function Leyenda({ tono }: { tono: Tono }) {
-  return (
-    <svg viewBox="-8 -8 16 16" width="14" height="14" aria-hidden="true">
-      <Forma tono={tono} r={5} />
-    </svg>
-  )
-}
-
-function ListaPuntos({ puntos, onElegir }: { puntos: Punto[]; onElegir: (c: string) => void }) {
-  const ordenados = [...puntos].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-  return (
     <>
-      <h2 id="titulo-puntos">Puntos registrados</h2>
-      <ul className="lista-puntos" aria-labelledby="titulo-puntos">
-        {ordenados.map((p) => (
-          <li key={p.clave}>
-            <button type="button" onClick={() => onElegir(p.clave)}>
-              <span className="lista-nombre">{p.nombre}</span>
-              <span className="muted lista-detalle">
-                {p.detalle}
-                {p.lat === null || p.lon === null ? ', sin coordenadas' : ''}
-              </span>
-              <Estado tono={tonoDe(p)}>{estadoDe(p)}</Estado>
+      <div className="mapa-herramientas" role="toolbar" aria-label="Filtros del mapa">
+        <label className="mapa-busqueda">
+          <span className="visually-hidden">Buscar árbol o zona</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+            <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15zM16 16l5 5" />
+          </svg>
+          <input
+            type="search"
+            placeholder="Buscar árbol o zona"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && visibles[0]) elegir(visibles[0].clave)
+            }}
+          />
+        </label>
+        <div className="fichas" role="group" aria-label="Mostrar por estado">
+          {ESTADOS.map((e) => (
+            <button
+              key={e.tono}
+              type="button"
+              className="ficha"
+              aria-pressed={!ocultos.has(e.tono)}
+              onClick={() => alternar(e.tono)}
+            >
+              <Simbolo tono={e.tono} />
+              {e.etiqueta}
+              <span className="ficha-cuenta">{conteo[e.tono]}</span>
             </button>
-          </li>
-        ))}
-      </ul>
+          ))}
+        </div>
+        <div className="fichas" role="group" aria-label="Mostrar por tipo">
+          <button type="button" className="ficha" aria-pressed={!ocultos.has('arbol')} onClick={() => alternar('arbol')}>
+            Árboles<span className="ficha-cuenta">{conteo.arbol}</span>
+          </button>
+          <button type="button" className="ficha" aria-pressed={!ocultos.has('zona')} onClick={() => alternar('zona')}>
+            Zonas<span className="ficha-cuenta">{conteo.zona}</span>
+          </button>
+          <button type="button" className="ficha" aria-pressed={nombres} onClick={() => setNombres((n) => !n)}>
+            Nombres
+          </button>
+        </div>
+      </div>
+
+      <div className="mapa">
+        <div className="mapa-marco">
+          <MapaCampo
+            ref={mapa}
+            nombre={`Mapa de campo: ${arboles} ${arboles === 1 ? 'árbol' : 'árboles'} y ${nZonas} ${nZonas === 1 ? 'zona' : 'zonas'}`}
+            marcas={marcas}
+            zonas={zonas}
+            encuadre={encuadre}
+            seleccion={seleccion}
+            resaltada={resaltada}
+            mostrarNombres={nombres}
+            onElegir={elegir}
+          />
+          <button type="button" className="btn btn-chico mapa-ver-todo" onClick={() => mapa.current?.verTodo()}>
+            Ver todos
+          </button>
+          <ul className="leyenda leyenda-mapa" aria-label="Simbología">
+            {ESTADOS.map((e) => (
+              <li key={e.tono}>
+                <Simbolo tono={e.tono} />
+                {e.etiqueta}
+              </li>
+            ))}
+            <li>
+              <span className="muestra-zona" aria-hidden="true" />
+              Zona de follaje, radio a escala
+            </li>
+          </ul>
+        </div>
+
+        <aside className="mapa-panel panel">
+          {elegido ? (
+            <Detalle punto={elegido} onCerrar={cerrar} tomarFoco={tomarFoco} />
+          ) : (
+            <ListaPuntos
+              puntos={visibles}
+              total={puntos.length}
+              onElegir={elegir}
+              onResaltar={setResaltada}
+            />
+          )}
+        </aside>
+      </div>
     </>
   )
 }
 
-function Detalle({ punto, onCerrar }: { punto: Punto; onCerrar: () => void }) {
-  const descripcion = punto.arbol?.descripcion ?? punto.zona?.descripcion
-  const registro = punto.arbol?.fechaRegistro ?? punto.zona?.fechaRegistro ?? null
+function ListaPuntos({
+  puntos,
+  total,
+  onElegir,
+  onResaltar,
+}: {
+  puntos: Punto[]
+  total: number
+  onElegir: (c: string) => void
+  onResaltar: (c: string | null) => void
+}) {
+  const ordenados = [...puntos].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
   return (
-    <section aria-labelledby="titulo-detalle" className="detalle" key={punto.clave}>
-      <h2 id="titulo-detalle">{punto.nombre}</h2>
+    <>
+      <h2 id="titulo-puntos">Puntos registrados</h2>
+      <p className="muted conteo" aria-live="polite">
+        {puntos.length === total ? `${total} en total` : `${puntos.length} de ${total} con estos filtros`}
+      </p>
+      {ordenados.length ? (
+        <ul className="lista-puntos" aria-labelledby="titulo-puntos" onMouseLeave={() => onResaltar(null)}>
+          {ordenados.map((p) => (
+            <li key={p.clave}>
+              <button
+                type="button"
+                onClick={() => onElegir(p.clave)}
+                onMouseEnter={() => onResaltar(p.clave)}
+                onFocus={() => onResaltar(p.clave)}
+                onBlur={() => onResaltar(null)}
+              >
+                <span className="lista-nombre">{p.nombre}</span>
+                <span className="muted lista-detalle">
+                  {p.detalle}
+                  {p.lat === null || p.lon === null ? ', sin coordenadas' : ''}
+                </span>
+                <Estado tono={tonoDe(p)}>{estadoDe(p)}</Estado>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">Ningún punto coincide. Cambia la búsqueda o los filtros.</p>
+      )}
+    </>
+  )
+}
+
+function Detalle({ punto, onCerrar, tomarFoco }: { punto: Punto; onCerrar: () => void; tomarFoco: () => boolean }) {
+  const titulo = useRef<HTMLHeadingElement>(null)
+  const seccion = useRef<HTMLElement>(null)
+  // Al elegir un punto, el foco pasa al detalle (teclado y lectores de pantalla) y, en pantallas
+  // angostas, donde el detalle queda debajo del mapa, se desplaza hasta él.
+  useEffect(() => {
+    if (!tomarFoco()) return
+    titulo.current?.focus({ preventScroll: true })
+    const suave = typeof window.matchMedia === 'function' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    seccion.current?.scrollIntoView?.({ block: 'nearest', behavior: suave ? 'smooth' : 'auto' })
+  }, [punto.clave]) // eslint-disable-line react-hooks/exhaustive-deps -- solo al cambiar de punto
+
+  return (
+    <section ref={seccion} aria-labelledby="titulo-detalle" className="detalle" key={punto.clave}>
+      <div className="detalle-cabeza">
+        <h2 id="titulo-detalle" ref={titulo} tabIndex={-1}>
+          {punto.nombre}
+        </h2>
+        <button type="button" className="btn-cerrar" aria-label="Cerrar detalle" onClick={onCerrar}>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
       <p className="muted">{punto.detalle}</p>
-      {descripcion && <p className="detalle-descripcion">{descripcion}</p>}
-      <p className="muted detalle-registro">Registrado el {formatFecha(registro)}</p>
+      <div className="detalle-estado">
+        <Estado tono={tonoDe(punto)}>{estadoDe(punto)}</Estado>
+        {punto.ultimo && <span className="muted">{haceCuanto(punto.ultimo.fechaCaptura)}</span>}
+      </div>
+      {punto.descripcion && <p className="detalle-descripcion">{punto.descripcion}</p>}
+      <p className="muted detalle-registro">
+        Registrado el {formatFecha(punto.fechaRegistro)}
+        {punto.lat !== null && punto.lon !== null && (
+          <>
+            <br />
+            {formatCoordenadas(punto.lat, punto.lon)}
+          </>
+        )}
+      </p>
+
+      <a className="btn btn-primary detalle-seguimiento" href={hrefDe(punto.tipo, punto.id)}>
+        Ver seguimiento {punto.tipo === 'arbol' ? 'del árbol' : 'de la zona'}
+      </a>
 
       <h3>Análisis</h3>
       {/* Sin último análisis no hay historial: no se pide nada. */}
@@ -249,9 +380,10 @@ function Detalle({ punto, onCerrar }: { punto: Punto; onCerrar: () => void }) {
 }
 
 const LIMITE_HISTORIAL = 50
+const EN_PANEL = 5
 
 function Historial({ punto }: { punto: Punto }) {
-  const filtro = punto.arbol ? { arbol: punto.arbol.id } : { zona: punto.zona!.id }
+  const filtro = punto.tipo === 'arbol' ? { arbol: punto.id } : { zona: punto.id }
   const historial = useCarga(
     (signal) => buscarAnalisis({ ...filtro, limite: LIMITE_HISTORIAL }, signal),
     [punto.clave],
@@ -260,10 +392,11 @@ function Historial({ punto }: { punto: Punto }) {
 
   if (historial.estado === 'cargando') return <EsqueletoLista texto="Cargando el historial…" filas={2} />
   if (historial.estado === 'error') return <ErrorCarga mensaje={historial.error} onReintentar={historial.reintentar} />
+  const recientes = historial.datos.slice(0, EN_PANEL)
   return (
     <>
       <ul className="historial">
-        {historial.datos.map((a) => (
+        {recientes.map((a) => (
           <li key={a.id}>
             <Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{ETIQUETA_RESULTADO[a.resultadoClasificacion]}</Estado>
             <span className="muted">
@@ -285,8 +418,11 @@ function Historial({ punto }: { punto: Punto }) {
           </li>
         ))}
       </ul>
-      {historial.datos.length === LIMITE_HISTORIAL && (
-        <p className="muted conteo">Se muestran los {LIMITE_HISTORIAL} más recientes; el resto está en Análisis.</p>
+      {historial.datos.length > EN_PANEL && (
+        <p className="muted conteo">
+          Se muestran los {EN_PANEL} más recientes de {historial.datos.length === LIMITE_HISTORIAL ? `más de ${LIMITE_HISTORIAL - 1}` : historial.datos.length};
+          el resto está en el seguimiento.
+        </p>
       )}
       {foto && <FotoEvidencia analisis={foto} onCerrar={() => setFoto(null)} />}
     </>

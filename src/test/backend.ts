@@ -71,12 +71,23 @@ export function mockBackend(fetchMock: Mock<typeof fetch>, rutas: Record<string,
   fetchMock.mockImplementation(async (input) => {
     const url = new URL(String(input), 'http://localhost')
     const path = url.pathname.replace(/^\/api/, '')
-    // /analisis/{id}/evidencia: ruta con parámetro.
+    // Rutas con parámetro: /analisis/{id}/evidencia, /arboles/{id}, /zonas/{id}.
     const foto = /^\/analisis\/([^/]+)\/evidencia$/.exec(path)
-    const ruta = foto ? (todas['/analisis/:id/evidencia'] ?? evidenciaPorDefecto(foto[1])) : todas[path]
+    const uno = /^\/(arboles|zonas)\/([^/]+)$/.exec(path)
+    const ruta = foto
+      ? (todas['/analisis/:id/evidencia'] ?? evidenciaPorDefecto(foto[1]))
+      : uno
+        ? (todas[`/${uno[1]}/:id`] ?? unoPorDefecto(uno[1] as 'arboles' | 'zonas', decodeURIComponent(uno[2])))
+        : todas[path]
     if (!ruta) return json(404)
     return typeof ruta === 'function' ? ruta(url) : ruta.clone()
   })
+}
+
+/** Como b-sheet: el registro, o 404 si no existe. */
+function unoPorDefecto(ruta: 'arboles' | 'zonas', id: string): Response {
+  const registro = ruta === 'arboles' ? ARBOLES.find((a) => a.id === id) : ZONAS.find((z) => z.id === id)
+  return registro ? json(200, registro) : json(404)
 }
 
 /** Como b-sheet: URL firmada para los análisis con foto, 404 para e5 (sin_imagen). */

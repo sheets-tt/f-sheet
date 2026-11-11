@@ -161,10 +161,12 @@ Resources:
           ContentSecurityPolicy:
             # La app no usa scripts ni estilos inline; la API va por el mismo origen (/api).
             # img-src: fotos de evidencia por URL firmada de S3, solo de ese bucket.
+            # connect-src: teselas y fuentes del mapa base (OpenFreeMap). worker-src: el worker de
+            # MapLibre se sirve desde el propio sitio, sin blob:.
             ContentSecurityPolicy: !Sub >-
-              default-src 'self'; script-src 'self'; style-src 'self';
+              default-src 'self'; script-src 'self'; style-src 'self'; worker-src 'self';
               img-src 'self' data: https://${EvidenciasBucket}.s3.amazonaws.com https://${EvidenciasBucket}.s3.${EvidenciasRegion}.amazonaws.com;
-              font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self';
+              font-src 'self'; connect-src 'self' https://tiles.openfreemap.org; object-src 'none'; base-uri 'self';
               form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
             Override: true
         CustomHeadersConfig:

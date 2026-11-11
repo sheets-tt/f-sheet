@@ -1,4 +1,9 @@
-import { expect, type Page } from '@playwright/test'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { expect, test as base, type BrowserContext, type Page } from '@playwright/test'
+
+export { expect }
 
 /** Cuentas de b-sheet/src/main/resources/db/demo/V2__datos_demo.sql (contraseña Demo1234!). */
 export const EXPERTO = 'demo@sheets.tt'
@@ -39,3 +44,61 @@ export async function interceptarS3(page: Page): Promise<URL[]> {
   })
   return pedidas
 }
+
+// ---------------------------------------------------------------------------------------------
+// Mapa base sin internet
+// ---------------------------------------------------------------------------------------------
+// Las teselas, el TileJSON y las fuentes de OpenFreeMap que usan las pruebas (alrededor de los datos
+// de db/demo) están guardados en e2e/mapa-base/, con la misma ruta que en tiles.openfreemap.org. Así
+// el mapa se ve completo y las pruebas no dependen de la red.
+//
+//   E2E_GRABAR_MAPA=1  lo que falte se descarga una vez y se guarda (después: git add e2e/mapa-base)
+//   E2E_TESELAS=1      sin copia: el navegador pide todo a internet
+// Lo que no esté guardado se aborta: esa parte del mapa queda con el fondo liso.
+const MAPA_BASE = join(dirname(fileURLToPath(import.meta.url)), 'mapa-base')
+const GRABAR = process.env.E2E_GRABAR_MAPA === '1'
+const EN_VIVO = process.env.E2E_TESELAS === '1'
+
+const TIPOS: Record<string, string> = { '.pbf': 'application/x-protobuf', '.json': 'application/json' }
+
+/** "/planet" (TileJSON, sin extensión) se guarda como planet.json. */
+function archivoDe(url: URL): string {
+  const ruta = decodeURIComponent(url.pathname).replace(/^\/+/, '')
+  return join(MAPA_BASE, /\.[a-z]+$/.test(ruta) ? ruta : `${ruta}.json`)
+}
+
+async function servirMapaBase(context: BrowserContext): Promise<void> {
+  await context.route(/^https:\/\/tiles\.openfreemap\.org\//, async (route) => {
+    const url = new URL(route.request().url())
+    const archivo = archivoDe(url)
+    const tipo = TIPOS[archivo.slice(archivo.lastIndexOf('.'))] ?? 'application/octet-stream'
+    const cabeceras = { 'Content-Type': tipo, 'Access-Control-Allow-Origin': '*' }
+    try {
+      await route.fulfill({ status: 200, headers: cabeceras, body: await readFile(archivo) })
+      return
+    } catch {
+      // No está guardado.
+    }
+    if (!GRABAR) return route.abort('internetdisconnected')
+    const respuesta = await route.fetch()
+    if (!respuesta.ok()) return route.fulfill({ response: respuesta })
+    const cuerpo = await respuesta.body()
+    await mkdir(dirname(archivo), { recursive: true })
+    // Varias pruebas en paralelo pueden pedir la misma tesela: se escribe aparte y se renombra.
+    const temporal = `${archivo}.${process.pid}.${Math.random().toString(36).slice(2)}`
+    await writeFile(temporal, cuerpo)
+    await rename(temporal, archivo)
+    await route.fulfill({ status: 200, headers: cabeceras, body: cuerpo })
+  })
+}
+
+/** El `test` de Playwright, con el mapa base servido desde e2e/mapa-base en todas las pruebas. */
+export const test = base.extend<{ mapaBase: void }>({
+  mapaBase: [
+    async ({ context }, use) => {
+      if (!EN_VIVO) await servirMapaBase(context)
+      await use()
+    },
+    { auto: true },
+  ],
+})

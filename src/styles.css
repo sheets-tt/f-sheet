@@ -398,6 +398,11 @@ input:disabled {
   background: var(--tinte);
 }
 
+.btn-foto[aria-pressed='true'] {
+  color: var(--casa);
+  background: color-mix(in srgb, var(--oro) 35%, transparent);
+}
+
 .btn-foto:active {
   transform: scale(0.95);
 }
@@ -535,7 +540,7 @@ input:disabled {
 
 .plano-esqueleto {
   position: relative;
-  aspect-ratio: 1000 / 620;
+  height: clamp(22rem, 62vh, 40rem);
   border-radius: var(--radio-m);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1404,143 +1409,278 @@ input:disabled {
   margin-top: 0;
 }
 
-.plano {
-  margin: 0;
+/* Barra de herramientas: búsqueda y fichas de filtro, en una fila sobre el mapa. */
+.mapa-herramientas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
 }
 
-.plano > svg {
-  display: block;
-  width: 100%;
-  height: auto;
+.mapa-busqueda {
+  position: relative;
+  flex: 1 1 16rem;
+  max-width: 22rem;
 }
 
-.plano-fondo {
-  fill: var(--surface);
-  stroke: var(--border);
-}
-
-.plano-rejilla {
+.mapa-busqueda svg {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  translate: 0 -50%;
   fill: none;
-  stroke: var(--border);
-  stroke-width: 1;
-  opacity: 0.7;
-}
-
-.zona {
-  fill-opacity: 0.14;
+  stroke: var(--muted);
   stroke-width: 2;
-  transition: fill-opacity 0.2s;
+  stroke-linecap: round;
+  pointer-events: none;
 }
 
-.punto:hover .zona,
-.punto.activo .zona {
-  fill-opacity: 0.24;
+.mapa-busqueda input {
+  width: 100%;
+  min-width: 0;
+  padding-left: 2.5rem;
+  border-radius: 999px;
 }
 
-.zona-bien { fill: var(--c-sano); stroke: var(--c-sano); }
-.zona-alerta { fill: var(--c-infestado); stroke: var(--c-infestado); }
-.zona-neutro { fill: var(--c-neutro); stroke: var(--c-neutro); }
-.zona-vacio { fill: var(--muted); stroke: var(--muted); fill-opacity: 0.06; }
-
-.zona-sin-radio {
-  stroke-dasharray: 4 4;
+.fichas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
 }
 
-.punto {
+.ficha {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  font: 600 var(--t-xs) / 1 var(--font);
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
   cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.punto:focus {
-  outline: none;
+.ficha:hover {
+  border-color: var(--border-fuerte);
 }
 
-.punto-toque {
-  fill: transparent;
+/* Encendida: se ve el filtro aplicado. Apagada: tachada y tenue, para que no parezca otra cosa. */
+.ficha[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--tinte);
+  border-color: var(--border-fuerte);
 }
 
-.punto:focus-visible .punto-toque,
-.punto.activo .punto-toque {
-  stroke: var(--focus);
+.ficha[aria-pressed='false'] {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.ficha[aria-pressed='false'] .simbolo {
+  opacity: 0.45;
+}
+
+.ficha-cuenta {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.mapa-marco {
+  position: relative;
+  min-width: 0;
+}
+
+.mapa-campo {
+  position: relative;
+  border-radius: var(--radio-m);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.mapa-lienzo {
+  height: clamp(22rem, 62vh, 40rem);
+}
+
+.mapa-mini .mapa-lienzo {
+  height: 18rem;
+}
+
+.mapa-cargando {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+}
+
+.mapa-sin-webgl {
+  display: grid;
+  place-items: center;
+  min-height: 12rem;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.mapa-ver-todo {
+  position: absolute;
+  top: 0.625rem;
+  left: 0.625rem;
+  z-index: 2;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-fuerte);
+  box-shadow: 0 2px 8px rgb(16 33 28 / 0.14);
+}
+
+.leyenda-mapa {
+  margin-top: 0.75rem;
+}
+
+.muestra-zona {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--muted);
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+}
+
+/* ---- Marcadores (botones sobre el mapa) ---- */
+
+.marcador {
+  position: relative;
+  display: grid;
+  place-items: center;
+  /* Área de toque de 32px; la marca dibujada es más chica. */
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.marcador-simbolo {
+  width: 24px;
+  height: 24px;
+  overflow: visible;
+  transition: transform 0.18s var(--ease);
+  filter: drop-shadow(0 1px 2px rgb(16 33 28 / 0.35));
+}
+
+.marcador-simbolo .forma {
+  stroke: var(--surface);
+  stroke-width: 2;
+  paint-order: stroke;
+}
+
+.marcador-simbolo .forma-vacio {
+  fill: var(--surface);
+  stroke: var(--muted);
   stroke-width: 2.5;
 }
 
-/* Al elegir un punto, un anillo se expande una vez: muestra cuál se seleccionó. */
-.punto.activo .punto-toque {
-  animation: latido 0.6s var(--ease);
+.marcador-anillo {
+  fill: color-mix(in srgb, var(--surface) 70%, transparent);
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2.5;
 }
 
-.punto-marca {
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 0.18s var(--ease);
-}
-
-.punto:hover .punto-marca,
-.punto.activo .punto-marca {
+.marcador:hover .marcador-simbolo,
+.marcador.resaltado .marcador-simbolo {
   transform: scale(1.25);
 }
 
-.punto-marca .forma {
-  stroke: var(--surface);
-  stroke-width: 2;
-  paint-order: stroke;
+.marcador:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
 }
 
-.punto-marca .forma-vacio {
-  stroke: var(--muted);
+/* El elegido crece y lo rodea un anillo dorado que late una vez. */
+.marcador.activo {
+  z-index: 3;
 }
 
-.punto-nombre {
-  font: 600 17px var(--font);
-  fill: var(--text);
-  paint-order: stroke;
-  stroke: var(--surface);
-  stroke-width: 4px;
-  stroke-linejoin: round;
+.marcador.activo .marcador-simbolo {
+  transform: scale(1.45);
 }
 
-.punto-cuerpo {
-  transform: scale(var(--k-simbolo, 1));
+.marcador.activo::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 3px solid var(--oro);
+  animation: pulso 0.7s var(--ease);
 }
 
-@media (max-width: 760px) {
-  .plano {
-    --k-simbolo: 1.6;
+.marcador-nombre {
+  position: absolute;
+  left: calc(100% - 2px);
+  top: 50%;
+  translate: 0 -50%;
+  padding: 0.125rem 0.5rem;
+  font: 650 0.75rem / 1.3 var(--font);
+  color: var(--text);
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgb(16 33 28 / 0.18);
+  pointer-events: none;
+}
+
+.marcador.activo .marcador-nombre {
+  color: var(--accent-text);
+  background: var(--casa);
+}
+
+.marcador-nodo:has(.marcador.activo),
+.marcador-nodo:has(.marcador:hover),
+.marcador-nodo:has(.marcador.resaltado) {
+  z-index: 3;
+}
+
+/* Controles de MapLibre con la piel de la app. */
+.mapa-campo .maplibregl-ctrl-group {
+  background: var(--surface);
+  border-radius: var(--radio-s);
+  box-shadow: 0 2px 8px rgb(16 33 28 / 0.14);
+}
+
+.mapa-campo .maplibregl-ctrl-group button + button {
+  border-top-color: var(--border);
+}
+
+.mapa-campo .maplibregl-ctrl-scale {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  border-color: var(--text);
+  font: 600 0.6875rem var(--font);
+}
+
+.mapa-campo .maplibregl-ctrl-attrib {
+  font: 0.6875rem var(--font);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .mapa-campo .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+    filter: invert(1) hue-rotate(180deg);
   }
-}
-
-@media (max-width: 480px) {
-  .plano {
-    --k-simbolo: 2.4;
+  :root:not([data-theme='light']) .mapa-campo .maplibregl-ctrl-attrib {
+    color: var(--muted);
+    background: color-mix(in srgb, var(--surface) 85%, transparent);
   }
-  .plano-escala text,
-  .plano-norte text {
-    font-size: 30px;
+  :root:not([data-theme='light']) .mapa-campo .maplibregl-ctrl-attrib a {
+    color: var(--text);
   }
-}
-
-.plano-escala line {
-  stroke: var(--text);
-  stroke-width: 1.5;
-}
-
-.plano-escala text,
-.plano-norte text {
-  font: 600 15px var(--font);
-  fill: var(--muted);
-  text-anchor: middle;
-}
-
-.plano-norte path {
-  fill: var(--oro);
-}
-
-.leyenda-plano {
-  margin-top: 1rem;
-}
-
-.leyenda-plano svg {
-  overflow: visible;
 }
 
 .lista-puntos {
@@ -1589,6 +1729,65 @@ input:disabled {
   animation: deslizar 0.28s var(--ease) both;
 }
 
+.detalle-cabeza {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.detalle-cabeza h2:focus {
+  outline: none;
+}
+
+.btn-cerrar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  margin: -0.25rem -0.375rem 0 0;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.btn-cerrar:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.btn-cerrar svg,
+.volver svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.detalle-estado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+  font-weight: 650;
+}
+
+.detalle-estado .muted {
+  font-weight: 400;
+  font-size: var(--t-xs);
+}
+
+.detalle-seguimiento {
+  width: 100%;
+  margin: 1rem 0 1.25rem;
+  text-decoration: none;
+}
+
 .detalle-descripcion {
   margin-top: 0.75rem;
 }
@@ -1629,6 +1828,321 @@ input:disabled {
   .muestra {
     border: 1px solid CanvasText;
   }
+}
+
+/* ---- Seguimiento de un árbol o zona --------------------------------------------------------- */
+
+.volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0 0 0.75rem -0.25rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  font-weight: 650;
+  font-size: var(--t-s);
+  color: var(--accent);
+  text-decoration: none;
+  border-radius: 999px;
+}
+
+.volver:hover {
+  background: var(--tinte);
+}
+
+.seguimiento-encabezado p i {
+  font-style: italic;
+}
+
+.seguimiento-ficha {
+  border-left: 6px solid var(--verde);
+}
+
+.seguimiento-ficha.ficha-alerta {
+  border-left-color: var(--c-infestado);
+}
+
+.datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem 1.5rem;
+  margin: 0;
+}
+
+.datos dt {
+  font-size: var(--t-xs);
+  color: var(--muted);
+}
+
+.datos dd {
+  display: grid;
+  gap: 0.125rem;
+  margin: 0.25rem 0 0;
+  font-size: var(--t-m);
+  font-weight: 700;
+}
+
+.dato-nota {
+  font-size: var(--t-xs);
+  font-weight: 400;
+}
+
+.datos-esqueleto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 1rem;
+}
+
+.datos-esqueleto span {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.seguimiento-rejilla {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 64rem) {
+  .seguimiento-rejilla {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: start;
+  }
+}
+
+.seguimiento-rejilla > .panel {
+  margin-top: 0;
+}
+
+.panel-mapa .mapa-campo {
+  margin-top: 0.75rem;
+}
+
+/* Gráfica de confianza: rejilla recesiva, la tinta va en los puntos. */
+.grafica-confianza {
+  margin: 0.75rem 0 0;
+}
+
+.grafica-lienzo {
+  position: relative;
+}
+
+.grafica-lienzo svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.eje text,
+text.eje {
+  font: 500 12px var(--font);
+  fill: var(--muted);
+}
+
+.eje-rejilla {
+  stroke: var(--border);
+  stroke-dasharray: 2 4;
+}
+
+.eje-base {
+  stroke: var(--border-fuerte);
+}
+
+.guia {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.grafica-punto {
+  cursor: pointer;
+}
+
+.grafica-punto .forma {
+  stroke: var(--surface);
+  stroke-width: 2;
+  paint-order: stroke;
+  transition: r 0.15s;
+}
+
+.grafica-toque {
+  fill: transparent;
+}
+
+.grafica-punto.activo .grafica-toque {
+  fill: color-mix(in srgb, var(--oro) 22%, transparent);
+  stroke: var(--oro);
+  stroke-width: 2;
+}
+
+.grafica-tooltip {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  gap: 0.125rem;
+  min-width: 11rem;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--t-xs);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-fuerte);
+  border-radius: var(--radio-s);
+  box-shadow: 0 6px 20px rgb(16 33 28 / 0.18);
+  translate: -50% calc(-100% - 14px);
+  pointer-events: none;
+}
+
+.grafica-tooltip strong {
+  font-size: var(--t-s);
+}
+
+.evolucion {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evolucion li {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+}
+
+.evolucion-fecha {
+  font-size: var(--t-xs);
+  color: var(--muted);
+}
+
+@media (max-width: 30rem) {
+  .evolucion li {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
+.linea-cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* Línea de tiempo: una vertical continua, cada análisis cuelga de ella con su estado. */
+.linea-tiempo {
+  position: relative;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.linea-tiempo::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 2px;
+  background: var(--border);
+}
+
+.evento {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+}
+
+.evento-marca {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  margin-top: 0.25rem;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 3px solid var(--muted);
+}
+
+.evento-bien .evento-marca { border-color: var(--c-sano); }
+.evento-alerta .evento-marca { border-color: var(--c-infestado); }
+.evento-neutro .evento-marca { border-color: var(--c-neutro); }
+
+.evento-cuerpo {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem 0.75rem;
+  margin: -0.25rem -0.75rem 0 0;
+  border-radius: var(--radio-s);
+  transition: background-color 0.2s;
+}
+
+.evento.elegido .evento-cuerpo {
+  background: color-mix(in srgb, var(--oro) 16%, transparent);
+}
+
+.evento-cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  font-weight: 650;
+}
+
+.evento-fecha {
+  font-size: var(--t-xs);
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.evento-cambio {
+  margin: 0;
+  font-size: var(--t-xs);
+  font-weight: 650;
+  color: var(--text);
+}
+
+.evento-cambio::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 0.375rem 0.125rem 0;
+  border-radius: 50%;
+  background: var(--oro);
+}
+
+.evento-datos,
+.evento-obs {
+  margin: 0;
+  font-size: var(--t-s);
+}
+
+.evento-obs {
+  font-style: italic;
+}
+
+.evento-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.25rem;
+  font-size: var(--t-xs);
+}
+
+.evento-pie .estado {
+  margin-right: auto;
+}
+
+.hueso-control {
+  height: 2.25rem;
+  border-radius: 999px;
 }
 
 /* ---- Foto de evidencia ----------------------------------------------------------------------- */
@@ -1707,6 +2221,12 @@ input:disabled {
 @keyframes oscurecer {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes pulso {
+  0% { transform: scale(1.9); opacity: 0; }
+  60% { opacity: 1; }
+  100% { transform: none; opacity: 1; }
 }
 
 @keyframes latido {

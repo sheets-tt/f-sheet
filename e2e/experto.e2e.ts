@@ -1,5 +1,4 @@
-import { expect, test } from '@playwright/test'
-import { EXPERTO, entrar, interceptarS3, ir } from './ayuda'
+import { EXPERTO, entrar, interceptarS3, ir, expect, test } from './ayuda'
 
 // Recorrido de un experto de campo con los datos reales de db/demo (b-sheet):
 // 3 árboles (uno sin análisis), 2 zonas, 5 análisis e1..e5, 1 dispositivo.
@@ -106,21 +105,67 @@ test('análisis: e2 guarda la URL completa de S3 (formato de TT_BKN) y también 
 
 test('mapa: último resultado por punto e historial al elegir uno', async ({ page }) => {
   await ir(page, '#/mapa', 'Mapa')
-  const plano = page.getByRole('group', { name: 'Plano de campo: 3 árboles y 2 zonas' })
-  await expect(plano.getByRole('button', { name: 'Pino del cerro (Pinus hartwegii): Sin análisis' })).toBeVisible()
-  await expect(plano.getByRole('button', { name: 'Zona lago menor, radio 50 m: No determinado' })).toBeVisible()
+  const mapa = page.getByRole('group', { name: 'Mapa de campo: 3 árboles y 2 zonas' })
+  await expect(mapa.getByRole('button', { name: 'Pino del cerro (Pinus hartwegii): Sin análisis' })).toBeVisible()
+  await expect(mapa.getByRole('button', { name: 'Zona lago menor, radio 50 m: No determinado' })).toBeVisible()
 
   const historial = page.waitForResponse((r) => r.url().includes('/api/analisis?arbol=b0000000-0000-0000-0000-000000000001'))
-  await plano.getByRole('button', { name: 'Oyamel del lago (Abies religiosa): Infestado' }).click()
+  await mapa.getByRole('button', { name: 'Oyamel del lago (Abies religiosa): Infestado' }).click()
   await historial
+  await expect(page).toHaveURL(/#\/mapa\/a-b0000000-0000-0000-0000-000000000001$/)
   const detalle = page.getByRole('region', { name: 'Oyamel del lago' })
   await expect(detalle).toContainText('Junto al lago menor')
   await expect(detalle.getByRole('listitem')).toHaveCount(1)
   await expect(detalle.getByRole('listitem')).toContainText('Galerías visibles')
 
-  // El plano también se maneja con teclado.
-  await detalle.getByRole('button', { name: 'Ver todos los puntos' }).click()
-  await plano.getByRole('button', { name: 'Pino del cerro (Pinus hartwegii): Sin análisis' }).focus()
+  // El mapa también se maneja con teclado; Esc cierra el detalle.
+  await page.keyboard.press('Escape')
+  await mapa.getByRole('button', { name: 'Pino del cerro (Pinus hartwegii): Sin análisis' }).focus()
   await page.keyboard.press('Enter')
   await expect(page.getByRole('region', { name: 'Pino del cerro' })).toContainText('Todavía no tiene análisis.')
+})
+
+test('mapa: filtros y búsqueda', async ({ page }) => {
+  await ir(page, '#/mapa', 'Mapa')
+  // Marcadores: sus nombres dicen el estado ("…: Sano"); los demás botones son controles del mapa.
+  const marcas = page.getByRole('group', { name: /^Mapa de campo/ }).getByRole('button', { name: /: / })
+  await expect(marcas).toHaveCount(5)
+  await page.getByRole('group', { name: 'Mostrar por estado' }).getByRole('button', { name: /Infestado/ }).click()
+  await expect(marcas).toHaveCount(3)
+  await expect(page.getByText('3 de 5 con estos filtros')).toBeVisible()
+
+  await page.getByRole('searchbox', { name: 'Buscar árbol o zona' }).fill('pinus')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('region', { name: 'Pino del cerro' })).toBeVisible()
+})
+
+test('seguimiento: del mapa al historial completo de un árbol y de vuelta', async ({ page }) => {
+  const pedidas = await interceptarS3(page)
+  await ir(page, '#/mapa', 'Mapa')
+  await page.getByRole('group', { name: /^Mapa de campo/ }).getByRole('button', { name: /^Oyamel del lago \(/ }).click()
+  await page.getByRole('link', { name: 'Ver seguimiento del árbol' }).click()
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Oyamel del lago' })).toBeVisible()
+  await expect(page).toHaveURL(/#\/arbol\/b0000000-0000-0000-0000-000000000001$/)
+  await expect(page.getByRole('region', { name: 'Estado actual' })).toContainText('Infestado')
+  await expect(page.getByRole('img', { name: /^Confianza por análisis: 1 análisis/ })).toBeVisible()
+  const linea = page.getByRole('list', { name: 'Línea de tiempo' })
+  await expect(linea.getByRole('listitem')).toHaveCount(1)
+  await expect(linea).toContainText('Galerías visibles')
+  await expect(page.getByRole('group', { name: 'Ubicación de Oyamel del lago y 1 captura' })).toBeVisible()
+
+  await linea.getByRole('button', { name: 'Ver foto del 3 oct 2026, 09:10' }).click()
+  await expect(page.getByRole('dialog').getByRole('img')).toBeVisible()
+  expect(pedidas.map((u) => u.pathname)).toEqual(['/evidencias/e1.jpg'])
+  await page.getByRole('dialog').getByRole('button', { name: 'Cerrar' }).click()
+
+  await page.getByRole('link', { name: 'Volver al mapa' }).click()
+  await expect(page.getByRole('region', { name: 'Oyamel del lago' })).toBeVisible()
+})
+
+test('seguimiento de una zona: evolución del follaje', async ({ page }) => {
+  await ir(page, '#/zona/c0000000-0000-0000-0000-000000000001', 'Zona lago menor')
+  const evolucion = page.getByRole('region', { name: 'Evolución del follaje' })
+  await expect(evolucion.getByRole('img')).toHaveCount(2)
+  await expect(page.getByRole('list', { name: 'Línea de tiempo' })).toContainText('Cambió de sano a no determinado')
 })

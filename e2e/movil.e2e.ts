@@ -1,5 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
-import { ADMIN, entrar, interceptarS3, ir } from './ayuda'
+import type { Page } from '@playwright/test'
+import { ADMIN, entrar, interceptarS3, ir, expect, test } from './ayuda'
 
 // En móvil, si algo desborda a lo ancho, Chrome aleja el zoom de toda la página en vez de mostrar una
 // barra: innerWidth crece por encima del ancho del dispositivo. Pasó con la tabla de análisis.
@@ -35,13 +35,20 @@ test('la foto cabe en la pantalla', async ({ page }) => {
   await sinDesbordeHorizontal(page)
 })
 
-test('las marcas del plano se pueden ver y tocar', async ({ page }) => {
+test('las marcas del mapa se pueden ver y tocar', async ({ page }) => {
   await ir(page, '#/mapa', 'Mapa')
-  const punto = page.getByRole('button', { name: 'Oyamel del lago (Abies religiosa): Infestado' })
-  const marca = (await punto.locator('.punto-marca').boundingBox())!
-  const toque = (await punto.locator('.punto-toque').boundingBox())!
+  const punto = page.getByRole('group', { name: /^Mapa de campo/ }).getByRole('button', { name: 'Oyamel del lago (Abies religiosa): Infestado' })
+  const marca = (await punto.locator('.forma').boundingBox())!
+  const toque = (await punto.boundingBox())!
   expect(Math.min(marca.width, marca.height)).toBeGreaterThanOrEqual(8)
   expect(Math.min(toque.width, toque.height)).toBeGreaterThanOrEqual(24)
   await punto.tap()
-  await expect(page.getByRole('region', { name: 'Oyamel del lago' })).toBeVisible()
+  // El foco pasa al detalle, que en móvil queda debajo del mapa.
+  await expect(page.getByRole('region', { name: 'Oyamel del lago' })).toBeInViewport()
+})
+
+test('el seguimiento de un árbol cabe a lo ancho', async ({ page }) => {
+  await ir(page, '#/arbol/b0000000-0000-0000-0000-000000000001', 'Oyamel del lago')
+  await expect(page.getByRole('list', { name: 'Línea de tiempo' })).toBeVisible()
+  await sinDesbordeHorizontal(page)
 })

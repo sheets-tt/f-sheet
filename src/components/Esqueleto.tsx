@@ -71,24 +71,57 @@ export function EsqueletoTabla({ texto, filas = 5, columnas = 6 }: { texto: stri
 
 export function EsqueletoMapa() {
   return (
-    <div className="esqueleto mapa" aria-busy="true">
-      <div className="plano-esqueleto" aria-hidden="true">
-        {[
-          [22, 30], [48, 58], [70, 36], [35, 72], [80, 70],
-        ].map(([x, y], i) => (
-          <span key={i} className="hueso hueso-punto" style={{ left: `${x}%`, top: `${y}%` }} />
+    <div className="esqueleto" aria-busy="true">
+      <div className="mapa-herramientas" aria-hidden="true">
+        <Hueso className="hueso-control" ancho="min(18rem, 100%)" />
+        {[0, 1, 2, 3].map((i) => (
+          <Hueso key={i} className="hueso-control" ancho="7rem" />
         ))}
       </div>
-      <div className="panel" aria-hidden="true">
-        <Hueso className="hueso-linea" ancho="55%" />
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="esqueleto-item">
-            <Hueso className="hueso-linea" ancho={`${60 + ((i * 17) % 30)}%`} />
-            <Hueso className="hueso-linea hueso-tenue" ancho="45%" />
-          </div>
-        ))}
+      <div className="mapa">
+        <div className="plano-esqueleto" aria-hidden="true">
+          {[
+            [22, 30], [48, 58], [70, 36], [35, 72], [80, 70],
+          ].map(([x, y], i) => (
+            <span key={i} className="hueso hueso-punto" style={{ left: `${x}%`, top: `${y}%` }} />
+          ))}
+        </div>
+        <div className="panel" aria-hidden="true">
+          <Hueso className="hueso-linea" ancho="55%" />
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="esqueleto-item">
+              <Hueso className="hueso-linea" ancho={`${60 + ((i * 17) % 30)}%`} />
+              <Hueso className="hueso-linea hueso-tenue" ancho="45%" />
+            </div>
+          ))}
+        </div>
       </div>
       <Aviso texto="Cargando el mapa…" />
+    </div>
+  )
+}
+
+/** Seguimiento de un árbol o zona: ficha, mapa + gráfica y línea de tiempo. */
+export function EsqueletoSeguimiento() {
+  return (
+    <div className="esqueleto" aria-busy="true">
+      <Hueso className="hueso-titulo" ancho="min(20rem, 70%)" />
+      <Hueso className="hueso-linea hueso-tenue" ancho="10rem" />
+      <div className="panel" aria-hidden="true">
+        <div className="totales-esqueleto datos-esqueleto">
+          {[0, 1, 2, 3].map((i) => (
+            <span key={i}>
+              <Hueso className="hueso-linea hueso-tenue" ancho="6rem" />
+              <Hueso className="hueso-linea" ancho="8rem" />
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="seguimiento-rejilla" aria-hidden="true">
+        <div className="panel esqueleto-bloque" />
+        <div className="panel esqueleto-bloque" />
+      </div>
+      <Aviso texto="Cargando el seguimiento…" />
     </div>
   )
 }

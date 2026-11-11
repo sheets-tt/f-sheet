@@ -1,53 +1,47 @@
 import { describe, expect, it } from 'vitest'
-import { escalaGrafica, proyectar } from './geo'
+import { circulo, distanciaMetros, formatCoordenadas, limitesDe, type LngLat } from './geo'
 
-const LAGO = { lat: 19.421, lon: -99.1825 }
-const CALZADA = { lat: 19.422, lon: -99.184 }
+const LAGO: LngLat = [-99.1825, 19.421]
+const CALZADA: LngLat = [-99.184, 19.422]
 
-describe('proyectar', () => {
-  it('pone el norte arriba y el este a la derecha', () => {
-    const p = proyectar([LAGO, CALZADA], { ancho: 1000, alto: 600, margen: 50 })
-    const lago = p.punto(LAGO)
-    const calzada = p.punto(CALZADA)
-    expect(calzada.y).toBeLessThan(lago.y) // calzada está más al norte
-    expect(calzada.x).toBeLessThan(lago.x) // y más al oeste
-  })
-
-  it('conserva la proporción: un metro mide lo mismo en x que en y', () => {
-    const p = proyectar([LAGO, CALZADA], { ancho: 1000, alto: 600, margen: 50 })
-    const norte = p.punto({ lat: LAGO.lat + 100 / 110_574, lon: LAGO.lon })
-    const este = p.punto({ lat: LAGO.lat, lon: LAGO.lon + 100 / (111_320 * Math.cos((LAGO.lat * Math.PI) / 180)) })
-    const lago = p.punto(LAGO)
-    expect(lago.y - norte.y).toBeCloseTo(este.x - lago.x, 1)
-    expect(lago.y - norte.y).toBeCloseTo(p.metros(100), 1)
-  })
-
-  it('todo queda dentro del margen', () => {
-    const p = proyectar([LAGO, CALZADA], { ancho: 1000, alto: 600, margen: 50 })
-    for (const q of [p.punto(LAGO), p.punto(CALZADA)]) {
-      expect(q.x).toBeGreaterThanOrEqual(50 - 1e-9)
-      expect(q.x).toBeLessThanOrEqual(950 + 1e-9)
-      expect(q.y).toBeGreaterThanOrEqual(50 - 1e-9)
-      expect(q.y).toBeLessThanOrEqual(550 + 1e-9)
-    }
-  })
-
-  it('incluye el radio de las zonas en el encuadre', () => {
-    const p = proyectar([{ ...LAGO, radioMetros: 300 }], { ancho: 1000, alto: 600, margen: 50 })
-    expect(p.punto(LAGO).y - p.metros(300)).toBeGreaterThanOrEqual(50 - 1e-9)
-  })
-
-  it('un solo punto sin radio usa un encuadre mínimo y queda centrado', () => {
-    const p = proyectar([LAGO], { ancho: 1000, alto: 600, margen: 50 })
-    expect(p.punto(LAGO)).toEqual({ x: 500, y: 300 })
-    expect(Number.isFinite(p.metros(1))).toBe(true)
+describe('circulo', () => {
+  it('es un anillo cerrado con todos sus puntos al radio pedido', () => {
+    const anillo = circulo(LAGO, 50, 32)
+    expect(anillo).toHaveLength(33)
+    expect(anillo[0]).toEqual(anillo[32])
+    for (const p of anillo) expect(distanciaMetros(LAGO, p)).toBeCloseTo(50, 0)
   })
 })
 
-describe('escalaGrafica', () => {
-  it('elige una longitud redonda cercana a la quinta parte del ancho útil', () => {
-    expect(escalaGrafica(1, 900)).toEqual({ metros: 200, ancho: 200 })
-    expect(escalaGrafica(0.5, 900)).toEqual({ metros: 500, ancho: 250 })
-    expect(escalaGrafica(4, 900)).toEqual({ metros: 50, ancho: 200 })
+describe('limitesDe', () => {
+  it('sin puntos no hay encuadre', () => {
+    expect(limitesDe([])).toBeNull()
+  })
+
+  it('contiene todos los puntos y el radio completo de las zonas', () => {
+    const [[oeste, sur], [este, norte]] = limitesDe([
+      { lon: LAGO[0], lat: LAGO[1], radioMetros: 50 },
+      { lon: CALZADA[0], lat: CALZADA[1] },
+    ])!
+    expect(oeste).toBeLessThanOrEqual(CALZADA[0])
+    expect(norte).toBeGreaterThanOrEqual(CALZADA[1])
+    // El círculo del lago (50 m) entra completo por el este y por el sur.
+    expect(distanciaMetros(LAGO, [este, LAGO[1]])).toBeGreaterThanOrEqual(49.5)
+    expect(distanciaMetros(LAGO, [LAGO[0], sur])).toBeGreaterThanOrEqual(49.5)
+  })
+
+  it('un solo punto queda centrado en un encuadre mínimo de 120 m', () => {
+    const [[oeste, sur], [este, norte]] = limitesDe([{ lon: LAGO[0], lat: LAGO[1] }])!
+    expect((oeste + este) / 2).toBeCloseTo(LAGO[0], 9)
+    expect((sur + norte) / 2).toBeCloseTo(LAGO[1], 9)
+    expect(distanciaMetros([oeste, LAGO[1]], [este, LAGO[1]])).toBeCloseTo(120, 0)
+    expect(distanciaMetros([LAGO[0], sur], [LAGO[0], norte])).toBeCloseTo(120, 0)
+  })
+})
+
+describe('formatCoordenadas', () => {
+  it('usa hemisferios en vez de signos', () => {
+    expect(formatCoordenadas(19.4205, -99.1818)).toBe('19.42050° N, 99.18180° O')
+    expect(formatCoordenadas(-33.5, 151.2)).toBe('33.50000° S, 151.20000° E')
   })
 })

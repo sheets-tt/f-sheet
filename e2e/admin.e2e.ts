@@ -1,5 +1,4 @@
-import { expect, test } from '@playwright/test'
-import { ADMIN, entrar } from './ayuda'
+import { ADMIN, entrar, expect, test } from './ayuda'
 
 test('un administrador ve cuentas y dispositivos sin datos sensibles', async ({ page }) => {
   await entrar(page, ADMIN)

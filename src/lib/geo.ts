@@ -1,78 +1,76 @@
-// Proyección local equirectangular para el plano de campo: a la escala de un parque (cientos de
-// metros) el error frente a una proyección real es despreciable y no hace falta ninguna librería.
+// Geometría pequeña para el mapa: a la escala de un parque (cientos de metros) basta una
+// aproximación local; no hace falta una librería de geodesia.
 
-export interface Coordenada {
-  lat: number
+export type LngLat = [lon: number, lat: number]
+export type Limites = [suroeste: LngLat, noreste: LngLat]
+
+const METROS_POR_GRADO_LAT = 110_574
+const METROS_POR_GRADO_LON_ECUADOR = 111_320
+
+function metrosPorGradoLon(lat: number): number {
+  return METROS_POR_GRADO_LON_ECUADOR * Math.cos((lat * Math.PI) / 180)
+}
+
+/** Polígono (anillo cerrado) que aproxima un círculo de `radio` metros alrededor de `centro`. */
+export function circulo(centro: LngLat, radio: number, pasos = 64): LngLat[] {
+  const [lon, lat] = centro
+  const dLat = radio / METROS_POR_GRADO_LAT
+  const dLon = radio / metrosPorGradoLon(lat)
+  const anillo: LngLat[] = []
+  for (let i = 0; i < pasos; i++) {
+    const t = (i / pasos) * 2 * Math.PI
+    anillo.push([lon + dLon * Math.cos(t), lat + dLat * Math.sin(t)])
+  }
+  anillo.push(anillo[0])
+  return anillo
+}
+
+export interface Ubicable {
   lon: number
+  lat: number
   /** Zonas de follaje: el círculo entra completo en el encuadre. */
   radioMetros?: number | null
 }
 
-export interface Lienzo {
-  ancho: number
-  alto: number
-  margen: number
-}
-
-export interface Proyeccion {
-  punto(c: Coordenada): { x: number; y: number }
-  /** Longitud en unidades del lienzo de una distancia en metros. */
-  metros(m: number): number
-}
-
-const METROS_POR_GRADO_LAT = 110_574
-const METROS_POR_GRADO_LON_ECUADOR = 111_320
 /** Encuadre mínimo (m) cuando hay un solo punto o todos coinciden. */
-const ENCUADRE_MINIMO = 200
+const ENCUADRE_MINIMO = 120
 
-export function proyectar(puntos: Coordenada[], lienzo: Lienzo): Proyeccion {
-  const latRef = puntos.length ? puntos.reduce((s, p) => s + p.lat, 0) / puntos.length : 0
-  const lonRef = puntos.length ? puntos.reduce((s, p) => s + p.lon, 0) / puntos.length : 0
-  const mLon = METROS_POR_GRADO_LON_ECUADOR * Math.cos((latRef * Math.PI) / 180)
-
-  // Metros respecto al centroide: x hacia el este, y hacia el norte.
-  const aMetros = (c: Coordenada) => ({ x: (c.lon - lonRef) * mLon, y: (c.lat - latRef) * METROS_POR_GRADO_LAT })
-
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+/** Rectángulo que contiene todos los puntos (y sus radios), nunca menor que ENCUADRE_MINIMO. */
+export function limitesDe(puntos: Ubicable[]): Limites | null {
+  if (!puntos.length) return null
+  let oeste = Infinity, este = -Infinity, sur = Infinity, norte = -Infinity
   for (const p of puntos) {
-    const m = aMetros(p)
     const r = p.radioMetros ?? 0
-    minX = Math.min(minX, m.x - r)
-    maxX = Math.max(maxX, m.x + r)
-    minY = Math.min(minY, m.y - r)
-    maxY = Math.max(maxY, m.y + r)
+    const dLat = r / METROS_POR_GRADO_LAT
+    const dLon = r / metrosPorGradoLon(p.lat)
+    oeste = Math.min(oeste, p.lon - dLon)
+    este = Math.max(este, p.lon + dLon)
+    sur = Math.min(sur, p.lat - dLat)
+    norte = Math.max(norte, p.lat + dLat)
   }
-  if (!puntos.length) minX = maxX = minY = maxY = 0
-
-  // Ensancha el encuadre alrededor de su centro si es demasiado pequeño.
-  const cx = (minX + maxX) / 2
-  const cy = (minY + maxY) / 2
-  const spanX = Math.max(maxX - minX, ENCUADRE_MINIMO)
-  const spanY = Math.max(maxY - minY, ENCUADRE_MINIMO)
-
-  const utilX = lienzo.ancho - 2 * lienzo.margen
-  const utilY = lienzo.alto - 2 * lienzo.margen
-  const escala = Math.min(utilX / spanX, utilY / spanY)
-
-  return {
-    punto(c) {
-      const m = aMetros(c)
-      return {
-        x: lienzo.ancho / 2 + (m.x - cx) * escala,
-        y: lienzo.alto / 2 - (m.y - cy) * escala, // el norte arriba
-      }
-    },
-    metros: (m) => m * escala,
-  }
+  const cLat = (sur + norte) / 2
+  const cLon = (oeste + este) / 2
+  const medioLat = Math.max(norte - sur, ENCUADRE_MINIMO / METROS_POR_GRADO_LAT) / 2
+  const medioLon = Math.max(este - oeste, ENCUADRE_MINIMO / metrosPorGradoLon(cLat)) / 2
+  return [
+    [cLon - medioLon, cLat - medioLat],
+    [cLon + medioLon, cLat + medioLat],
+  ]
 }
 
-const LONGITUDES_REDONDAS = [5, 10, 20, 50, 100, 200, 500, 1_000, 2_000, 5_000]
+/** Distancia aproximada en metros entre dos puntos cercanos. */
+export function distanciaMetros(a: LngLat, b: LngLat): number {
+  const lat = (a[1] + b[1]) / 2
+  const dx = (b[0] - a[0]) * metrosPorGradoLon(lat)
+  const dy = (b[1] - a[1]) * METROS_POR_GRADO_LAT
+  return Math.hypot(dx, dy)
+}
 
-/** Barra de escala: la longitud redonda más cercana a 1/5 del ancho útil. */
-export function escalaGrafica(pxPorMetro: number, anchoUtil: number): { metros: number; ancho: number } {
-  const objetivo = anchoUtil / 5 / pxPorMetro
-  const metros = LONGITUDES_REDONDAS.reduce((mejor, m) =>
-    Math.abs(m - objetivo) < Math.abs(mejor - objetivo) ? m : mejor,
-  )
-  return { metros, ancho: metros * pxPorMetro }
+const coordenada = new Intl.NumberFormat('es-MX', { minimumFractionDigits: 5, maximumFractionDigits: 5 })
+
+/** "19.42050° N, 99.18180° O". */
+export function formatCoordenadas(lat: number, lon: number): string {
+  const ns = lat >= 0 ? 'N' : 'S'
+  const eo = lon >= 0 ? 'E' : 'O'
+  return `${coordenada.format(Math.abs(lat))}° ${ns}, ${coordenada.format(Math.abs(lon))}° ${eo}`
 }
