@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { getEvidencia, type Analisis } from '../lib/api'
 import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha } from '../lib/format'
 import { useCarga } from '../lib/useCarga'
-import { Cargando, ErrorCarga } from './EstadoCarga'
+import { ErrorCarga } from './EstadoCarga'
 
 interface Props {
   analisis: Analisis
@@ -18,6 +18,7 @@ export default function FotoEvidencia({ analisis, onCerrar }: Props) {
   const tituloId = useId()
   const evidencia = useCarga((signal) => getEvidencia(analisis.id, signal), [analisis.id])
   const [rota, setRota] = useState<string | null>(null)
+  const [cargada, setCargada] = useState<string | null>(null)
 
   useEffect(() => {
     const d = dialogo.current
@@ -46,11 +47,17 @@ export default function FotoEvidencia({ analisis, onCerrar }: Props) {
         </button>
       </header>
 
-      {evidencia.estado === 'cargando' && <Cargando texto="Cargando la foto…" lineas={1} />}
+      {evidencia.estado === 'cargando' && (
+        <div className="foto-esqueleto" aria-busy="true">
+          <span className="hueso" aria-hidden="true" />
+          <p className="visually-hidden" role="status">Cargando la foto…</p>
+        </div>
+      )}
       {evidencia.estado === 'error' && <ErrorCarga mensaje={evidencia.error} onReintentar={evidencia.reintentar} />}
       {url && !fallo && (
         <img
-          className="foto-imagen"
+          className={`foto-imagen${cargada === url ? ' foto-lista' : ''}`}
+          onLoad={() => setCargada(url)}
           src={url}
           alt={`Foto de ${tipo.toLowerCase()} capturada el ${fecha}. Resultado: ${ETIQUETA_RESULTADO[analisis.resultadoClasificacion]}.`}
           onError={() => setRota(url)}
@@ -63,5 +70,14 @@ export default function FotoEvidencia({ analisis, onCerrar }: Props) {
         />
       )}
     </dialog>
+  )
+}
+
+/** Ícono de cámara para los botones "Ver foto" (decorativo). */
+export function IconoFoto() {
+  return (
+    <svg className="icono" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+      <path d="M4 8h3l2-3h6l2 3h3v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
+    </svg>
   )
 }

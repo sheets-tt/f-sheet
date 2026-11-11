@@ -7,3 +7,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// Hojas de fuentes self-hosted (solo CSS, sin tipos).
+declare module '@fontsource-variable/*'

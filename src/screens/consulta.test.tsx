@@ -290,3 +290,22 @@ describe('administración', () => {
     expect(sessionStorage.getItem('sheets-tt.session')).not.toBeNull()
   })
 })
+
+describe('carga', () => {
+  it.each([
+    ['#/', 'Cargando el resumen…'],
+    ['#/mapa', 'Cargando el mapa…'],
+    ['#/analisis', 'Cargando análisis…'],
+  ])('%s muestra un esqueleto con su forma y lo anuncia', async (hash, aviso) => {
+    conSesion()
+    fetchMock.mockImplementation(() => new Promise<Response>(() => {}))
+    abrir(hash)
+    const estado = await screen.findByRole('status')
+    expect(estado).toHaveTextContent(aviso)
+    // El esqueleto es decorativo y la región queda marcada como ocupada.
+    expect(estado.closest('[aria-busy="true"]')).toBeInTheDocument()
+    const huesos = [...estado.closest('[aria-busy="true"]')!.querySelectorAll('.hueso')]
+    expect(huesos.length).toBeGreaterThan(0)
+    for (const h of huesos) expect(h.closest('[aria-hidden="true"]')).not.toBeNull()
+  })
+})

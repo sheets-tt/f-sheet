@@ -2,11 +2,11 @@
 # Publica dist/ en S3 y invalida index.html en CloudFront.
 #
 # Uso:
-#   S3_BUCKET=mi-bucket CLOUDFRONT_DISTRIBUTION_ID=E123ABC npm run deploy
+#   S3_BUCKET=mi-bucket CLOUDFRONT_DISTRIBUTION_ID=E123ABC pnpm run deploy
 #
 # Variables opcionales:
 #   DRY_RUN=1      muestra lo que haría (aws s3 sync --dryrun) y no invalida.
-#   SKIP_BUILD=1   no ejecuta `npm run build` (usa el dist/ existente).
+#   SKIP_BUILD=1   no ejecuta `pnpm build` (usa el dist/ existente).
 #   PRUNE=1        borra del bucket assets antiguos (por defecto se conservan para que
 #                  los clientes con un index.html anterior en memoria sigan funcionando).
 #   AWS_PROFILE / AWS_REGION  los de la CLI de AWS.
@@ -22,7 +22,7 @@ DELETE=""
 [ "${PRUNE:-0}" = "1" ] && DELETE="--delete"
 
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
-  npm run build
+  pnpm build
 fi
 [ -f "$DIST_DIR/index.html" ] || { echo "No existe $DIST_DIR/index.html" >&2; exit 1; }
 

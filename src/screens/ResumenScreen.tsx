@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import BarraSegmentada from '../components/BarraSegmentada'
-import { Cargando, ErrorCarga } from '../components/EstadoCarga'
+import { ErrorCarga } from '../components/EstadoCarga'
+import { EsqueletoResumen } from '../components/Esqueleto'
+import Galeria from '../components/Galeria'
 import Simbolo, { Estado, TONO_SINCRONIZACION } from '../components/Simbolo'
 import { getEstadisticas, type Estadisticas } from '../lib/api'
 import { ETIQUETA_RESULTADO, ETIQUETA_SINCRONIZACION, formatFecha } from '../lib/format'
@@ -36,7 +38,7 @@ export default function ResumenScreen() {
         )}
       </header>
 
-      {carga.estado === 'cargando' && <Cargando texto="Cargando el resumen…" />}
+      {carga.estado === 'cargando' && <EsqueletoResumen />}
       {carga.estado === 'error' && <ErrorCarga mensaje={carga.error} onReintentar={carga.reintentar} />}
       {carga.datos && <Contenido e={carga.datos} />}
     </div>
@@ -49,25 +51,27 @@ function Contenido({ e }: { e: Estadisticas }) {
 
   return (
     <>
-      <p className={`foco${hayFocos ? ' foco-alerta' : ''}`}>
-        <Simbolo tono={hayFocos ? 'alerta' : 'bien'} />
-        <span>{fraseInfestacion(t.arbolesConInfestacion, t.zonasConInfestacion)}</span>
+      <section className={`hero${hayFocos ? ' hero-alerta' : ''}`} aria-label="Estado del bosque">
+        <Galeria className="hero-galeria" ramas={12} semilla={11} />
+        <p className="foco">
+          <Simbolo tono={hayFocos ? 'alerta' : 'bien'} />
+          <span>{fraseInfestacion(t.arbolesConInfestacion, t.zonasConInfestacion)}</span>
+        </p>
         {hayFocos && (
-          <a className="foco-enlace" href={hrefDe('mapa')}>
+          <a className="btn btn-oro foco-enlace" href={hrefDe('mapa')}>
             Ver en el mapa
           </a>
         )}
-      </p>
-
-      <ul className="totales" aria-label="Totales">
-        <li><span>Árboles</span><strong>{t.arboles}</strong></li>
-        <li><span>Zonas de follaje</span><strong>{t.zonas}</strong></li>
-        <li><span>Análisis</span><strong>{t.analisis}</strong></li>
-        <li><span>Dispositivos</span><strong>{t.dispositivos}</strong></li>
-      </ul>
+        <ul className="totales" aria-label="Totales">
+          <li><span>Árboles</span><strong>{t.arboles}</strong></li>
+          <li><span>Zonas de follaje</span><strong>{t.zonas}</strong></li>
+          <li><span>Análisis</span><strong>{t.analisis}</strong></li>
+          <li><span>Dispositivos</span><strong>{t.dispositivos}</strong></li>
+        </ul>
+      </section>
 
       <div className="rejilla-resumen">
-        <section className="bloque" aria-labelledby="titulo-resultados">
+        <section className="panel" aria-labelledby="titulo-resultados">
           <h2 id="titulo-resultados">Resultado de los análisis</h2>
           <p className="muted bloque-nota">
             {e.analisisPorTipo.corteza} de corteza y {e.analisisPorTipo.follaje} de follaje
@@ -83,7 +87,7 @@ function Contenido({ e }: { e: Estadisticas }) {
           />
         </section>
 
-        <section className="bloque" aria-labelledby="titulo-cromatico">
+        <section className="panel" aria-labelledby="titulo-cromatico">
           <h2 id="titulo-cromatico">Cromático promedio del follaje</h2>
           <p className="muted bloque-nota">Porcentaje del dosel en cada condición</p>
           {e.cromaticoPromedio ? (
@@ -97,7 +101,7 @@ function Contenido({ e }: { e: Estadisticas }) {
           )}
         </section>
 
-        <section className="bloque" aria-labelledby="titulo-sincronizacion">
+        <section className="panel" aria-labelledby="titulo-sincronizacion">
           <h2 id="titulo-sincronizacion">Sincronización desde el móvil</h2>
           <BarraSegmentada
             titulo="Sincronización desde el móvil"

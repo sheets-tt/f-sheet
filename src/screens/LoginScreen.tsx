@@ -45,7 +45,7 @@ export default function LoginScreen({ onLoggedIn, notice }: Props) {
   const invalid = error !== null
 
   return (
-    <section className="card" aria-labelledby="login-title">
+    <section className="card acceso-card" aria-labelledby="login-title">
       <h1 id="login-title">Iniciar sesión</h1>
       <p className="muted lead">Accede con tu cuenta para continuar.</p>
 

@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "pnpm@12.16.1",
   "engines": {
     "node": ">=20.19"
   },
@@ -15,9 +16,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "deploy": "sh scripts/deploy.sh",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:ver": "E2E_LENTO=${E2E_LENTO:-800} playwright test --headed --workers=1"
   },
   "dependencies": {
+    "@fontsource-variable/schibsted-grotesk": "^5.2.8",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import Encabezado from './components/Encabezado'
+import { EsqueletoPagina } from './components/Esqueleto'
+import Galeria, { Marca } from './components/Galeria'
 import { logout, setUnauthorizedHandler } from './lib/api'
 import { esAdministrador, loadSession, type Session } from './lib/session'
 import { navigate, useRoute, type Route } from './lib/router'
@@ -52,26 +54,27 @@ export default function App() {
     handleSignedOut('Has cerrado sesión.')
   }, [handleSignedOut])
 
-  const fallback = (
-    <div className="card" aria-busy="true">
-      <p className="muted">Cargando…</p>
-    </div>
-  )
+  const fallback = <EsqueletoPagina />
 
   if (!session) {
     return (
-      <div className="shell">
+      <div className="acceso">
         <a className="skip-link" href="#main">Saltar al contenido</a>
-        <header className="topbar">
-          <span className="brand" aria-label="Sheets TT">
-            <svg aria-hidden="true" width="22" height="22" viewBox="0 0 32 32">
-              <rect width="32" height="32" rx="7" fill="currentColor" />
-              <path d="M9 10h14M9 16h14M9 22h9" stroke="var(--bg)" strokeWidth="2.5" strokeLinecap="round" />
-            </svg>
+        {/* El único momento animado sin que nadie lo pida: la galería se excava al llegar. */}
+        <aside className="acceso-arte" aria-label="Sheets TT">
+          <Galeria animada className="acceso-galeria" />
+          <span className="brand brand-claro">
+            <Marca />
             Sheets&nbsp;TT
           </span>
-        </header>
-        <main id="main" className="main">
+          <div className="acceso-texto">
+            <p className="acceso-titular">Sanidad del bosque, árbol por árbol.</p>
+            <p className="acceso-bajada">
+              Los análisis de corteza y follaje que el equipo captura en campo con la app móvil, en un solo lugar.
+            </p>
+          </div>
+        </aside>
+        <main id="main" className="acceso-main">
           <Suspense fallback={fallback}>
             {route === target && <LoginScreen onLoggedIn={handleLoggedIn} notice={notice} />}
           </Suspense>

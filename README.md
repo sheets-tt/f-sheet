@@ -19,6 +19,20 @@ Está pensada para servirse desde **S3 + CloudFront**. El contrato de API está 
 Las fotos se muestran con la URL firmada (5 min) que entrega b-sheet. La CSP de `infra/cloudfront.yaml`
 permite `img-src` solo para ese bucket (parámetros `EvidenciasBucket` y `EvidenciasRegion`).
 
+### Identidad visual
+
+- **Paleta de marca**: verde `#00704A`, blanco `#FFFFFF`, verde casa `#1E3932`, menta `#D4E9E2`
+  y oro `#CBA258` (tokens en `src/styles.css`). En modo oscuro la superficie es el verde casa.
+  El oro solo va sobre verde (sobre blanco no llega a 3:1); los colores de estado no salen de esta paleta.
+- **Motivo**: las galerías que el descortezador excava bajo la corteza (`components/Galeria.tsx`).
+  Se "excava" una vez en el login; en el resumen aparece quieto detrás del estado del bosque.
+- **Tipografía**: Schibsted Grotesk variable, servida desde el propio sitio (`@fontsource-variable`),
+  así la CSP sigue en `font-src 'self'`.
+- **Carga**: esqueletos con la forma de cada pantalla (`components/Esqueleto.tsx`), decorativos
+  (`aria-hidden`) y con su aviso en `role="status"`.
+- **Movimiento**: solo en respuesta a lo que hace la persona (cambio de sección, elegir un punto,
+  abrir una foto) más la galería del login. Con `prefers-reduced-motion` todo queda en su estado final.
+
 ### Colores de estado
 
 Validados con el script de la skill de dataviz (CVD protan/deutan/tritan, contraste y luminosidad) en
@@ -36,16 +50,19 @@ modo claro y oscuro. Ningún estado depende solo del color: cada uno lleva **for
 Las fechas se muestran en hora del centro de México (UTC−6, sin horario de verano) y los filtros por
 día cubren el día completo en esa hora.
 
+> **¿Quieres correrlo en tu máquina?** Sigue la guía [docs/correr-en-local.md](docs/correr-en-local.md).
+
 ## Requisitos
 
-- Node.js ≥ 20.19 (probado con Node 25 / npm 11)
+- Node.js ≥ 20.19 (probado con Node 25)
+- pnpm 12 (`npm install -g pnpm@12.16.1`; la versión exacta está en `packageManager` de `package.json`)
 - Backend en `http://localhost:8080` para desarrollo (ver repo `b-sheet`)
 
 ## Desarrollo
 
 ```bash
-npm ci
-npm run dev          # http://localhost:5173
+pnpm install --frozen-lockfile
+pnpm dev                         # http://localhost:5173
 ```
 
 Vite hace de proxy: `/api/*` → `http://localhost:8080/*` (quita el prefijo `/api`, igual que
@@ -56,7 +73,7 @@ CloudFront en producción). Así no hace falta CORS en local. Usuario demo: `dem
 | Variable            | Default                 | Uso |
 |---------------------|-------------------------|-----|
 | `VITE_API_BASE_URL` | `/api`                  | Base de la API (se incrusta en el build). Con `/api` las llamadas van al mismo origen y CloudFront las enruta a API Gateway. Puede ser una URL absoluta (`https://xxx.execute-api…`), pero entonces el backend debe permitir el origen en `CORS_ALLOWED_ORIGINS`. |
-| `DEV_API_TARGET`    | `http://localhost:8080` | Solo `npm run dev`: destino del proxy de `/api`. |
+| `DEV_API_TARGET`    | `http://localhost:8080` | Solo `pnpm dev`: destino del proxy de `/api`. |
 | `BUILD_SOURCEMAP`   | _(vacío)_               | `hidden` genera `.map` sin referenciarlos desde el JS (para subir a un sistema de errores, **no** al bucket). |
 
 Copia `.env.example` a `.env.local` si necesitas cambiarlas.
@@ -65,17 +82,17 @@ Copia `.env.example` a `.env.local` si necesitas cambiarlas.
 
 | Comando             | Qué hace |
 |---------------------|----------|
-| `npm run dev`       | Servidor de desarrollo con proxy `/api`. |
-| `npm run build`     | `tsc -b` (type-check) + build de producción en `dist/`. |
-| `npm run preview`   | Sirve `dist/` localmente. |
-| `npm run lint`      | ESLint (0 warnings permitidos). |
-| `npm test`          | Vitest + Testing Library (fetch mockeado). |
-| `npm run test:e2e`  | E2E con Playwright contra b-sheet y Postgres reales (ver abajo). |
-| `npm run deploy`    | Build + subida a S3 + invalidación de CloudFront (ver abajo). |
+| `pnpm dev`          | Servidor de desarrollo con proxy `/api`. |
+| `pnpm build`        | `tsc -b` (type-check) + build de producción en `dist/`. |
+| `pnpm preview`      | Sirve `dist/` localmente. |
+| `pnpm lint`         | ESLint (0 warnings permitidos). |
+| `pnpm test`         | Vitest + Testing Library (fetch mockeado). |
+| `pnpm test:e2e`     | E2E con Playwright contra b-sheet y Postgres reales (ver abajo). |
+| `pnpm run deploy`   | Build + subida a S3 + invalidación de CloudFront (ver abajo). Lleva `run` porque `pnpm deploy` es un comando de pnpm. |
 
 ## Pruebas de punta a punta (E2E)
 
-`npm run test:e2e` levanta todo y lo recorre como una persona en Chromium:
+`pnpm test:e2e` levanta todo y lo recorre como una persona en Chromium:
 
 ```
 Chromium ──► vite preview (build de producción, proxy /api como CloudFront) :5174
@@ -83,7 +100,7 @@ Chromium ──► vite preview (build de producción, proxy /api como CloudFron
 ```
 
 - **Requisitos:** Docker (el Postgres de `b-sheet/docker-compose.yml`), JDK 25 y el repo `b-sheet` al
-  lado de este (o `B_SHEET_DIR=/ruta/a/b-sheet`). La primera vez: `npx playwright install chromium`.
+  lado de este (o `B_SHEET_DIR=/ruta/a/b-sheet`). La primera vez: `pnpm exec playwright install chromium`.
 - **Datos:** Flyway carga la réplica del esquema de TT_BKN y `db/demo` (3 árboles, 2 zonas, 5 análisis,
   cuentas `demo@`, `admin@` y `baja@sheets.tt` con `Demo1234!`).
 - **S3 sin AWS:** b-sheet firma las fotos con credenciales ficticias y el navegador intercepta la
@@ -91,7 +108,7 @@ Chromium ──► vite preview (build de producción, proxy /api como CloudFron
 - **Proyectos:** `escritorio` (sesión, recorridos de experto y administrador, 403 del backend) y
   `movil` (Pixel 7: nada desborda a lo ancho, la foto cabe, las marcas del plano miden ≥ 8 px y su área
   de toque ≥ 24 px).
-- Fallos: captura y traza en `test-results/`; reporte con `npx playwright show-report`.
+- Fallos: captura y traza en `test-results/`; reporte con `pnpm exec playwright show-report`.
 
 No cubre la CSP de CloudFront (vite preview no la envía) ni `StrictMode` (solo existe en desarrollo;
 lo cubre `FotoEvidencia.test.tsx`).
@@ -110,11 +127,11 @@ lo cubre `FotoEvidencia.test.tsx`).
 - **Accesibilidad**: labels explícitos, foco gestionado (campo usuario al entrar, error tras
   fallo, encabezado en bienvenida), errores con `role="alert"` dentro de una región `aria-live`,
   `aria-invalid`/`aria-busy`, enlace "saltar al contenido", `prefers-reduced-motion`, modo oscuro.
-- **Peso**: sin librerías de UI ni router; fuentes del sistema; CSS propio (~1,8 kB gzip).
+- **Peso**: sin librerías de UI ni router; una fuente variable (~68 kB woff2, latin + latin-ext); CSS propio (~6,5 kB gzip).
 
 ## Build y caché
 
-`npm run build` produce:
+`pnpm build` produce:
 
 ```
 dist/index.html                   (no-cache)
@@ -159,7 +176,7 @@ aws cloudformation describe-stacks --stack-name sheets-tt-web \
 ## Despliegue
 
 ```bash
-S3_BUCKET=<BucketName> CLOUDFRONT_DISTRIBUTION_ID=<DistributionId> npm run deploy
+S3_BUCKET=<BucketName> CLOUDFRONT_DISTRIBUTION_ID=<DistributionId> pnpm run deploy
 # DRY_RUN=1   → solo muestra lo que haría
 # SKIP_BUILD=1 → reutiliza dist/
 # PRUNE=1     → borra assets antiguos del bucket
