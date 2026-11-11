@@ -167,18 +167,18 @@ describe('mapa', () => {
     conSesion()
     mockBackend(fetchMock)
     abrir('#/mapa')
-    await screen.findByRole('group', { name: /Plano de campo/ })
+    await screen.findByRole('group', { name: /Mapa de campo/ })
     expect(llamadasA(fetchMock, '/arboles')).toHaveLength(1)
     expect(llamadasA(fetchMock, '/zonas')).toHaveLength(1)
     expect(llamadasA(fetchMock, '/analisis')).toEqual([])
   })
 
-  it('cada árbol y zona del plano dice su último resultado', async () => {
+  it('cada árbol y zona del mapa dice su último resultado', async () => {
     conSesion()
     mockBackend(fetchMock)
     abrir('#/mapa')
-    const plano = await screen.findByRole('group', { name: 'Plano de campo: 3 árboles y 2 zonas' })
-    expect(within(plano).getByRole('button', { name: 'Oyamel del lago (Abies religiosa): Infestado' })).toBeInTheDocument()
+    const plano = await screen.findByRole('group', { name: 'Mapa de campo: 3 árboles y 2 zonas' })
+    expect(await within(plano).findByRole('button', { name: 'Oyamel del lago (Abies religiosa): Infestado' })).toBeInTheDocument()
     expect(within(plano).getByRole('button', { name: 'Ahuehuete de la calzada (Taxodium mucronatum): Sano' })).toBeInTheDocument()
     expect(within(plano).getByRole('button', { name: 'Pino del cerro (Pinus hartwegii): Sin análisis' })).toBeInTheDocument()
     expect(within(plano).getByRole('button', { name: 'Zona lago menor, radio 50 m: No determinado' })).toBeInTheDocument()
@@ -213,7 +213,7 @@ describe('mapa', () => {
     expect(llamadasA(fetchMock, '/analisis')).toEqual([])
   })
 
-  it('la lista de puntos es la alternativa accesible al plano', async () => {
+  it('la lista de puntos es la alternativa accesible al mapa', async () => {
     conSesion()
     mockBackend(fetchMock)
     abrir('#/mapa')

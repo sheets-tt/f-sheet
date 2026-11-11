@@ -99,6 +99,9 @@ Todas usan la contraseña `Demo1234!`.
 existen en el bucket real de S3, así que verás el mensaje de error en lugar de la foto. En las
 pruebas E2E sí aparecen, porque el navegador intercepta la descarga y responde con una imagen de prueba.
 
+**El mapa base necesita internet.** Las calles y áreas verdes vienen de OpenFreeMap. Sin conexión,
+el mapa se ve con fondo liso, pero los árboles, las zonas y los filtros funcionan igual.
+
 ### Apagar todo
 
 - Backend y frontend: `Ctrl+C` en cada terminal.
@@ -142,7 +145,7 @@ Si dejaste corriendo la Opción 1, no estorba: usa otros puertos.
    terminal se ve quieta.
 6. **Mira las pruebas.** Se abre una ventana de Chromium que escribe, hace clic y navega sola, con
    800 ms de pausa por acción. Al terminar cada prueba la ventana se cierra y se abre la siguiente.
-7. **Lee el resultado** en la terminal (`21 passed`). Si algo falló, abre el reporte con capturas y
+7. **Lee el resultado** en la terminal (`25 passed`). Si algo falló, abre el reporte con capturas y
    trazas:
    ```bash
    pnpm exec playwright show-report
@@ -155,13 +158,20 @@ encendida; apágala con `cd tt/b-sheet && docker compose stop db` si ya no la us
 
 | Comando | Qué hace |
 |---|---|
-| `pnpm test:e2e` | Corre las 21 pruebas sin ventana, en paralelo (~25 s) |
+| `pnpm test:e2e` | Corre las 25 pruebas sin ventana, en paralelo (~45 s) |
 | `pnpm test:e2e:ver` | Una sola ventana de Chromium, pruebas una tras otra, 800 ms de pausa por acción |
 | `E2E_LENTO=1500 pnpm test:e2e:ver` | Igual, pero más lento (el número son milisegundos por acción) |
 | `pnpm test:e2e:ver -g "mapa"` | Solo las pruebas cuyo nombre contiene "mapa" |
+| `pnpm test:e2e:ver -g "seguimiento"` | Solo el recorrido del mapa al historial de un árbol o zona |
+| `pnpm test:e2e:grabar-mapa` | Descarga y guarda en `e2e/mapa-base/` las partes del mapa base que falten (ver abajo) |
 | `pnpm test:e2e:ver --project=escritorio` | Solo escritorio, sin las pruebas de móvil |
 | `pnpm test:e2e --ui` | Interfaz de Playwright: eliges una prueba y avanzas o retrocedes paso a paso |
 | `pnpm exec playwright show-report` | Abre el reporte HTML de la última corrida |
+
+El mapa se ve completo (calles, lago, áreas verdes) aunque no tengas internet: las pruebas usan la
+copia guardada en `e2e/mapa-base/`. Si algún día una parte del mapa sale con fondo liso (por ejemplo,
+porque cambiaron las coordenadas de los datos de ejemplo), corre `pnpm test:e2e:grabar-mapa` una vez
+con internet y agrega los archivos nuevos al commit.
 
 En modo `ver`, cada prueba abre su propia ventana y la cierra al terminar: verás que una se cierra y
 se abre otra, pero nunca hay más de una a la vez.

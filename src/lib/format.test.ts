@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { finDelDia, formatFecha, formatPorcentaje, inicioDelDia, ETIQUETA_RESULTADO } from './format'
+import { finDelDia, formatFecha, formatPorcentaje, haceCuanto, inicioDelDia, ETIQUETA_RESULTADO } from './format'
 
 describe('fechas (hora del centro de México, UTC−6 sin horario de verano)', () => {
   it('formatFecha muestra fecha y hora locales', () => {
@@ -30,5 +30,16 @@ describe('números y etiquetas', () => {
 
   it('etiquetas en lenguaje de campo', () => {
     expect(ETIQUETA_RESULTADO.no_determinado).toBe('No determinado')
+  })
+})
+
+describe('haceCuanto', () => {
+  const ahora = new Date('2026-11-10T18:00:00Z').getTime()
+  it('dice el tiempo transcurrido en palabras', () => {
+    expect(haceCuanto('2026-11-10T08:00:00Z', ahora)).toBe('hoy')
+    expect(haceCuanto('2026-11-09T12:00:00Z', ahora)).toBe('ayer')
+    expect(haceCuanto('2026-11-02T18:00:00Z', ahora)).toBe('hace 8 días')
+    expect(haceCuanto('2026-08-10T18:00:00Z', ahora)).toBe('hace 3 meses')
+    expect(haceCuanto('2024-11-10T18:00:00Z', ahora)).toBe('hace 2 años')
   })
 })

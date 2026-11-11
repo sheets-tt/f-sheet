@@ -1,13 +1,14 @@
 # f-sheet — frontend web de sheets-tt
 
-SPA (Vite + React 19 + TypeScript, sin librerías de UI ni de mapas) para consultar los datos de
+SPA (Vite + React 19 + TypeScript, sin librerías de UI; mapa con MapLibre GL JS) para consultar los datos de
 monitoreo fitosanitario que la app móvil captura. Solo lectura: todas las pantallas son `GET` a b-sheet.
 
 | Ruta | Pantalla | Datos |
 |---|---|---|
 | `#/login` | Inicio de sesión; guarda el JWT y los `roles` en `sessionStorage` | `POST /auth/login` |
 | `#/` | **Resumen**: focos de infestación, totales, resultado de los análisis, cromático promedio y sincronización | `GET /estadisticas` |
-| `#/mapa` | **Mapa**: plano de campo en SVG a escala real (metros), con el último resultado de cada árbol y zona; al elegir un punto pide su historial | `GET /arboles` y `/zonas` en paralelo; `GET /analisis?arbol=…` o `?zona=…` al elegir |
+| `#/mapa` | **Mapa** interactivo (MapLibre GL JS): árboles y zonas con su último resultado, radio real de las zonas, filtros por estado y tipo, búsqueda y lista sincronizada. Al elegir un punto (`#/mapa/a-<id>`) muestra su detalle y los 5 análisis más recientes | `GET /arboles` y `/zonas` en paralelo; `GET /analisis?arbol=…&limite=50` o `?zona=…` al elegir |
+| `#/arbol/<id>`, `#/zona/<id>` | **Seguimiento**: estado actual, mapa con el punto y dónde se tomó cada foto, confianza de cada análisis en el tiempo, evolución cromática del follaje y línea de tiempo con los cambios de resultado y las fotos | `GET /arboles/{id}` o `/zonas/{id}` y `GET /analisis?arbol=…&limite=200` en paralelo |
 | `#/analisis` | **Análisis**: tabla con filtros por fechas, tipo, resultado y sincronización; "Ver foto" abre la evidencia en un diálogo | `GET /analisis?…&limite=100`, `GET /analisis/{id}/evidencia` |
 | `#/admin` | **Administración** (solo `ADMINISTRADOR`): cuentas y dispositivos | `GET /cuentas`, `/dispositivos` |
 
@@ -18,6 +19,23 @@ Está pensada para servirse desde **S3 + CloudFront**. El contrato de API está 
 
 Las fotos se muestran con la URL firmada (5 min) que entrega b-sheet. La CSP de `infra/cloudfront.yaml`
 permite `img-src` solo para ese bucket (parámetros `EvidenciasBucket` y `EvidenciasRegion`).
+
+### Mapa
+
+- **Motor**: MapLibre GL JS (licencia BSD, sin clave). Las pantallas hablan con `lib/motorMapa.ts`,
+  nunca con `maplibre-gl` directo; en las pruebas unitarias (jsdom, sin WebGL) se sustituye por
+  `src/test/motorFalso.ts`.
+- **Mapa base**: teselas vectoriales de [OpenFreeMap](https://openfreemap.org) (datos de
+  OpenStreetMap, gratis y sin clave) con un estilo propio y apagado (`lib/estiloMapa.ts`), para que
+  resalten los estados. Si las teselas no cargan, el mapa sigue funcionando con fondo liso.
+- **Marcadores**: cada árbol y zona es un `<button>` real sobre el mapa, con nombre accesible
+  ("Oyamel del lago (Abies religiosa): Infestado"), forma + color por estado y área de toque de 32 px.
+  Se recorren con Tab; Esc cierra el detalle. La lista de puntos sigue siendo la alternativa en texto.
+- **CSP**: `connect-src` agrega `https://tiles.openfreemap.org` (teselas y fuentes) y el worker de
+  MapLibre se sirve desde el propio sitio (`worker-src 'self'`, sin `blob:`).
+- **Sin WebGL** el mapa muestra un aviso y la lista sigue funcionando.
+- **Créditos**: OpenFreeMap, OpenMapTiles y OpenStreetMap aparecen en el botón ⓘ del mapa; son
+  obligatorios por licencia, no los quites.
 
 ### Identidad visual
 
@@ -105,9 +123,14 @@ Chromium ──► vite preview (build de producción, proxy /api como CloudFron
   cuentas `demo@`, `admin@` y `baja@sheets.tt` con `Demo1234!`).
 - **S3 sin AWS:** b-sheet firma las fotos con credenciales ficticias y el navegador intercepta la
   descarga; el test revisa que la URL sea la firmada (bucket, clave, `X-Amz-Expires=300`, credencial).
-- **Proyectos:** `escritorio` (sesión, recorridos de experto y administrador, 403 del backend) y
-  `movil` (Pixel 7: nada desborda a lo ancho, la foto cabe, las marcas del plano miden ≥ 8 px y su área
-  de toque ≥ 24 px).
+- **Proyectos:** `escritorio` (sesión, recorridos de experto y administrador, mapa, filtros,
+  seguimiento de árbol y zona, 403 del backend) y `movil` (Pixel 7: nada desborda a lo ancho, la foto
+  cabe, las marcas del mapa miden ≥ 8 px y su área de toque ≥ 24 px).
+- **Mapa:** Chromium dibuja WebGL con SwiftShader (sin GPU). El mapa base se ve completo sin internet:
+  las teselas y fuentes de OpenFreeMap que usan las pruebas están guardadas en `e2e/mapa-base/`
+  (~830 kB, la zona de `db/demo`) y se sirven desde ahí. Si cambian los datos de ejemplo o el mapa
+  pide algo que no está guardado, esa parte sale con fondo liso: `pnpm test:e2e:grabar-mapa`
+  descarga lo que falte (luego `git add e2e/mapa-base`). `E2E_TESELAS=1` usa internet en vez de la copia.
 - Fallos: captura y traza en `test-results/`; reporte con `pnpm exec playwright show-report`.
 
 No cubre la CSP de CloudFront (vite preview no la envía) ni `StrictMode` (solo existe en desarrollo;
@@ -127,7 +150,9 @@ lo cubre `FotoEvidencia.test.tsx`).
 - **Accesibilidad**: labels explícitos, foco gestionado (campo usuario al entrar, error tras
   fallo, encabezado en bienvenida), errores con `role="alert"` dentro de una región `aria-live`,
   `aria-invalid`/`aria-busy`, enlace "saltar al contenido", `prefers-reduced-motion`, modo oscuro.
-- **Peso**: sin librerías de UI ni router; una fuente variable (~68 kB woff2, latin + latin-ext); CSS propio (~6,5 kB gzip).
+- **Peso**: sin librerías de UI ni router; una fuente variable (~68 kB woff2, latin + latin-ext); CSS propio (~8 kB gzip).
+  MapLibre (~293 kB gzip + su worker) va en su propio chunk: solo lo descargan el mapa y el
+  seguimiento, se carga después de la lista y sobrevive en caché entre despliegues de la app.
 
 ## Build y caché
 

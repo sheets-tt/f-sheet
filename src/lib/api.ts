@@ -248,6 +248,16 @@ export function getZonas(signal?: AbortSignal): Promise<Zona[]> {
   return request<Zona[]>('/zonas', { auth: true, signal })
 }
 
+/** Un árbol con su último análisis; 404 si no existe. */
+export function getArbol(id: string, signal?: AbortSignal): Promise<Arbol> {
+  return request<Arbol>(`/arboles/${encodeURIComponent(id)}`, { auth: true, signal })
+}
+
+/** Una zona de follaje con su último análisis; 404 si no existe. */
+export function getZona(id: string, signal?: AbortSignal): Promise<Zona> {
+  return request<Zona>(`/zonas/${encodeURIComponent(id)}`, { auth: true, signal })
+}
+
 export function buscarAnalisis(filtro: FiltroAnalisis, signal?: AbortSignal): Promise<Analisis[]> {
   return request<Analisis[]>(`/analisis${queryAnalisis(filtro)}`, { auth: true, signal })
 }

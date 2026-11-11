@@ -7,6 +7,16 @@ const FRONT = 'http://localhost:5174'
 const BACK = 'http://localhost:8082'
 // Para verlo a ritmo humano: E2E_LENTO=800 (ms de pausa por acción). Ver script test:e2e:ver.
 const LENTO = Number(process.env.E2E_LENTO ?? 0)
+// El mapa base (OpenFreeMap) es lo único que vendría de internet: las pruebas lo sirven desde la
+// copia de e2e/mapa-base (ver e2e/ayuda.ts) y el navegador no puede resolver el dominio real.
+// E2E_TESELAS=1 usa internet; E2E_GRABAR_MAPA=1 completa la copia.
+const TESELAS = process.env.E2E_TESELAS === '1'
+const ARGS_CHROMIUM = [
+  // MapLibre necesita WebGL; en Chromium sin GPU (headless, CI) lo da SwiftShader.
+  '--enable-unsafe-swiftshader',
+  '--use-angle=swiftshader',
+  ...(TESELAS ? [] : ['--host-resolver-rules=MAP tiles.openfreemap.org ~NOTFOUND']),
+]
 
 export default defineConfig({
   testDir: 'e2e',
@@ -22,7 +32,7 @@ export default defineConfig({
     timezoneId: 'America/Mexico_City',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    launchOptions: { slowMo: LENTO },
+    launchOptions: { slowMo: LENTO, args: ARGS_CHROMIUM },
   },
   projects: [
     { name: 'escritorio', use: { ...devices['Desktop Chrome'] }, testIgnore: '**/movil.e2e.ts' },

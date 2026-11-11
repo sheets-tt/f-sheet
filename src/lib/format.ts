@@ -54,3 +54,14 @@ export function inicioDelDia(dia: string): string | undefined {
 export function finDelDia(dia: string): string | undefined {
   return dia ? new Date(`${dia}T23:59:59.999${OFFSET_CDMX}`).toISOString() : undefined
 }
+
+const relativo = new Intl.RelativeTimeFormat('es-MX', { numeric: 'auto' })
+
+/** "hoy", "ayer", "hace 5 días", "hace 3 meses": cuánto pasó desde una captura. */
+export function haceCuanto(iso: string, ahora: number = Date.now()): string {
+  const dias = Math.floor((ahora - new Date(iso).getTime()) / 86_400_000)
+  if (dias < 0) return relativo.format(0, 'day')
+  if (dias < 45) return relativo.format(-dias, 'day')
+  if (dias < 365) return relativo.format(-Math.round(dias / 30), 'month')
+  return relativo.format(-Math.round(dias / 365), 'year')
+}

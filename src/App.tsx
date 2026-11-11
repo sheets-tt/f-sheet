@@ -4,7 +4,7 @@ import { EsqueletoPagina } from './components/Esqueleto'
 import Galeria, { Marca } from './components/Galeria'
 import { logout, setUnauthorizedHandler } from './lib/api'
 import { esAdministrador, loadSession, type Session } from './lib/session'
-import { navigate, useRoute, type Route } from './lib/router'
+import { navigate, useRoute, useRutaId, type Route } from './lib/router'
 
 // Cada pantalla en su propio chunk: el login no descarga el plano ni las tablas, y viceversa.
 const LoginScreen = lazy(() => import('./screens/LoginScreen'))
@@ -12,6 +12,7 @@ const ResumenScreen = lazy(() => import('./screens/ResumenScreen'))
 const MapaScreen = lazy(() => import('./screens/MapaScreen'))
 const AnalisisScreen = lazy(() => import('./screens/AnalisisScreen'))
 const AdminScreen = lazy(() => import('./screens/AdminScreen'))
+const SeguimientoScreen = lazy(() => import('./screens/SeguimientoScreen'))
 
 /** Guardia de rutas: sin sesión → login; con sesión, login → resumen; admin solo para ADMINISTRADOR. */
 function destino(ruta: Route, session: Session | null): Route {
@@ -23,6 +24,7 @@ function destino(ruta: Route, session: Session | null): Route {
 
 export default function App() {
   const route = useRoute()
+  const rutaId = useRutaId()
   const [session, setSession] = useState<Session | null>(() => loadSession())
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -100,6 +102,9 @@ export default function App() {
               {target === 'mapa' && <MapaScreen />}
               {target === 'analisis' && <AnalisisScreen />}
               {target === 'admin' && <AdminScreen />}
+              {(target === 'arbol' || target === 'zona') && rutaId && (
+                <SeguimientoScreen key={`${target}-${rutaId}`} tipo={target} id={rutaId} />
+              )}
             </>
           )}
         </Suspense>

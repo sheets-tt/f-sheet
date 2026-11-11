@@ -1,5 +1,4 @@
-import { expect, test } from '@playwright/test'
-import { CONTRASENA, DESACTIVADA, EXPERTO, entrar } from './ayuda'
+import { CONTRASENA, DESACTIVADA, EXPERTO, entrar, expect, test } from './ayuda'
 
 test.describe('sesión', () => {
   test('sin sesión cualquier ruta lleva al login', async ({ page }) => {

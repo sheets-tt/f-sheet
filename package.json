@@ -17,10 +17,12 @@
     "test:watch": "vitest",
     "deploy": "sh scripts/deploy.sh",
     "test:e2e": "playwright test",
+    "test:e2e:grabar-mapa": "E2E_GRABAR_MAPA=1 playwright test",
     "test:e2e:ver": "E2E_LENTO=${E2E_LENTO:-800} playwright test --headed --workers=1"
   },
   "dependencies": {
     "@fontsource-variable/schibsted-grotesk": "^5.2.8",
+    "maplibre-gl": "6.16.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
