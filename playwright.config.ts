@@ -5,10 +5,13 @@ import { defineConfig, devices } from '@playwright/test'
 // lo único interceptado es la descarga de S3 (ver e2e/ayuda.ts).
 const FRONT = 'http://localhost:5174'
 const BACK = 'http://localhost:8082'
+// Para verlo a ritmo humano: E2E_LENTO=800 (ms de pausa por acción). Ver script test:e2e:ver.
+const LENTO = Number(process.env.E2E_LENTO ?? 0)
 
 export default defineConfig({
   testDir: 'e2e',
   testMatch: '**/*.e2e.ts',
+  timeout: LENTO ? 180_000 : 30_000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -19,6 +22,7 @@ export default defineConfig({
     timezoneId: 'America/Mexico_City',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    launchOptions: { slowMo: LENTO },
   },
   projects: [
     { name: 'escritorio', use: { ...devices['Desktop Chrome'] }, testIgnore: '**/movil.e2e.ts' },
@@ -35,7 +39,7 @@ export default defineConfig({
       stderr: 'pipe',
     },
     {
-      command: 'npm run build && npx vite preview --port 5174 --strictPort',
+      command: 'pnpm build && pnpm exec vite preview --port 5174 --strictPort',
       url: FRONT,
       timeout: 120_000,
       reuseExistingServer: false,

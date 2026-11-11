@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { Cargando, ErrorCarga } from '../components/EstadoCarga'
+import { ErrorCarga } from '../components/EstadoCarga'
+import { EsqueletoTabla } from '../components/Esqueleto'
 import { Estado } from '../components/Simbolo'
 import { getCuentas, getDispositivos } from '../lib/api'
 import { formatFecha } from '../lib/format'
@@ -24,12 +25,12 @@ export default function AdminScreen() {
         <p className="muted">Cuentas con acceso y dispositivos que envían capturas.</p>
       </header>
 
-      <section className="bloque" aria-labelledby="titulo-cuentas">
+      <section className="panel" aria-labelledby="titulo-cuentas">
         <h2 id="titulo-cuentas">Cuentas</h2>
-        {cuentas.estado === 'cargando' && <Cargando texto="Cargando cuentas…" />}
+        {cuentas.estado === 'cargando' && <EsqueletoTabla texto="Cargando cuentas…" filas={3} columnas={5} />}
         {cuentas.estado === 'error' && <ErrorCarga mensaje={cuentas.error} onReintentar={cuentas.reintentar} />}
         {cuentas.datos && (
-          <div className="tabla-desplazable">
+          <div className="tabla-desplazable panel-tabla">
             <table className="tabla" aria-labelledby="titulo-cuentas">
               <thead>
                 <tr>
@@ -56,14 +57,14 @@ export default function AdminScreen() {
         )}
       </section>
 
-      <section className="bloque" aria-labelledby="titulo-dispositivos">
+      <section className="panel" aria-labelledby="titulo-dispositivos">
         <h2 id="titulo-dispositivos">Dispositivos</h2>
-        {dispositivos.estado === 'cargando' && <Cargando texto="Cargando dispositivos…" />}
+        {dispositivos.estado === 'cargando' && <EsqueletoTabla texto="Cargando dispositivos…" filas={2} columnas={5} />}
         {dispositivos.estado === 'error' && (
           <ErrorCarga mensaje={dispositivos.error} onReintentar={dispositivos.reintentar} />
         )}
         {dispositivos.datos && (
-          <div className="tabla-desplazable">
+          <div className="tabla-desplazable panel-tabla">
             <table className="tabla" aria-labelledby="titulo-dispositivos">
               <thead>
                 <tr>

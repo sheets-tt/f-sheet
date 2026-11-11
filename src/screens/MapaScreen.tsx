@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
-import { Cargando, ErrorCarga } from '../components/EstadoCarga'
-import FotoEvidencia from '../components/FotoEvidencia'
+import { ErrorCarga } from '../components/EstadoCarga'
+import { EsqueletoLista, EsqueletoMapa } from '../components/Esqueleto'
+import FotoEvidencia, { IconoFoto } from '../components/FotoEvidencia'
 import { Estado, Forma, TONO_RESULTADO, type Tono } from '../components/Simbolo'
 import { buscarAnalisis, getArboles, getZonas, type Analisis, type Arbol, type UltimoAnalisis, type Zona } from '../lib/api'
 import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha, formatPorcentaje } from '../lib/format'
@@ -74,13 +75,13 @@ export default function MapaScreen() {
         <p className="muted">Árboles y zonas de follaje registrados, con el resultado de su análisis más reciente.</p>
       </header>
 
-      {carga.estado === 'cargando' && <Cargando texto="Cargando el mapa…" />}
+      {carga.estado === 'cargando' && <EsqueletoMapa />}
       {carga.estado === 'error' && <ErrorCarga mensaje={carga.error} onReintentar={carga.reintentar} />}
 
       {carga.datos && (
         <div className="mapa">
           <Plano puntos={puntos} seleccion={seleccion} onElegir={setSeleccion} />
-          <aside className="mapa-panel">
+          <aside className="mapa-panel panel">
             {elegido ? (
               <Detalle punto={elegido} onCerrar={() => setSeleccion(null)} />
             ) : (
@@ -119,7 +120,13 @@ function Plano({ puntos, seleccion, onElegir }: { puntos: Punto[]; seleccion: st
         role="group"
         aria-label={`Plano de campo: ${arboles} ${arboles === 1 ? 'árbol' : 'árboles'} y ${ubicados.length - arboles} ${ubicados.length - arboles === 1 ? 'zona' : 'zonas'}`}
       >
-        <rect className="plano-fondo" x="0.5" y="0.5" width={LIENZO.ancho - 1} height={LIENZO.alto - 1} rx="8" />
+        <defs>
+          <pattern id="plano-rejilla" width="50" height="50" patternUnits="userSpaceOnUse">
+            <path d="M50 0H0V50" className="plano-rejilla" />
+          </pattern>
+        </defs>
+        <rect className="plano-fondo" x="0.5" y="0.5" width={LIENZO.ancho - 1} height={LIENZO.alto - 1} rx="16" />
+        <rect x="0.5" y="0.5" width={LIENZO.ancho - 1} height={LIENZO.alto - 1} rx="16" fill="url(#plano-rejilla)" />
 
         {ubicados.map((p) => {
           const { x, y } = proy.punto(p)
@@ -225,7 +232,7 @@ function Detalle({ punto, onCerrar }: { punto: Punto; onCerrar: () => void }) {
   const descripcion = punto.arbol?.descripcion ?? punto.zona?.descripcion
   const registro = punto.arbol?.fechaRegistro ?? punto.zona?.fechaRegistro ?? null
   return (
-    <section aria-labelledby="titulo-detalle" className="detalle">
+    <section aria-labelledby="titulo-detalle" className="detalle" key={punto.clave}>
       <h2 id="titulo-detalle">{punto.nombre}</h2>
       <p className="muted">{punto.detalle}</p>
       {descripcion && <p className="detalle-descripcion">{descripcion}</p>}
@@ -251,7 +258,7 @@ function Historial({ punto }: { punto: Punto }) {
   )
   const [foto, setFoto] = useState<Analisis | null>(null)
 
-  if (historial.estado === 'cargando') return <Cargando texto="Cargando el historial…" lineas={2} />
+  if (historial.estado === 'cargando') return <EsqueletoLista texto="Cargando el historial…" filas={2} />
   if (historial.estado === 'error') return <ErrorCarga mensaje={historial.error} onReintentar={historial.reintentar} />
   return (
     <>
@@ -267,10 +274,11 @@ function Historial({ punto }: { punto: Punto }) {
             {a.tieneEvidencia && (
               <button
                 type="button"
-                className="enlace"
+                className="btn-foto"
                 aria-label={`Ver foto del ${formatFecha(a.fechaCaptura)}`}
                 onClick={() => setFoto(a)}
               >
+                <IconoFoto />
                 Ver foto
               </button>
             )}

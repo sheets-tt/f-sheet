@@ -230,7 +230,7 @@ Resources:
 
 Outputs:
   BucketName:
-    Description: Bucket destino de `npm run deploy` (S3_BUCKET)
+    Description: Bucket destino de `pnpm run deploy` (S3_BUCKET)
     Value: !Ref SiteBucket
   DistributionId:
     Description: ID para invalidaciones (CLOUDFRONT_DISTRIBUTION_ID)

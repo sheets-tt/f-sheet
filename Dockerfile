@@ -5,12 +5,14 @@
 
 FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+# pnpm en la versión fijada en package.json (packageManager).
+RUN npm install -g pnpm@12.16.1
+COPY package.json pnpm-lock.yaml ./
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
 COPY . .
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-RUN npm run build
+RUN pnpm build
 
 # nginx sin root, escucha en 8080. Las plantillas de /etc/nginx/templates se procesan con envsubst al arrancar.
 FROM nginxinc/nginx-unprivileged:1.29-alpine

@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import BarraSegmentada from '../components/BarraSegmentada'
-import { Cargando, ErrorCarga } from '../components/EstadoCarga'
-import FotoEvidencia from '../components/FotoEvidencia'
+import { ErrorCarga } from '../components/EstadoCarga'
+import { EsqueletoTabla } from '../components/Esqueleto'
+import FotoEvidencia, { IconoFoto } from '../components/FotoEvidencia'
 import { Estado, TONO_RESULTADO, TONO_SINCRONIZACION } from '../components/Simbolo'
 import { buscarAnalisis, type Analisis, type EstadoSincronizacion, type FiltroAnalisis, type Resultado, type TipoImagen } from '../lib/api'
 import {
@@ -74,7 +75,7 @@ export default function AnalisisScreen() {
         <p className="muted">Capturas de corteza y follaje clasificadas en campo, de la más reciente a la más antigua.</p>
       </header>
 
-      <form className="filtros" onSubmit={aplicar} aria-label="Filtros">
+      <form className="filtros panel" onSubmit={aplicar} aria-label="Filtros">
         <div className="field">
           <label htmlFor="f-desde">Desde</label>
           <input id="f-desde" type="date" {...campo('desde')} />
@@ -118,13 +119,13 @@ export default function AnalisisScreen() {
         </div>
       </form>
 
-      {carga.estado === 'cargando' && <Cargando texto="Cargando análisis…" lineas={5} />}
+      {carga.estado === 'cargando' && <EsqueletoTabla texto="Cargando análisis…" filas={6} columnas={7} />}
       {carga.estado === 'error' && <ErrorCarga mensaje={carga.error} />}
 
       {carga.datos && (
         <div className={carga.recargando ? 'recargando' : undefined}>
           {carga.datos.length === 0 ? (
-            <div className="vacio">
+            <div className="vacio panel">
               <p>Ningún análisis coincide con estos filtros.</p>
               {hayFiltros && (
                 <button type="button" className="btn btn-secondary" onClick={quitar}>Quitar filtros</button>
@@ -137,7 +138,7 @@ export default function AnalisisScreen() {
                   ? `Se muestran los ${LIMITE} más recientes. Acota por fechas para ver los anteriores.`
                   : `${carga.datos.length} ${carga.datos.length === 1 ? 'análisis' : 'análisis'}`}
               </p>
-              <div className="tabla-desplazable">
+              <div className="tabla-desplazable panel-tabla">
                 <table className="tabla">
                   <caption className="visually-hidden">Análisis</caption>
                   <thead>
@@ -172,10 +173,11 @@ export default function AnalisisScreen() {
                           {a.tieneEvidencia && (
                             <button
                               type="button"
-                              className="enlace"
+                              className="btn-foto"
                               aria-label={`Ver foto del ${formatFecha(a.fechaCaptura)}`}
                               onClick={() => setFoto(a)}
                             >
+                              <IconoFoto />
                               Ver foto
                             </button>
                           )}
