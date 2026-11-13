@@ -3,7 +3,7 @@
 # esta imagen permite servirla en ECS/App Runner/EC2 si alguna vez hace falta.
 # Replica lo que hace CloudFront: caché de assets, cabeceras de seguridad y /api/* -> backend.
 
-FROM --platform=$BUILDPLATFORM node:22-alpine AS build
+FROM --platform=$BUILDPLATFORM node:25-alpine AS build
 WORKDIR /app
 # pnpm en la versión fijada en package.json (packageManager).
 RUN npm install -g pnpm@12.16.1
@@ -15,7 +15,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN pnpm build
 
 # nginx sin root, escucha en 8080. Las plantillas de /etc/nginx/templates se procesan con envsubst al arrancar.
-FROM nginxinc/nginx-unprivileged:1.29-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 ENV API_UPSTREAM=http://backend:8080 \
     NGINX_ENVSUBST_FILTER=^API_
 COPY docker/default.conf.template /etc/nginx/templates/default.conf.template
