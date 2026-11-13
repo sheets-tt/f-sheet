@@ -5,10 +5,12 @@ import type { Session } from '../lib/session'
 interface Props {
   onLoggedIn: (s: Session) => void
   notice?: string | null
+  /** Correo ya escrito (p. ej. tras cambiar el propio correo); el foco va a la contraseña. */
+  usuarioInicial?: string
 }
 
-export default function LoginScreen({ onLoggedIn, notice }: Props) {
-  const [username, setUsername] = useState('')
+export default function LoginScreen({ onLoggedIn, notice, usuarioInicial = '' }: Props) {
+  const [username, setUsername] = useState(usuarioInicial)
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -17,7 +19,10 @@ export default function LoginScreen({ onLoggedIn, notice }: Props) {
 
   useEffect(() => {
     document.title = 'Iniciar sesión · Sheets TT'
-    userRef.current?.focus()
+    if (usuarioInicial) document.getElementById('password')?.focus()
+    else userRef.current?.focus()
+    // Solo al montar: después el foco lo maneja quien escribe.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {

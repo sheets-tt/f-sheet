@@ -25,6 +25,9 @@ export default function Dialogo({ titulo, descripcion, onCerrar, bloqueado = fal
     // jsdom (tests) no implementa showModal; en navegadores siempre existe.
     if (typeof d.showModal === 'function') d.showModal()
     else d.setAttribute('open', '')
+    // React no pone el atributo autofocus (enfoca al montar, antes de showModal, que luego enfoca el
+    // propio diálogo): el control inicial se marca con data-autofocus y se enfoca aquí.
+    d.querySelector<HTMLElement>('[data-autofocus]')?.focus()
     // Sin limpieza: ver FotoEvidencia (StrictMode cerraría el diálogo al volver a montar).
   }, [])
 

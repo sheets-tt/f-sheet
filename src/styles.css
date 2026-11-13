@@ -2224,6 +2224,10 @@ text.eje {
   font-size: var(--t-s);
 }
 
+.notice-aviso {
+  border-left-color: var(--oro);
+}
+
 .notice-exito {
   margin: 0 0 1rem;
 }

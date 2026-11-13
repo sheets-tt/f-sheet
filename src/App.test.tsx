@@ -91,7 +91,7 @@ describe('flujo de login', () => {
 
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Tu sesión ha expirado')
+    expect(screen.getByRole('status')).toHaveTextContent('Tu sesión terminó. Vuelve a iniciar sesión.')
     expect(sessionStorage.getItem('sheets-tt.session')).toBeNull()
   })
 

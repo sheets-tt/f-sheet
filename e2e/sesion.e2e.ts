@@ -39,7 +39,7 @@ test.describe('sesión', () => {
     await page.goto('/#/analisis')
     await page.reload()
     await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()
-    await expect(page.getByRole('status')).toContainText('Tu sesión ha expirado')
+    await expect(page.getByRole('status')).toContainText('Tu sesión terminó. Vuelve a iniciar sesión.')
   })
 
   test('cerrar sesión borra el token', async ({ page }) => {

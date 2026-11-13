@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import Encabezado from './components/Encabezado'
 import { EsqueletoPagina } from './components/Esqueleto'
 import Galeria, { Marca } from './components/Galeria'
-import { logout, setUnauthorizedHandler } from './lib/api'
+import { logout, SESION_TERMINADA, setUnauthorizedHandler } from './lib/api'
 import { esAdministrador, loadSession, type Session } from './lib/session'
 import { navigate, useRoute, useRutaId, type Route } from './lib/router'
 
@@ -27,16 +27,19 @@ export default function App() {
   const rutaId = useRutaId()
   const [session, setSession] = useState<Session | null>(() => loadSession())
   const [notice, setNotice] = useState<string | null>(null)
+  // Correo para rellenar el login (tras cambiar el propio correo en Administración).
+  const [usuarioSugerido, setUsuarioSugerido] = useState('')
 
-  const handleSignedOut = useCallback((message: string | null) => {
+  const handleSignedOut = useCallback((message: string | null, usuario = '') => {
     setSession(null)
     setNotice(message)
+    setUsuarioSugerido(usuario)
     navigate('login', { replace: true })
   }, [])
 
   // 401 en cualquier petición autenticada → vuelta a login con aviso.
   useEffect(() => {
-    setUnauthorizedHandler(() => handleSignedOut('Tu sesión ha expirado. Inicia sesión de nuevo.'))
+    setUnauthorizedHandler(() => handleSignedOut(SESION_TERMINADA))
     return () => setUnauthorizedHandler(null)
   }, [handleSignedOut])
 
@@ -55,6 +58,16 @@ export default function App() {
     logout()
     handleSignedOut('Has cerrado sesión.')
   }, [handleSignedOut])
+
+  // b-sheet invalida el token al cambiar el correo de la cuenta: se cierra la sesión aquí, con aviso,
+  // antes de que la siguiente petición falle con 401 y se pierda lo que se estaba haciendo.
+  const handleCorreoPropioCambiado = useCallback(
+    (correo: string) => {
+      logout()
+      handleSignedOut(`Correo actualizado. Inicia sesión con ${correo}.`, correo)
+    },
+    [handleSignedOut],
+  )
 
   const fallback = <EsqueletoPagina />
 
@@ -78,7 +91,7 @@ export default function App() {
         </aside>
         <main id="main" className="acceso-main">
           <Suspense fallback={fallback}>
-            {route === target && <LoginScreen onLoggedIn={handleLoggedIn} notice={notice} />}
+            {route === target && <LoginScreen onLoggedIn={handleLoggedIn} notice={notice} usuarioInicial={usuarioSugerido} />}
           </Suspense>
         </main>
       </div>
@@ -101,7 +114,7 @@ export default function App() {
               {target === 'resumen' && <ResumenScreen />}
               {target === 'mapa' && <MapaScreen />}
               {target === 'analisis' && <AnalisisScreen />}
-              {target === 'admin' && <AdminScreen username={session.username} />}
+              {target === 'admin' && <AdminScreen username={session.username} onCorreoPropioCambiado={handleCorreoPropioCambiado} />}
               {(target === 'arbol' || target === 'zona') && rutaId && (
                 <SeguimientoScreen key={`${target}-${rutaId}`} tipo={target} id={rutaId} />
               )}

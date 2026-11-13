@@ -12,6 +12,8 @@ import { useCarga } from '../lib/useCarga'
 interface Props {
   /** Correo de la sesión: su fila no se puede desactivar ni perder el rol de administrador. */
   username: string
+  /** La cuenta propia cambió de correo: b-sheet invalidó el token y hay que volver a entrar. */
+  onCorreoPropioCambiado: (correo: string) => void
 }
 
 type Accion =
@@ -22,7 +24,7 @@ type Accion =
 const FILTRO_VACIO: FiltroCuentas = { texto: '', rol: '', estado: '' }
 
 /** Solo se enlaza para ADMINISTRADOR; aun así el backend es quien autoriza (403). RF-26, RN-01. */
-export default function AdminScreen({ username }: Props) {
+export default function AdminScreen({ username, onCorreoPropioCambiado }: Props) {
   // Secciones independientes: si una falla, la otra se sigue mostrando.
   const cuentas = useCarga((signal) => getCuentas(signal), [])
   const dispositivos = useCarga((signal) => getDispositivos(signal), [])
@@ -268,7 +270,13 @@ export default function AdminScreen({ username }: Props) {
           cuenta={accion.tipo === 'editar' ? accion.cuenta : undefined}
           propia={accion.tipo === 'editar' && esPropia(accion.cuenta, username)}
           onCerrar={cerrar}
-          onGuardada={(c) => aplicar(c, accion.tipo === 'crear' ? `Cuenta creada: ${c.correo}.` : `Cambios guardados: ${c.correo}.`)}
+          onGuardada={(c) => {
+            if (accion.tipo === 'editar' && esPropia(accion.cuenta, username) && !esPropia(c, username)) {
+              onCorreoPropioCambiado(c.correo)
+              return
+            }
+            aplicar(c, accion.tipo === 'crear' ? `Cuenta creada: ${c.correo}.` : `Cambios guardados: ${c.correo}.`)
+          }}
         />
       )}
       {(accion?.tipo === 'desactivar' || accion?.tipo === 'activar') && (
@@ -330,7 +338,7 @@ function ConfirmarEstado({ tipo, cuenta, onHecho, onCerrar }: ConfirmarProps) {
         )}
       </div>
       <div className="dialogo-acciones">
-        <button type="button" className="btn btn-ghost" onClick={onCerrar} disabled={enviando} autoFocus>
+        <button type="button" className="btn btn-ghost" onClick={onCerrar} disabled={enviando} data-autofocus>
           Cancelar
         </button>
         <button
