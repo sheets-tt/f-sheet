@@ -23,6 +23,9 @@ export class ApiError extends Error {
   }
 }
 
+/** 401 en una petición autenticada: token caducado, cuenta desactivada, rol o correo cambiados… */
+export const SESION_TERMINADA = 'Tu sesión terminó. Vuelve a iniciar sesión.'
+
 /** Se invoca cuando una petición autenticada recibe 401 (token inválido/expirado). */
 type UnauthorizedHandler = () => void
 let onUnauthorized: UnauthorizedHandler | null = null
@@ -55,7 +58,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     const s = loadSession()
     if (!s) {
       onUnauthorized?.()
-      throw new ApiError(401, 'Tu sesión ha expirado. Inicia sesión de nuevo.')
+      throw new ApiError(401, SESION_TERMINADA)
     }
     headers.Authorization = `Bearer ${s.accessToken}`
   }
@@ -80,10 +83,16 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     if (res.status === 401 && opts.auth) {
       clearSession()
       onUnauthorized?.()
-      throw new ApiError(401, 'Tu sesión ha expirado. Inicia sesión de nuevo.')
+      throw new ApiError(401, SESION_TERMINADA)
     }
     if (res.status === 401) throw new ApiError(401, 'Usuario o contraseña incorrectos.')
-    if (res.status === 403) throw new ApiError(403, 'Tu cuenta no tiene permiso para ver esta sección.')
+    if (res.status === 403)
+      throw new ApiError(
+        403,
+        (opts.method ?? 'GET') === 'GET'
+          ? 'Tu cuenta no tiene permiso para ver esta sección.'
+          : 'Tu cuenta no tiene permiso para hacer este cambio.',
+      )
     if (res.status === 404) throw new ApiError(404, 'No se encontró el registro.')
     if (res.status === 400) throw new ApiError(400, msg ?? 'Revisa los datos introducidos.')
     if (res.status === 409) throw new ApiError(409, msg ?? 'La operación choca con el estado actual del registro.')

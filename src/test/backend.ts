@@ -129,7 +129,7 @@ function cuentasEnMemoria() {
       const b = cuerpo(init)
       const error = invalido(b, true)
       if (error) return json(400, { message: error })
-      const correo = String(b.correo).trim()
+      const correo = String(b.correo).trim().toLowerCase()
       if (repetido(correo)) return json(409, { message: 'Ya existe una cuenta con ese correo.' })
       const nueva: CuentaResumen = {
         id: `n${siguiente++}`,
@@ -157,7 +157,7 @@ function cuentasEnMemoria() {
       const b = cuerpo(init)
       const error = invalido(b, false)
       if (error) return json(400, { message: error })
-      const correo = String(b.correo).trim()
+      const correo = String(b.correo).trim().toLowerCase()
       if (repetido(correo, id)) return json(409, { message: 'Ya existe una cuenta con ese correo.' })
       if (propia && b.rol !== 'ADMINISTRADOR') return json(409, { message: 'No puedes quitarte el rol de administrador.' })
       lista[i] = { ...actual, correo, nombreCompleto: String(b.nombreCompleto).trim(), rol: b.rol as CuentaResumen['rol'] }

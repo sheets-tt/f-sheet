@@ -52,3 +52,15 @@ test('el seguimiento de un árbol cabe a lo ancho', async ({ page }) => {
   await expect(page.getByRole('list', { name: 'Línea de tiempo' })).toBeVisible()
   await sinDesbordeHorizontal(page)
 })
+
+test('el formulario de cuenta cabe en la pantalla y se cierra con Cancelar', async ({ page }) => {
+  await ir(page, '#/admin', 'Administración')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const dialogo = page.getByRole('dialog', { name: 'Crear cuenta' })
+  await expect(dialogo.getByLabel('Nombre completo')).toBeFocused()
+  await expect(dialogo.getByRole('button', { name: 'Crear cuenta' })).toBeInViewport()
+  await sinDesbordeHorizontal(page)
+  await dialogo.getByRole('button', { name: 'Cancelar' }).click()
+  await expect(dialogo).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Crear cuenta' })).toBeFocused()
+})

@@ -17,7 +17,7 @@ export type ErroresCuenta = Partial<Record<CampoCuenta, string>>
 export const MIN_CONTRASENA = 8
 export const MAX_BYTES_CONTRASENA = 72
 export const MAX_NOMBRE = 255
-export const MAX_CORREO = 255
+export const MAX_CORREO = 254
 
 const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -54,6 +54,9 @@ export function validarCuenta(form: FormCuenta, modo: 'crear' | 'editar'): Error
   const { contrasena } = form
   if (!contrasena) {
     if (modo === 'crear') errores.contrasena = 'Escribe una contraseña.'
+  } else if (!contrasena.trim()) {
+    // Al editar, b-sheet toma una contraseña en blanco como "conservar": no se cambiaría nada.
+    errores.contrasena = 'La contraseña no puede ser solo espacios.'
   } else if ([...contrasena].length < MIN_CONTRASENA) {
     errores.contrasena = `Usa al menos ${MIN_CONTRASENA} caracteres.`
   } else if (bytesUtf8(contrasena) > MAX_BYTES_CONTRASENA) {

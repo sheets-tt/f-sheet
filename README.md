@@ -1,7 +1,8 @@
 # f-sheet — frontend web de sheets-tt
 
 SPA (Vite + React 19 + TypeScript, sin librerías de UI; mapa con MapLibre GL JS) para consultar los datos de
-monitoreo fitosanitario que la app móvil captura. Solo lectura: todas las pantallas son `GET` a b-sheet.
+monitoreo fitosanitario que la app móvil captura. Las pantallas de consulta son de solo lectura (`GET` a
+b-sheet); lo único que escribe es la gestión de cuentas de Administración.
 
 | Ruta | Pantalla | Datos |
 |---|---|---|
@@ -10,10 +11,24 @@ monitoreo fitosanitario que la app móvil captura. Solo lectura: todas las panta
 | `#/mapa` | **Mapa** interactivo (MapLibre GL JS): árboles y zonas con su último resultado, radio real de las zonas, filtros por estado y tipo, búsqueda y lista sincronizada. Al elegir un punto (`#/mapa/a-<id>`) muestra su detalle y los 5 análisis más recientes | `GET /arboles` y `/zonas` en paralelo; `GET /analisis?arbol=…&limite=50` o `?zona=…` al elegir |
 | `#/arbol/<id>`, `#/zona/<id>` | **Seguimiento**: estado actual, mapa con el punto y dónde se tomó cada foto, confianza de cada análisis en el tiempo, evolución cromática del follaje y línea de tiempo con los cambios de resultado y las fotos | `GET /arboles/{id}` o `/zonas/{id}` y `GET /analisis?arbol=…&limite=200` en paralelo |
 | `#/analisis` | **Análisis**: tabla con filtros por fechas, tipo, resultado y sincronización; "Ver foto" abre la evidencia en un diálogo | `GET /analisis?…&limite=100`, `GET /analisis/{id}/evidencia` |
-| `#/admin` | **Administración** (solo `ADMINISTRADOR`): cuentas y dispositivos | `GET /cuentas`, `/dispositivos` |
+| `#/admin` | **Administración** (solo `ADMINISTRADOR`): gestión de cuentas (crear, editar, asignar rol, desactivar y activar, con búsqueda y filtros por rol y estado) y dispositivos | `GET /cuentas`, `/dispositivos`; `POST /cuentas`, `PUT /cuentas/{id}`, `PATCH /cuentas/{id}/desactivar` y `/activar` |
 
 El encabezado muestra el nombre de `GET /me`. Sin sesión todo redirige a `#/login`; un experto de campo
 que abre `#/admin` vuelve al resumen (y el backend responde 403 de todos modos).
+
+### Cuentas (RN-01, RF-26)
+
+- **No hay registro público**: solo un administrador crea cuentas, desde Administración → "Crear cuenta".
+- El formulario (un `<dialog>` modal: foco en el primer campo, Esc o "Cancelar" cierran y el foco
+  vuelve al botón que lo abrió) valida lo mismo que b-sheet antes de enviar: correo válido (máx. 254),
+  nombre de 1 a 255 caracteres sin contar espacios de los extremos, rol, contraseña de al menos 8
+  caracteres y como máximo 72 bytes en UTF-8 (límite de bcrypt), y confirmación. Al editar, la
+  contraseña vacía conserva la actual y no se envía.
+- Desactivar y activar piden confirmación. Una cuenta desactivada no puede iniciar sesión; sus datos se conservan.
+- La cuenta de la sesión no se puede desactivar ni perder el rol de administrador: los controles
+  aparecen deshabilitados con la explicación (y el backend responde 409 si se intenta igual).
+- Errores del backend: el 409 por correo repetido se muestra en el campo Correo; los demás, como
+  alerta dentro del diálogo. Los cambios se aplican en la tabla sin volver a pedir la lista.
 
 Está pensada para servirse desde **S3 + CloudFront**. El contrato de API está en `../API_CONTRACT.md` (v1).
 

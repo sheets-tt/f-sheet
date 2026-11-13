@@ -51,6 +51,17 @@ describe('validarCuenta', () => {
     expect(validarCuenta({ ...valido, confirmacion: 'Otra1234' }, 'crear')).toEqual({ confirmacion: 'Las contraseñas no coinciden.' })
   })
 
+  it.each(['crear', 'editar'] as const)('al %s rechaza una contraseña de solo espacios', (modo) => {
+    const espacios = ' '.repeat(10)
+    expect(validarCuenta({ ...valido, contrasena: espacios, confirmacion: espacios }, modo)).toEqual({
+      contrasena: 'La contraseña no puede ser solo espacios.',
+    })
+  })
+
+  it('acepta espacios dentro de una contraseña con más caracteres', () => {
+    expect(validarCuenta({ ...valido, contrasena: ' clave larga ', confirmacion: ' clave larga ' }, 'crear')).toEqual({})
+  })
+
   it('al editar, la contraseña vacía conserva la actual', () => {
     expect(validarCuenta({ ...valido, contrasena: '', confirmacion: '' }, 'editar')).toEqual({})
     expect(validarCuenta({ ...valido, contrasena: 'corta', confirmacion: 'corta' }, 'editar').contrasena).toBeDefined()

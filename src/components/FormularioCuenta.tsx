@@ -71,7 +71,8 @@ export default function FormularioCuenta({ cuenta, propia = false, onGuardada, o
       // 409 por correo repetido: el error va en el campo, que es lo que hay que cambiar.
       if (err instanceof ApiError && err.status === 409 && /correo/i.test(mensaje)) {
         setErrores({ correo: mensaje })
-        enfocar('correo')
+        // Tras el render que vuelve a habilitar el campo.
+        requestAnimationFrame(() => enfocar('correo'))
         return
       }
       setErrorServidor(mensaje)
@@ -97,6 +98,10 @@ export default function FormularioCuenta({ cuenta, propia = false, onGuardada, o
       </p>
     ) : null
   }
+
+  // b-sheet guarda el correo recortado y en minúsculas; si el de la sesión cambia, invalida el token.
+  const cambiaCorreoPropio = propia && !!cuenta && form.correo.trim().toLowerCase() !== cuenta.correo.trim().toLowerCase()
+  const avisoId = `${id}-aviso`
 
   const titulo = cuenta ? 'Editar cuenta' : 'Crear cuenta'
   const accion = cuenta ? 'Guardar cambios' : 'Crear cuenta'
@@ -124,7 +129,7 @@ export default function FormularioCuenta({ cuenta, propia = false, onGuardada, o
             type="text"
             autoComplete="off"
             maxLength={300}
-            autoFocus
+            data-autofocus
             value={form.nombreCompleto}
             onChange={(e) => cambiar('nombreCompleto', e.target.value)}
           />
@@ -195,11 +200,23 @@ export default function FormularioCuenta({ cuenta, propia = false, onGuardada, o
           {error('confirmacion')}
         </div>
 
+        {cambiaCorreoPropio && (
+          <p className="notice notice-aviso" id={avisoId}>
+            Al cambiar tu correo tendrás que iniciar sesión de nuevo con el correo nuevo.
+          </p>
+        )}
+
         <div className="dialogo-acciones">
           <button type="button" className="btn btn-ghost" onClick={onCerrar} disabled={guardando}>
             Cancelar
           </button>
-          <button type="submit" className="btn btn-primary" disabled={guardando} aria-busy={guardando}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={guardando}
+            aria-busy={guardando}
+            aria-describedby={cambiaCorreoPropio ? avisoId : undefined}
+          >
             {guardando && <span className="spinner" aria-hidden="true" />}
             {guardando ? (cuenta ? 'Guardando cambios…' : 'Creando cuenta…') : accion}
           </button>

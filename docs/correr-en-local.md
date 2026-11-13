@@ -90,7 +90,7 @@ Todas usan la contraseña `Demo1234!`.
 | Correo | Qué ves |
 |---|---|
 | `demo@sheets.tt` | Experto de campo: Resumen, Mapa y Análisis |
-| `admin@sheets.tt` | Administrador: además, la sección Administración |
+| `admin@sheets.tt` | Administrador: además, la sección Administración (crear, editar, desactivar y activar cuentas) |
 | `baja@sheets.tt` | Cuenta dada de baja: el login la rechaza |
 
 ### Lo que no funciona en local
