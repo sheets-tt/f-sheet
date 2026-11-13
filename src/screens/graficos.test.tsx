@@ -444,3 +444,17 @@ describe('Gráficos: campos de fecha "sucios" (N1), aviso de rango (N2) y foco d
   })
 })
 
+describe('Gráficos: tooltip (E2)', () => {
+  it('gana la última interacción: el foco con el teclado manda sobre la marca bajo el puntero', async () => {
+    await abrir()
+    const barras = within(grafica(/^Análisis por día/)).getAllByRole('button')
+    fireEvent.pointerEnter(barras[0])
+    await waitFor(() => expect(document.querySelector('.tooltip-rico')).toHaveTextContent('3 oct 2026'))
+    barras[4].focus()
+    await waitFor(() => expect(document.querySelector('.tooltip-rico')).toHaveTextContent('7 oct 2026'))
+    // Y si después el puntero entra en otra, manda el puntero.
+    fireEvent.pointerEnter(barras[1])
+    await waitFor(() => expect(document.querySelector('.tooltip-rico')).toHaveTextContent('4 oct 2026'))
+  })
+})
+

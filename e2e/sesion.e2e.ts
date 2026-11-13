@@ -1,6 +1,6 @@
 import { CONTRASENA, DESACTIVADA, EXPERTO, entrar, expect, test } from './ayuda'
 
-test.describe('sesión', () => {
+test.describe('Sesión', () => {
   test('sin sesión cualquier ruta lleva al login', async ({ page }) => {
     await page.goto('/#/mapa')
     await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()

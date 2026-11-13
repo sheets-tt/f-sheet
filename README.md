@@ -246,14 +246,25 @@ Chromium ──► vite preview (build de producción, proxy /api como CloudFron
   cuentas `demo@`, `admin@` y `baja@sheets.tt` con `Demo1234!`).
 - **S3 sin AWS:** b-sheet firma las fotos con credenciales ficticias y el navegador intercepta la
   descarga; el test revisa que la URL sea la firmada (bucket, clave, `X-Amz-Expires=300`, credencial).
-- **Proyectos:** `escritorio` (sesión, recorridos de experto y administrador, mapa, filtros,
-  seguimiento de árbol y zona, 403 del backend) y `movil` (Pixel 7: nada desborda a lo ancho, la foto
-  cabe, las marcas del mapa miden ≥ 8 px y su área de toque ≥ 24 px).
+- **Proyectos:** `escritorio` (todo lo demás) y `movil` (Pixel 7: `movil.e2e.ts` y los `*-movil.e2e.ts`;
+  nada desborda a lo ancho, la foto cabe, las marcas del mapa miden ≥ 8 px y su área de toque ≥ 24 px).
 - **Mapa:** Chromium dibuja WebGL con SwiftShader (sin GPU). El mapa base se ve completo sin internet:
   las teselas y fuentes de OpenFreeMap que usan las pruebas están guardadas en `e2e/mapa-base/`
   (~830 kB, la zona de `db/demo`) y se sirven desde ahí. Si cambian los datos de ejemplo o el mapa
   pide algo que no está guardado, esa parte sale con fondo liso: `pnpm test:e2e:grabar-mapa`
   descarga lo que falte (luego `git add e2e/mapa-base`). `E2E_TESELAS=1` usa internet en vez de la copia.
+- **Cobertura:** 90 pruebas, una por función y los flujos completos (administrador, experto,
+  desactivación con sesión abierta, cambio del propio correo, móvil). La matriz función → prueba está
+  en [docs/e2e-cobertura.md](docs/e2e-cobertura.md). Cada prueba se llama «Área › función».
+- **Evidencia:** cada prueba adjunta capturas con nombre de sus pasos clave (`evidencia()` en
+  `e2e/ayuda.ts`, que espera a que terminen las animaciones, sin pausas fijas) y una captura final.
+  `pnpm test:e2e:evidencia` deja en `evidencia-e2e/AAAA-MM-DD_HHMMSS/` el reporte HTML, el JSON, los
+  artefactos y un `resumen.md` con la tabla prueba → resultado → duración (ver
+  [docs/correr-en-local.md](docs/correr-en-local.md#evidencia-de-las-pruebas-e2e)).
+- **Una corrida a la vez:** `e2e/iniciar-backend.sh` tiene un candado atómico (`mkdir`, con el PID del backend; y revisa el puerto 8082) antes
+  de borrar la BD `sheets_e2e`; una segunda corrida se detiene con un mensaje claro.
+- **Independientes:** las pruebas que escriben crean sus propias cuentas con correo único
+  (`crearCuenta()`); nunca tocan las de `db/demo`.
 - Fallos: captura y traza en `test-results/`; reporte con `pnpm exec playwright show-report`.
 
 No cubre la CSP de CloudFront (vite preview no la envía) ni `StrictMode` (solo existe en desarrollo;

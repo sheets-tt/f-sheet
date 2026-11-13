@@ -87,6 +87,13 @@ export function useRoving(total: number, { columnas, onActivar }: { columnas?: n
 /** Marca bajo el puntero o con el foco: es la que muestra el tooltip. */
 export function useResalte(enfocado: number | null) {
   const [encima, setEncima] = useState<number | null>(null)
+  // Gana la última interacción: si el foco cambia (teclado), deja de mandar la marca bajo el puntero
+  // hasta que el puntero entre en otra.
+  const [focoPrevio, setFocoPrevio] = useState(enfocado)
+  if (focoPrevio !== enfocado) {
+    setFocoPrevio(enfocado)
+    if (enfocado !== null) setEncima(null)
+  }
   const resaltada = encima ?? enfocado
   const eventos = (i: number) => ({
     onPointerEnter: () => setEncima(i),
