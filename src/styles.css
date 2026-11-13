@@ -2196,6 +2196,169 @@ text.eje {
   opacity: 1;
 }
 
+/* ---- Gestión de cuentas (Administración) ---------------------------------------------------- */
+
+.panel-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.panel-titulo h2 {
+  margin: 0;
+}
+
+.filtros-cuentas {
+  margin: 0.25rem 0 0.75rem;
+}
+
+.conteo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin: 0 0 1rem;
+  font-size: var(--t-s);
+}
+
+.notice-exito {
+  margin: 0 0 1rem;
+}
+
+.etiqueta-propia {
+  color: var(--muted);
+  font-size: var(--t-xs);
+  font-weight: 650;
+}
+
+.acciones-fila {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.acciones-fila .btn:disabled,
+.dialogo-acciones .btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.btn-peligro {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+}
+
+.btn-peligro:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
+.btn-peligro-lleno {
+  background: #b3261e;
+  color: #ffffff;
+}
+
+.btn-peligro-lleno:hover:not(:disabled) {
+  background: #8f1e18;
+}
+
+.tabla-cuentas td:last-child {
+  text-align: right;
+}
+
+.tabla-cuentas .field-ayuda {
+  margin: 0.375rem 0 0;
+  white-space: nowrap;
+}
+
+.field-ayuda,
+.field-error {
+  margin: 0;
+  font-size: var(--t-xs);
+}
+
+.field-ayuda {
+  color: var(--muted);
+}
+
+.field-error {
+  color: var(--danger);
+  font-weight: 650;
+}
+
+select[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+select:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.dialogo {
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 1.25rem 1.25rem 1.5rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--radio-l);
+  box-shadow: 0 24px 64px rgb(8 24 19 / 0.35);
+  overflow-y: auto;
+}
+
+@media (min-width: 480px) {
+  .dialogo {
+    padding: 1.5rem 1.75rem 1.75rem;
+  }
+}
+
+.dialogo[open] {
+  animation: abrir 0.22s var(--ease);
+}
+
+.dialogo::backdrop {
+  background: rgb(16 33 28 / 0.7);
+  backdrop-filter: blur(3px);
+  animation: oscurecer 0.22s ease-out;
+}
+
+.dialogo h2 {
+  margin: 0 0 0.25rem;
+  font-size: var(--t-l);
+}
+
+.dialogo-descripcion p {
+  margin: 0 0 1rem;
+}
+
+.form-cuenta select {
+  width: 100%;
+}
+
+.dialogo-acciones {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 30rem) {
+  .dialogo-acciones .btn {
+    flex: 1 1 100%;
+  }
+}
+
+@media (forced-colors: active) {
+  .dialogo {
+    border: 1px solid CanvasText;
+  }
+}
+
 /* ---- Animaciones ----------------------------------------------------------------------------- */
 
 @keyframes entrar {

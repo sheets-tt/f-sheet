@@ -42,7 +42,7 @@ async function readMessage(res: Response): Promise<string | undefined> {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH'
   body?: unknown
   auth?: boolean
   signal?: AbortSignal
@@ -86,6 +86,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     if (res.status === 403) throw new ApiError(403, 'Tu cuenta no tiene permiso para ver esta sección.')
     if (res.status === 404) throw new ApiError(404, 'No se encontró el registro.')
     if (res.status === 400) throw new ApiError(400, msg ?? 'Revisa los datos introducidos.')
+    if (res.status === 409) throw new ApiError(409, msg ?? 'La operación choca con el estado actual del registro.')
     throw new ApiError(res.status, msg ?? `Error del servidor (${res.status}). Inténtalo más tarde.`)
   }
 
@@ -193,11 +194,13 @@ export interface Estadisticas {
   ultimaCaptura: string | null
 }
 
+export type Rol = 'ADMINISTRADOR' | 'EXPERTO_CAMPO'
+
 export interface CuentaResumen {
   id: string
   correo: string
   nombreCompleto: string
-  rol: 'ADMINISTRADOR' | 'EXPERTO_CAMPO'
+  rol: Rol
   activa: boolean
   fechaCreacion: string | null
 }
@@ -286,4 +289,38 @@ export function getCuentas(signal?: AbortSignal): Promise<CuentaResumen[]> {
 /** Solo ADMINISTRADOR (403 para los demás). */
 export function getDispositivos(signal?: AbortSignal): Promise<DispositivoResumen[]> {
   return request<DispositivoResumen[]>('/dispositivos', { auth: true, signal })
+}
+
+/** Alta o edición de una cuenta. En edición, `contrasena` vacía u omitida conserva la actual. */
+export interface DatosCuenta {
+  correo: string
+  nombreCompleto: string
+  rol: Rol
+  contrasena?: string
+}
+
+const rutaCuenta = (id: string) => `/cuentas/${encodeURIComponent(id)}`
+
+/** RN-01: solo ADMINISTRADOR crea cuentas. 409 si el correo ya existe. */
+export function crearCuenta(datos: DatosCuenta & { contrasena: string }): Promise<CuentaResumen> {
+  return request<CuentaResumen>('/cuentas', { method: 'POST', body: datos, auth: true })
+}
+
+/** 409 si el correo ya existe o si la cuenta propia perdería el rol de administrador. */
+export function editarCuenta(id: string, datos: DatosCuenta): Promise<CuentaResumen> {
+  const { contrasena, ...resto } = datos
+  return request<CuentaResumen>(rutaCuenta(id), {
+    method: 'PUT',
+    body: contrasena ? { ...resto, contrasena } : resto,
+    auth: true,
+  })
+}
+
+/** 409 si es la cuenta propia. */
+export function desactivarCuenta(id: string): Promise<CuentaResumen> {
+  return request<CuentaResumen>(`${rutaCuenta(id)}/desactivar`, { method: 'PATCH', auth: true })
+}
+
+export function activarCuenta(id: string): Promise<CuentaResumen> {
+  return request<CuentaResumen>(`${rutaCuenta(id)}/activar`, { method: 'PATCH', auth: true })
 }
