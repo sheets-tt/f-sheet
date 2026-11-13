@@ -1,6 +1,6 @@
 # f-sheet — frontend web de sheets-tt
 
-SPA (Vite + React 19 + TypeScript, sin librerías de UI; mapa con MapLibre GL JS) para consultar los datos de
+SPA (Vite + React 19 + TypeScript, sin librerías de UI; mapa con MapLibre GL JS; gráficos con módulos de D3) para consultar los datos de
 monitoreo fitosanitario que la app móvil captura. Las pantallas de consulta son de solo lectura (`GET` a
 b-sheet); lo único que escribe es la gestión de cuentas de Administración.
 
@@ -11,6 +11,7 @@ b-sheet); lo único que escribe es la gestión de cuentas de Administración.
 | `#/mapa` | **Mapa** interactivo (MapLibre GL JS): árboles y zonas con su último resultado, radio real de las zonas, filtros por estado y tipo, búsqueda y lista sincronizada. Al elegir un punto (`#/mapa/a-<id>`) muestra su detalle y los 5 análisis más recientes | `GET /arboles` y `/zonas` en paralelo; `GET /analisis?arbol=…&limite=50` o `?zona=…` al elegir |
 | `#/arbol/<id>`, `#/zona/<id>` | **Seguimiento**: estado actual, mapa con el punto y dónde se tomó cada foto, confianza de cada análisis en el tiempo, evolución cromática del follaje y línea de tiempo con los cambios de resultado y las fotos | `GET /arboles/{id}` o `/zonas/{id}` y `GET /analisis?arbol=…&limite=200` en paralelo |
 | `#/analisis` | **Análisis**: tabla con filtros por fechas, tipo, resultado y sincronización; "Ver foto" abre la evidencia en un diálogo | `GET /analisis?…&limite=100`, `GET /analisis/{id}/evidencia` |
+| `#/graficos` | **Gráficos** (D3, ambos roles): análisis en el tiempo con acercamiento, confianza del modelo, por árbol y zona, mapa de calor lugar × periodo y la lista de análisis de la selección. Crossfilter entre gráficas y vista en la URL (`#/graficos?desde=…&hasta=…&resultado=…&tipo=…&arbol=…\|zona=…&confianza=…`) | `GET /analisis?limite=500`, `GET /arboles` y `/zonas` en paralelo; todo se calcula en el navegador |
 | `#/admin` | **Administración** (solo `ADMINISTRADOR`): gestión de cuentas (crear, editar, asignar rol, desactivar y activar, con búsqueda y filtros por rol y estado) y dispositivos | `GET /cuentas`, `/dispositivos`; `POST /cuentas`, `PUT /cuentas/{id}`, `PATCH /cuentas/{id}/desactivar` y `/activar` |
 
 El encabezado muestra el nombre de `GET /me`. Sin sesión todo redirige a `#/login`; un experto de campo
@@ -52,6 +53,35 @@ permite `img-src` solo para ese bucket (parámetros `EvidenciasBucket` y `Eviden
 - **Créditos**: OpenFreeMap, OpenMapTiles y OpenStreetMap aparecen en el botón ⓘ del mapa; son
   obligatorios por licencia, no los quites.
 
+### Gráficos
+
+- **Qué hay**: análisis por día, semana o mes (el intervalo sigue al acercamiento), apilados por
+  resultado; una franja con todos los datos y un pincel (`d3-brush`) para elegir el rango
+  arrastrando con ratón o dedo; botones Anterior, Acercar, Alejar, Siguiente y Restablecer, y las
+  fechas Desde/Hasta (todo sincronizado). Histograma de confianza por decenas, barras por árbol y
+  zona y un mapa de calor lugar × periodo (intensidad = cuántos análisis; triángulo = hubo
+  infestación). Encima, indicadores de la selección; debajo, la lista de análisis que cumplen los
+  filtros con enlace al seguimiento.
+- **Navegación**: un clic o Enter en un periodo acerca a ese periodo; en una decena de confianza,
+  en un resultado de la leyenda o en una celda del mapa de calor, filtra las demás gráficas
+  (crossfilter: cada gráfica ignora su propia dimensión y la resalta); en una barra de árbol o zona,
+  abre su seguimiento (`#/arbol/<id>`, `#/zona/<id>`). Lo elegido aparece como chips que se quitan
+  con su botón; Esc quita lo elegido (no el rango). Cada cambio queda en la URL y en el historial:
+  Atrás lo deshace y la dirección se puede compartir.
+- **Accesibilidad**: cada gráfica es un `role="group"` con un resumen en su nombre accesible y una
+  sola parada de Tab; las flechas recorren las marcas (rejilla en el mapa de calor), Inicio/Fin van
+  a los extremos, y cada marca dice su detalle completo. El tooltip sale con el puntero y con el
+  foco. "Ver como tabla" muestra lo mismo en texto. Resultados con forma + color + etiqueta; en
+  `forced-colors` las marcas llevan contorno; sin animaciones con `prefers-reduced-motion`.
+- **Técnica**: `d3-scale`, `d3-array`, `d3-shape`, `d3-time`, `d3-time-format` (es-MX) y `d3-brush`
+  (que trae `d3-selection`, solo para el pincel). React dibuja el SVG; D3 calcula escalas, intervalos
+  y el área. Todo vive en el chunk perezoso de Gráficos (≈134 kB, ≈42 kB gzip); el resto de la
+  app no lo descarga. CSP: sin atributos `style` en el marcado; los colores van por clases y
+  atributos SVG. El pincel y el tooltip se posicionan por CSSOM (`el.style.*`), que `style-src
+  'self'` permite. Fechas en hora de CDMX (intervalos `utc*` sobre la hora de pared).
+- **Límite**: se piden los 500 análisis más recientes (el máximo de `GET /analisis`); si hay más, la
+  pantalla lo avisa.
+
 ### Identidad visual
 
 - **Paleta de marca**: verde `#00704A`, blanco `#FFFFFF`, verde casa `#1E3932`, menta `#D4E9E2`
@@ -84,6 +114,25 @@ Las fechas se muestran en hora del centro de México (UTC−6, sin horario de ve
 día cubren el día completo en esa hora.
 
 > **¿Quieres correrlo en tu máquina?** Sigue la guía [docs/correr-en-local.md](docs/correr-en-local.md).
+
+### Rampa café (Gráficos)
+
+Para magnitud (secuencial), no para categorías: los resultados siguen con los colores de estado,
+forma y etiqueta. Paleta original: `#320000 #5D2417 #8D4925 #C57D56 #FFB48A`. Validada con
+`validate_palette.js` de la skill de dataviz sobre las superficies reales (`#ffffff` y `#1e3932`):
+
+| Modo | Pasos | Resultado |
+|---|---|---|
+| Claro, como rampa (`--ordinal`) | los 5 | monótona, saltos ≥ 0.06 y un solo tono (21°), pero `#FFB48A` queda a 1.73:1 (mínimo 2:1) |
+| Claro, como rampa | `#C57D56 #8D4925 #5D2417 #320000` | **pasa todo** (extremo claro a 3.26:1) → `--cafe-1…4` |
+| Claro, categórica | los 5 | falla: banda de luminosidad, croma (`#320000`, `#5D2417` se leen grises) y separación normal 14.2 < 15 |
+| Oscuro, como rampa | los 5 | falla: `#320000` a 1.49:1 |
+| Oscuro, como rampa | `#8D4925 #C57D56 #FFB48A` | falla: `#8D4925` a 1.85:1 |
+| Oscuro, como rampa | `#A86038 #C57D56 #E29A70 #FFB48A` | **pasa todo** (extremo a 2.61:1, tono 4°) → `--cafe-1…4` en oscuro |
+
+`#FFB48A` (claro) y `#5D2417` (oscuro) quedan como `--cafe-tinte`: solo fondo o relleno con contorno
+(la vista general del pincel). En oscuro la rampa se invierte (más análisis = más claro). Los tokens
+están en `:root`, en `@media (prefers-color-scheme: dark)` y en `:root[data-theme='dark']`.
 
 ## Requisitos
 
@@ -241,3 +290,18 @@ pidiendo chunks viejos (carga diferida). Usa `PRUNE=1` de vez en cuando.
 - campos vacíos → validación sin llamar a la API
 - 401 en `/me` (token expirado) → vuelve a login con aviso
 - cerrar sesión → borra el token y vuelve a login
+
+`src/lib/graficos.test.ts` y `src/screens/graficos.test.tsx` (Gráficos; jsdom no tiene layout, así que
+se prueban los datos, los nombres accesibles y la interacción, no los píxeles):
+
+- transformaciones: días en hora de CDMX, intervalos día/semana/mes, crossfilter, histograma, por
+  lugar, mapa de calor, rango (acercar, alejar, desplazar) y filtros ↔ URL
+- resumen en el nombre accesible de cada gráfica, tooltip con el foco
+- flechas, Inicio/Fin y Enter (tabindex itinerante; rejilla en el mapa de calor)
+- un periodo acerca el rango; leyenda, decena y celda filtran; una barra de lugar abre su seguimiento
+- chips, Esc, "Ver como tabla", vista abierta desde la URL, estados vacío y de error
+
+`e2e/graficos.e2e.ts` contra b-sheet: totales en las gráficas, tooltip con el teclado, abrir un
+árbol desde su barra, acercar/Atrás/Restablecer, crossfilter con chips y URL compartida, y el pincel
+arrastrando con el ratón. `e2e/movil.e2e.ts` revisa que Gráficos quepa a 360 px.
+`E2E_CAPTURAS=<carpeta> pnpm test:e2e` guarda capturas en claro y oscuro para revisarlas.

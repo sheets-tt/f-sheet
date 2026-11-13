@@ -80,7 +80,7 @@ test('el administrador crea, edita, desactiva y reactiva una cuenta de experto',
   await experta.getByLabel('Contraseña').fill(nueva)
   await experta.getByRole('button', { name: 'Entrar' }).click()
   await expect(experta.getByRole('heading', { level: 1, name: 'Resumen' })).toBeVisible()
-  await expect(experta.getByRole('navigation', { name: 'Secciones' }).getByRole('link')).toHaveText(['Resumen', 'Mapa', 'Análisis'])
+  await expect(experta.getByRole('navigation', { name: 'Secciones' }).getByRole('link')).toHaveText(['Resumen', 'Mapa', 'Análisis', 'Gráficos'])
   await otra.close()
 
   // Desactivar (con confirmación) y reactivar.

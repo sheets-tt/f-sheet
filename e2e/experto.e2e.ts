@@ -23,7 +23,7 @@ test('resumen: focos, totales y gráficas calculados por el backend', async ({ p
 
 test('un experto no ve Administración y no puede entrar por la URL', async ({ page }) => {
   const nav = page.getByRole('navigation', { name: 'Secciones' })
-  await expect(nav.getByRole('link')).toHaveText(['Resumen', 'Mapa', 'Análisis'])
+  await expect(nav.getByRole('link')).toHaveText(['Resumen', 'Mapa', 'Análisis', 'Gráficos'])
   await page.goto('/#/admin')
   await expect(page.getByRole('heading', { level: 1, name: 'Resumen' })).toBeVisible()
   await expect(page).toHaveURL(/#\/$/)

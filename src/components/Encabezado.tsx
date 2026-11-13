@@ -16,6 +16,7 @@ const ICONOS: Record<Route, string> = {
   resumen: 'M4 13h4v7H4zM10 4h4v16h-4zM16 9h4v11h-4z',
   mapa: 'M12 21s-6-5.3-6-11a6 6 0 1 1 12 0c0 5.7-6 11-6 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
   analisis: 'M5 4h10l4 4v12H5zM14 4v5h5M8 13h8M8 17h5',
+  graficos: 'M4 4v16h16M8 16v-4M12 16V8M16 16v-7M20 16v-2',
   arbol: '',
   zona: '',
   admin: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .8 3 3 3 6',
@@ -25,6 +26,7 @@ const SECCIONES: { ruta: Route; nombre: string; soloAdmin?: boolean }[] = [
   { ruta: 'resumen', nombre: 'Resumen' },
   { ruta: 'mapa', nombre: 'Mapa' },
   { ruta: 'analisis', nombre: 'Análisis' },
+  { ruta: 'graficos', nombre: 'Gráficos' },
   { ruta: 'admin', nombre: 'Administración', soloAdmin: true },
 ]
 
