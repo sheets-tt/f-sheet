@@ -8,3 +8,6 @@ coverage
 !.env.example
 *.log
 e2e/mapa-base
+test-results
+playwright-report
+evidencia-e2e

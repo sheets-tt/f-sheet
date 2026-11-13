@@ -4,7 +4,7 @@ import { ETIQUETA_RESULTADO, formatFecha, formatPorcentaje } from '../../lib/for
 import { claveLugar, desglose, plural, RESULTADOS, type FilaLugar, type Lugar } from '../../lib/graficos'
 import { hrefDe } from '../../lib/router'
 import Simbolo, { TONO_RESULTADO } from '../Simbolo'
-import { MarcoGrafica, recortarAlAncho, Tooltip, useAncho, useResalte, useRoving } from './comunes'
+import { MarcoGrafica, recortarAlAncho, Tooltip, useAncho, useResalte, useRoving, type Enlace } from './comunes'
 import { LeyendaResultados } from './GraficaTiempo'
 
 const FILA = 30
@@ -15,10 +15,20 @@ interface Props {
   elegido: Lugar | null
   onAbrir: (l: Lugar) => void
   onQuitarFiltros: () => void
+  titulo?: string
+  descripcion?: string
+  enlace?: Enlace
+  nivel?: 2 | 3
 }
 
 /** Análisis por árbol y zona, apilados por resultado. Clic o Enter abre el seguimiento. */
-export default function GraficaLugares({ filas, elegido, onAbrir, onQuitarFiltros }: Props) {
+export default function GraficaLugares({
+  filas, elegido, onAbrir, onQuitarFiltros,
+  titulo = 'Por árbol y zona',
+  descripcion = 'Análisis de cada árbol y zona de follaje, apilados por resultado. Clic o Enter abre su seguimiento.',
+  enlace,
+  nivel,
+}: Props) {
   const [lienzo, ancho] = useAncho<HTMLDivElement>(320)
   const izquierda = Math.min(170, Math.round(ancho * 0.42))
   const util = Math.max(40, ancho - izquierda - M.derecha)
@@ -38,8 +48,10 @@ export default function GraficaLugares({ filas, elegido, onAbrir, onQuitarFiltro
   return (
     <MarcoGrafica
       id="titulo-lugares"
-      titulo="Por árbol y zona"
-      descripcion="Análisis de cada árbol y zona de follaje, apilados por resultado. Clic o Enter abre su seguimiento."
+      titulo={titulo}
+      descripcion={descripcion}
+      enlace={enlace}
+      nivel={nivel}
       vacio={filas.length === 0}
       onQuitarFiltros={onQuitarFiltros}
       leyenda={<LeyendaResultados elegido={null} />}

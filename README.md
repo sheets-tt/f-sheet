@@ -7,7 +7,7 @@ b-sheet); lo único que escribe es la gestión de cuentas de Administración.
 | Ruta | Pantalla | Datos |
 |---|---|---|
 | `#/login` | Inicio de sesión; guarda el JWT y los `roles` en `sessionStorage` | `POST /auth/login` |
-| `#/` | **Resumen**: focos de infestación, totales, resultado de los análisis, cromático promedio y sincronización | `GET /estadisticas` |
+| `#/` | **Resumen** (dashboard): estado del bosque y totales; **Necesita tu atención** con enlaces a Análisis ya filtrado y a los lugares infestados; indicadores de los últimos 7 días contra los 7 previos; gráficas clave (d3, perezosas) con "Ver en Gráficos"; accesos rápidos; actividad reciente; y el detalle de resultados, cromático y sincronización | `GET /estadisticas`, `GET /analisis?limite=500`, `GET /arboles` y `/zonas`, cada uno por su lado |
 | `#/mapa` | **Mapa** interactivo (MapLibre GL JS): árboles y zonas con su último resultado, radio real de las zonas, filtros por estado y tipo, búsqueda y lista sincronizada. Al elegir un punto (`#/mapa/a-<id>`) muestra su detalle y los 5 análisis más recientes | `GET /arboles` y `/zonas` en paralelo; `GET /analisis?arbol=…&limite=50` o `?zona=…` al elegir |
 | `#/arbol/<id>`, `#/zona/<id>` | **Seguimiento**: estado actual, mapa con el punto y dónde se tomó cada foto, confianza de cada análisis en el tiempo, evolución cromática del follaje y línea de tiempo con los cambios de resultado y las fotos | `GET /arboles/{id}` o `/zonas/{id}` y `GET /analisis?arbol=…&limite=200` en paralelo |
 | `#/analisis` | **Análisis**: filtros por fechas, tipo, resultado y sincronización (al backend); cajas por categoría que afinan lo cargado; vista de tarjetas o tabla; agrupar por árbol o zona, resultado o día; detalle de cada análisis con foto y enlaces. Todo en la URL (`#/analisis?tipo=…&caja_resultado=…&vista=tarjetas&agrupar=lugar`) | `GET /analisis?…&limite=100`, `GET /arboles` y `/zonas` (nombres), `GET /analisis/{id}/evidencia` |
@@ -52,6 +52,26 @@ permite `img-src` solo para ese bucket (parámetros `EvidenciasBucket` y `Eviden
 - **Sin WebGL** el mapa muestra un aviso y la lista sigue funcionando.
 - **Créditos**: OpenFreeMap, OpenMapTiles y OpenStreetMap aparecen en el botón ⓘ del mapa; son
   obligatorios por licencia, no los quites.
+
+### Resumen (dashboard)
+
+- **Animación**: el login conserva la galería que se excava (`excavar` + `aparecer-pupa`); al entrar,
+  la página usa `entrar` como siempre y cada sección del resumen entra después con la misma
+  animación, escalonada por su lugar (`.resumen-secciones`, sin atributos `style`). Con movimiento
+  reducido, todo aparece en su estado final.
+- **Orden de prioridad**: el hero de siempre → *Necesita tu atención* (infestados, confianza baja,
+  no determinados y errores de sincronización entre los 100 análisis más recientes —los mismos que
+  muestra Análisis— con enlaces a `#/analisis?caja_resultado=…`, `?caja_confianza=baja`,
+  `?estado=error` y `?atencion=1`; y los árboles y zonas cuyo último análisis salió infestado, con
+  enlace a su seguimiento) → indicadores de los últimos 7 días con datos contra los 7 previos →
+  gráficas clave → accesos (Mapa, Análisis, Gráficos, seguimiento del último lugar infestado y,
+  solo para administradores, Administración) → actividad reciente (abre el detalle en Análisis con
+  `#/analisis?detalle=<id>`) → el detalle de siempre.
+- **Gráficas clave**: las de Gráficos en versión ligera (sin pincel): actividad de los últimos 30
+  días con datos, dónde hay más infestación y la confianza. Cada una tiene "Ver en Gráficos" con los
+  mismos filtros. d3 viaja en un chunk propio (`d3`) que se carga después; los indicadores no lo esperan.
+- **Fallos parciales**: estadísticas, análisis y árboles/zonas se piden por separado; si uno falla,
+  su sección lo dice (con Reintentar) y las demás se muestran.
 
 ### Análisis
 
@@ -226,14 +246,25 @@ Chromium ──► vite preview (build de producción, proxy /api como CloudFron
   cuentas `demo@`, `admin@` y `baja@sheets.tt` con `Demo1234!`).
 - **S3 sin AWS:** b-sheet firma las fotos con credenciales ficticias y el navegador intercepta la
   descarga; el test revisa que la URL sea la firmada (bucket, clave, `X-Amz-Expires=300`, credencial).
-- **Proyectos:** `escritorio` (sesión, recorridos de experto y administrador, mapa, filtros,
-  seguimiento de árbol y zona, 403 del backend) y `movil` (Pixel 7: nada desborda a lo ancho, la foto
-  cabe, las marcas del mapa miden ≥ 8 px y su área de toque ≥ 24 px).
+- **Proyectos:** `escritorio` (todo lo demás) y `movil` (Pixel 7: `movil.e2e.ts` y los `*-movil.e2e.ts`;
+  nada desborda a lo ancho, la foto cabe, las marcas del mapa miden ≥ 8 px y su área de toque ≥ 24 px).
 - **Mapa:** Chromium dibuja WebGL con SwiftShader (sin GPU). El mapa base se ve completo sin internet:
   las teselas y fuentes de OpenFreeMap que usan las pruebas están guardadas en `e2e/mapa-base/`
   (~830 kB, la zona de `db/demo`) y se sirven desde ahí. Si cambian los datos de ejemplo o el mapa
   pide algo que no está guardado, esa parte sale con fondo liso: `pnpm test:e2e:grabar-mapa`
   descarga lo que falte (luego `git add e2e/mapa-base`). `E2E_TESELAS=1` usa internet en vez de la copia.
+- **Cobertura:** 90 pruebas, una por función y los flujos completos (administrador, experto,
+  desactivación con sesión abierta, cambio del propio correo, móvil). La matriz función → prueba está
+  en [docs/e2e-cobertura.md](docs/e2e-cobertura.md). Cada prueba se llama «Área › función».
+- **Evidencia:** cada prueba adjunta capturas con nombre de sus pasos clave (`evidencia()` en
+  `e2e/ayuda.ts`, que espera a que terminen las animaciones, sin pausas fijas) y una captura final.
+  `pnpm test:e2e:evidencia` deja en `evidencia-e2e/AAAA-MM-DD_HHMMSS/` el reporte HTML, el JSON, los
+  artefactos y un `resumen.md` con la tabla prueba → resultado → duración (ver
+  [docs/correr-en-local.md](docs/correr-en-local.md#evidencia-de-las-pruebas-e2e)).
+- **Una corrida a la vez:** `e2e/iniciar-backend.sh` tiene un candado atómico (`mkdir`, con el PID del backend; y revisa el puerto 8082) antes
+  de borrar la BD `sheets_e2e`; una segunda corrida se detiene con un mensaje claro.
+- **Independientes:** las pruebas que escriben crean sus propias cuentas con correo único
+  (`crearCuenta()`); nunca tocan las de `db/demo`.
 - Fallos: captura y traza en `test-results/`; reporte con `pnpm exec playwright show-report`.
 
 No cubre la CSP de CloudFront (vite preview no la envía) ni `StrictMode` (solo existe en desarrollo;

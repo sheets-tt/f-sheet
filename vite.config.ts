@@ -48,6 +48,8 @@ export default defineConfig(({ mode }) => {
               { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
               // MapLibre (~300 kB gzip) solo lo bajan el mapa y el seguimiento, y cambia poco.
               { name: 'maplibre', test: /node_modules[\\/].*maplibre-gl[\\/]/ },
+              // d3 (Gráficos y las gráficas del Resumen): perezoso, compartido entre ambas pantallas.
+              { name: 'd3', test: /node_modules[\\/].*d3-[a-z-]+[\\/]/ },
             ],
           },
         },

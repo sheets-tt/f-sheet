@@ -117,7 +117,7 @@ export default function App() {
         <Suspense fallback={fallback}>
           {route === target && (
             <>
-              {target === 'resumen' && <ResumenScreen />}
+              {target === 'resumen' && <ResumenScreen esAdmin={esAdministrador(session)} />}
               {target === 'mapa' && <MapaScreen />}
               {target === 'analisis' && <AnalisisScreen />}
               {target === 'graficos' && <GraficosScreen />}

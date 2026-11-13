@@ -2237,6 +2237,24 @@ text.eje {
   margin: 0;
 }
 
+/* Títulos de panel un nivel abajo (dentro de una sección con su h2), con el mismo aspecto. */
+.panel-titulo h3,
+.panel-h3 {
+  margin: 0;
+  font-size: var(--t-m);
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.panel-h3 {
+  margin-bottom: 0.25rem;
+}
+
+.nota-definicion {
+  margin: -0.25rem 0 0.75rem;
+  font-size: var(--t-xs);
+}
+
 .filtros-cuentas {
   margin: 0.25rem 0 0.75rem;
 }
@@ -3279,6 +3297,241 @@ text.eje-valor {
 
   .caja:active {
     transform: none;
+  }
+}
+
+/* ---- Resumen (dashboard): atención, indicadores, gráficas clave, accesos y actividad ---------- */
+
+.resumen-secciones > * + * {
+  margin-top: 1.5rem;
+}
+
+/* Una sola coreografía: tras el hero, cada sección entra con "entrar" (la misma de las páginas),
+   una detrás de otra. Con movimiento reducido, la regla global las deja en su estado final. */
+.resumen-secciones > * {
+  animation: entrar 0.32s var(--ease) both;
+}
+.resumen-secciones > :nth-child(1) { animation-delay: 0.08s; }
+.resumen-secciones > :nth-child(2) { animation-delay: 0.14s; }
+.resumen-secciones > :nth-child(3) { animation-delay: 0.2s; }
+.resumen-secciones > :nth-child(4) { animation-delay: 0.26s; }
+.resumen-secciones > :nth-child(5) { animation-delay: 0.32s; }
+.resumen-secciones > :nth-child(n + 6) { animation-delay: 0.38s; }
+
+.resumen-titulo {
+  margin: 0 0 0.75rem;
+  font-size: var(--t-m);
+}
+
+.resumen-subtitulo {
+  margin: 1.5rem 0 0.75rem;
+  font-size: var(--t-s);
+  font-weight: 700;
+}
+
+.panel-titulo-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.esqueleto-bloque {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.atencion-puntos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.atencion-punto {
+  display: grid;
+  gap: 0.125rem;
+  height: 100%;
+  padding: 0.875rem 1rem;
+  color: var(--text);
+  text-decoration: none;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radio-m);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.atencion-punto:hover {
+  border-color: var(--border-fuerte);
+  background: var(--tinte);
+}
+
+.atencion-encabezado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--t-s);
+  font-weight: 650;
+}
+
+.atencion-cifra {
+  font-size: var(--t-xl);
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.atencion-descripcion {
+  font-size: var(--t-xs);
+  color: var(--muted);
+}
+
+.atencion-sin-enlace,
+.atencion-sin-enlace:hover {
+  background: var(--surface);
+  border-style: dashed;
+}
+
+.atencion-cero .atencion-cifra {
+  color: var(--muted);
+}
+
+.lugares-infestados {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lugares-infestados li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  font-size: var(--t-s);
+}
+
+.lugares-infestados a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 650;
+  color: var(--accent);
+}
+
+.indicadores.indicadores-resumen {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+  margin-top: 0;
+}
+
+.indicador-cambio {
+  font-size: var(--t-xs);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.indicadores strong.indicador-fecha {
+  font-size: var(--t-m);
+}
+
+.resumen-grafica-ancha {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.atajos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.atajo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  height: 100%;
+  padding: 1rem;
+  color: var(--text);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radio-m);
+  transition: border-color 0.15s, transform 0.12s var(--ease);
+}
+
+.atajo:hover {
+  border-color: var(--accent);
+}
+
+.atajo:active {
+  transform: scale(0.98);
+}
+
+.atajo .icono {
+  margin-top: 0.125rem;
+  color: var(--accent);
+}
+
+.atajo-texto {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.atajo-texto span {
+  font-size: var(--t-xs);
+  color: var(--muted);
+}
+
+.actividad {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.actividad li {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--t-s);
+}
+
+.actividad li:last-child {
+  border-bottom: 0;
+}
+
+.actividad-cuando {
+  font-size: var(--t-xs);
+  white-space: nowrap;
+}
+
+.actividad-detalle {
+  font-weight: 650;
+  color: var(--accent);
+}
+
+@media (max-width: 40rem) {
+  .actividad li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .actividad-cuando {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+}
+
+@media (forced-colors: active) {
+  .atencion-punto,
+  .atajo {
+    border-color: CanvasText;
   }
 }
 

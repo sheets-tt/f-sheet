@@ -150,10 +150,21 @@ export default function AnalisisScreen() {
 
   function cerrarDetalle() {
     setDetalle(null)
+    // Si se abrió por enlace (…?detalle=id), al cerrar se quita de la URL sin paso nuevo.
+    if (estado.detalle) fijarConsulta(escribirEstado({ ...estado, detalle: null }), { replace: true })
     const o = origenDetalle.current
+    origenDetalle.current = null
     requestAnimationFrame(() => {
+      // Sin botón de origen (se abrió por enlace), el foco va al conteo (o al título).
       if (o?.isConnected) o.focus()
+      else (document.getElementById('analisis-conteo') ?? document.getElementById('titulo-analisis'))?.focus()
     })
+  }
+
+  /** Anterior/siguiente: si el detalle vino por enlace, la URL sigue al análisis que se ve (sin paso nuevo). */
+  function cambiarDetalle(a: Analisis) {
+    setDetalle(a)
+    if (estado.detalle) fijarConsulta(escribirEstado({ ...estado, detalle: a.id }), { replace: true })
   }
 
   const campo = <K extends keyof Formulario>(k: K) => ({
@@ -165,11 +176,23 @@ export default function AnalisisScreen() {
   const filtrados = useMemo(() => (datos ? filtrarCajas(datos, estado.cajas) : []), [datos, estado.cajas])
   const grupos = useMemo(() => agrupar(filtrados, estado.agrupar, nombres), [filtrados, estado.agrupar, nombres])
   const conCajas = hayCajas(estado.cajas)
+  // Detalle abierto: el elegido aquí o, si no, el de la URL (enlace desde el Resumen).
+  const porEnlace = estado.detalle && datos ? (datos.find((a) => a.id === estado.detalle) ?? null) : null
+  const abierto = detalle ?? porEnlace
+  // Un ?detalle= que no está entre los cargados: se avisa y el parámetro se quita (replace), para
+  // que no se arrastre a los siguientes cambios. El aviso sigue mientras la URL sea la que quedó.
+  const detalleInexistente = !!(estado.detalle && datos && !porEnlace)
+  const sinDetalle = escribirEstado({ ...estado, detalle: null }).toString()
+  const [avisoDetalle, setAvisoDetalle] = useState<string | null>(null)
+  if (detalleInexistente && avisoDetalle !== sinDetalle) setAvisoDetalle(sinDetalle)
+  useEffect(() => {
+    if (detalleInexistente) fijarConsulta(new URLSearchParams(sinDetalle), { replace: true })
+  }, [detalleInexistente, sinDetalle])
 
   return (
     <div className="pagina">
       <header className="pagina-encabezado">
-        <h1>Análisis</h1>
+        <h1 id="titulo-analisis" tabIndex={-1}>Análisis</h1>
         <p className="muted">Capturas de corteza y follaje clasificadas en campo, de la más reciente a la más antigua.</p>
       </header>
 
@@ -292,8 +315,13 @@ export default function AnalisisScreen() {
         </div>
       )}
       {foto && <FotoEvidencia analisis={foto} onCerrar={() => setFoto(null)} />}
-      {detalle && datos && (
-        <DetalleAnalisis analisis={detalle} todos={datos} nombres={nombres} onCambiar={setDetalle} onCerrar={cerrarDetalle} />
+      {abierto && datos && (
+        <DetalleAnalisis analisis={abierto} todos={datos} nombres={nombres} onCambiar={cambiarDetalle} onCerrar={cerrarDetalle} />
+      )}
+      {avisoDetalle !== null && avisoDetalle === consulta && (
+        <p className="notice" role="status">
+          El análisis enlazado no está entre los cargados con estos filtros.
+        </p>
       )}
     </div>
   )
