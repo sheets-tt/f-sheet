@@ -101,7 +101,7 @@ export default function App() {
               {target === 'resumen' && <ResumenScreen />}
               {target === 'mapa' && <MapaScreen />}
               {target === 'analisis' && <AnalisisScreen />}
-              {target === 'admin' && <AdminScreen />}
+              {target === 'admin' && <AdminScreen username={session.username} />}
               {(target === 'arbol' || target === 'zona') && rutaId && (
                 <SeguimientoScreen key={`${target}-${rutaId}`} tipo={target} id={rutaId} />
               )}
