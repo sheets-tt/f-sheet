@@ -84,3 +84,27 @@ test('Gráficos a 360 px: sin desborde horizontal de la página', async ({ page 
     await page.screenshot({ path: `${capturas}/graficos-360-oscuro.png` })
   }
 })
+
+test('Análisis a 360 px: cajas, tarjetas y detalle sin desborde horizontal', async ({ page }) => {
+  await interceptarS3(page)
+  await page.setViewportSize({ width: 360, height: 780 })
+  await ir(page, '#/analisis?vista=tarjetas', 'Análisis')
+  await expect(page.getByRole('list', { name: 'Análisis' }).getByRole('article')).toHaveCount(5)
+  await sinDesbordeHorizontal(page)
+  const capturas = process.env.E2E_CAPTURAS
+  if (capturas) {
+    await page.waitForTimeout(600)
+    await page.screenshot({ path: `${capturas}/analisis-360.png` })
+    await page.getByRole('list', { name: 'Análisis' }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `${capturas}/analisis-360-tarjetas.png` })
+  }
+  await page.getByRole('button', { name: 'Ver detalle del análisis del 3 oct 2026, 09:10' }).click()
+  const dialogo = page.getByRole('dialog', { name: 'Análisis del 3 oct 2026, 09:10' })
+  await expect(dialogo.getByRole('button', { name: 'Cerrar' })).toBeVisible()
+  await sinDesbordeHorizontal(page)
+  if (capturas) {
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: `${capturas}/analisis-360-detalle-oscuro.png` })
+  }
+})

@@ -10,7 +10,7 @@ b-sheet); lo único que escribe es la gestión de cuentas de Administración.
 | `#/` | **Resumen**: focos de infestación, totales, resultado de los análisis, cromático promedio y sincronización | `GET /estadisticas` |
 | `#/mapa` | **Mapa** interactivo (MapLibre GL JS): árboles y zonas con su último resultado, radio real de las zonas, filtros por estado y tipo, búsqueda y lista sincronizada. Al elegir un punto (`#/mapa/a-<id>`) muestra su detalle y los 5 análisis más recientes | `GET /arboles` y `/zonas` en paralelo; `GET /analisis?arbol=…&limite=50` o `?zona=…` al elegir |
 | `#/arbol/<id>`, `#/zona/<id>` | **Seguimiento**: estado actual, mapa con el punto y dónde se tomó cada foto, confianza de cada análisis en el tiempo, evolución cromática del follaje y línea de tiempo con los cambios de resultado y las fotos | `GET /arboles/{id}` o `/zonas/{id}` y `GET /analisis?arbol=…&limite=200` en paralelo |
-| `#/analisis` | **Análisis**: tabla con filtros por fechas, tipo, resultado y sincronización; "Ver foto" abre la evidencia en un diálogo | `GET /analisis?…&limite=100`, `GET /analisis/{id}/evidencia` |
+| `#/analisis` | **Análisis**: filtros por fechas, tipo, resultado y sincronización (al backend); cajas por categoría que afinan lo cargado; vista de tarjetas o tabla; agrupar por árbol o zona, resultado o día; detalle de cada análisis con foto y enlaces. Todo en la URL (`#/analisis?tipo=…&caja_resultado=…&vista=tarjetas&agrupar=lugar`) | `GET /analisis?…&limite=100`, `GET /arboles` y `/zonas` (nombres), `GET /analisis/{id}/evidencia` |
 | `#/graficos` | **Gráficos** (D3, ambos roles): análisis en el tiempo con acercamiento, confianza del modelo, por árbol y zona, mapa de calor lugar × periodo y la lista de análisis de la selección. Crossfilter entre gráficas y vista en la URL (`#/graficos?desde=…&hasta=…&resultado=…&tipo=…&arbol=…\|zona=…&confianza=…`) | `GET /analisis?limite=500`, `GET /arboles` y `/zonas` en paralelo; todo se calcula en el navegador |
 | `#/admin` | **Administración** (solo `ADMINISTRADOR`): gestión de cuentas (crear, editar, asignar rol, desactivar y activar, con búsqueda y filtros por rol y estado) y dispositivos | `GET /cuentas`, `/dispositivos`; `POST /cuentas`, `PUT /cuentas/{id}`, `PATCH /cuentas/{id}/desactivar` y `/activar` |
 
@@ -52,6 +52,27 @@ permite `img-src` solo para ese bucket (parámetros `EvidenciasBucket` y `Eviden
 - **Sin WebGL** el mapa muestra un aviso y la lista sigue funcionando.
 - **Créditos**: OpenFreeMap, OpenMapTiles y OpenStreetMap aparecen en el botón ⓘ del mapa; son
   obligatorios por licencia, no los quites.
+
+### Análisis
+
+- **Lo de siempre**: el formulario (Desde, Hasta, Tipo, Resultado, Sincronización) consulta al
+  backend al aplicar, con `limite=100` (el máximo de `GET /analisis` es 500; si llegan 100 se pide
+  acotar por fechas). La tabla es la vista por defecto y sigue igual, con un botón "Detalle" por fila.
+- **Cajas por categoría** (sobre los análisis cargados, en el navegador): por resultado (color de
+  estado + forma), por tipo de imagen, por confianza del modelo — alta (≥ 80 %), media (50 % a menos de 80 %),
+  baja (< 50 %) y sin confianza, con un medidor café de la proporción — y **Requieren atención**:
+  infestados, no determinados, confianza baja o error de sincronización. Cada caja muestra cuántos
+  y su porcentaje, es un botón con `aria-pressed` y se combina con las demás (dentro de un grupo
+  suman, entre grupos se cruzan). Las elegidas aparecen como chips; "Quitar filtros" quita todo.
+- **Vista "Tarjetas | Tabla"**: se guarda en la URL y, como preferencia, en `localStorage`. Cada
+  tarjeta: miniatura (la URL firmada se pide solo al acercarse a la pantalla), resultado, confianza
+  con medidor, árbol o zona con enlace al seguimiento, tipo, fecha, observaciones y motivos de
+  atención. Toda la tarjeta abre el detalle.
+- **Agrupar por** nada, árbol o zona, resultado o día: secciones plegables (`<details>`) con el
+  conteo por resultado y cuántas requieren atención; por lugar, con enlace al seguimiento.
+- **Detalle** (diálogo): foto grande firmada, todos los datos, enlaces al seguimiento y a Gráficos
+  filtrado por ese lugar, y el análisis anterior y siguiente del mismo lugar.
+- La rampa café solo marca magnitudes (medidores); los resultados conservan sus colores de estado.
 
 ### Gráficos
 

@@ -2,9 +2,10 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import Encabezado from './components/Encabezado'
 import { EsqueletoPagina } from './components/Esqueleto'
 import Galeria, { Marca } from './components/Galeria'
+import LimiteError from './components/LimiteError'
 import { logout, SESION_TERMINADA, setUnauthorizedHandler } from './lib/api'
 import { esAdministrador, loadSession, type Session } from './lib/session'
-import { navigate, useRoute, useRutaId, type Route } from './lib/router'
+import { navigate, useConsulta, useRoute, useRutaId, type Route } from './lib/router'
 
 // Cada pantalla en su propio chunk: el login no descarga el plano ni las tablas, y viceversa.
 const LoginScreen = lazy(() => import('./screens/LoginScreen'))
@@ -27,6 +28,7 @@ function destino(ruta: Route, session: Session | null): Route {
 export default function App() {
   const route = useRoute()
   const rutaId = useRutaId()
+  const consulta = useConsulta()
   const [session, setSession] = useState<Session | null>(() => loadSession())
   const [notice, setNotice] = useState<string | null>(null)
   // Correo para rellenar el login (tras cambiar el propio correo en Administración).
@@ -110,6 +112,8 @@ export default function App() {
         onCerrarSesion={handleLogout}
       />
       <main id="main" className="main main-app" tabIndex={-1}>
+        {/* Un error al dibujar una pantalla no deja la app en blanco; cambiar de vista lo reinicia. */}
+        <LimiteError clave={`${target}|${rutaId ?? ''}|${consulta}`}>
         <Suspense fallback={fallback}>
           {route === target && (
             <>
@@ -124,6 +128,7 @@ export default function App() {
             </>
           )}
         </Suspense>
+        </LimiteError>
       </main>
     </div>
   )
