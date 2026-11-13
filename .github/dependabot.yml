@@ -1,0 +1,63 @@
+# Dependabot: el bot que ARREGLA dependencias vulnerables abriendo PRs (ramas dependabot/...).
+#  - Security updates (Settings → Code security → Dependabot security updates): PR en cuanto se
+#    publica un aviso que afecta a una dependencia de los archivos de abajo.
+#  - Version updates (esta configuración): revisión semanal de versiones nuevas.
+
+version: 2
+updates:
+  # package.json + pnpm-lock.yaml (Dependabot lee el lockfile de pnpm con el ecosistema npm).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Mexico_City
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: fix
+      prefix-development: chore
+      include: scope
+    labels: [dependencies, javascript]
+    groups:
+      # Parches y menores juntos, para no llenar de PRs; las mayores van solas.
+      minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Mexico_City
+    commit-message:
+      prefix: fix
+    labels: [dependencies, docker]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Mexico_City
+    commit-message:
+      prefix: chore
+    labels: [dependencies, github-actions]
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Dependencias de Python del script de revisión de PRs (.github/scripts/requirements.txt).
+  - package-ecosystem: pip
+    directory: /.github/scripts
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Mexico_City
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: [dependencies, python]
