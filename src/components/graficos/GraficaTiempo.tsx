@@ -9,10 +9,13 @@ import type { Resultado } from '../../lib/api'
 import { ETIQUETA_RESULTADO, formatPorcentaje } from '../../lib/format'
 import {
   desglose,
+  enPeriodo,
   etiquetaTick,
   INTERVALO,
+  NOMBRE_INTERVALO,
   plural,
   RESULTADOS,
+  UN_INTERVALO,
   type Dominio,
   type Intervalo,
   type Periodo,
@@ -69,9 +72,9 @@ export default function GraficaTiempo(props: Props) {
   const pico = conDatos.reduce<Periodo | null>((m, p) => (!m || p.total > m.total ? p : m), null)
 
   const resumen =
-    `Análisis por ${intervalo === 'dia' ? 'día' : intervalo === 'semana' ? 'semana' : 'mes'}: ${plural(total, 'análisis', 'análisis')} ` +
+    `Análisis por ${NOMBRE_INTERVALO[intervalo]}: ${plural(total, 'análisis', 'análisis')} ` +
     `en ${plural(periodos.length, 'periodo', 'periodos')}` +
-    (pico ? `; el máximo, ${pico.total} el ${pico.etiqueta}.` : '.')
+    (pico ? `; el máximo, ${pico.total} ${enPeriodo(pico.inicio, intervalo)}.` : '.')
 
   const columna = (p: Periodo) => {
     const x0 = Math.max(M.izquierda, x(p.inicio))
@@ -91,7 +94,7 @@ export default function GraficaTiempo(props: Props) {
       titulo="Análisis en el tiempo"
       descripcion={
         <>
-          Cada barra es un {intervalo === 'dia' ? 'día' : intervalo === 'semana' ? 'semana' : 'mes'}, apilada por resultado. Clic o Enter en
+          Cada barra es {UN_INTERVALO[intervalo]}, apilada por resultado. Clic o Enter en
           una barra acerca a ese periodo; arrastra en la franja de abajo para elegir el rango.
         </>
       }
@@ -248,8 +251,11 @@ function Vista({
 
   // El pincel es de d3 (arrastre con ratón o dedo); React no toca lo que hay dentro de ese <g>.
   const onRangoRef = useRef(onRango)
+  // Lo que el pincel debe mostrar ahora (para restaurarlo si un clic sin arrastrar lo borra).
+  const actual = useRef<[number, number] | null>(null)
   useEffect(() => {
     onRangoRef.current = onRango
+    actual.current = conRango ? [x(dominio[0]), x(dominio[1])] : null
   })
   useEffect(() => {
     const g = pincelRef.current
@@ -262,7 +268,13 @@ function Vista({
       .on('end', (e: D3BrushEvent<unknown>) => {
         if (!e.sourceEvent) return // movido desde aquí (sincronía con los filtros), no por la persona
         const s = e.selection as [number, number] | null
-        onRangoRef.current(s ? [x.invert(s[0]), x.invert(s[1])] : null)
+        if (!s) {
+          // Un clic sin arrastrar borra la selección de d3-brush: se conserva el rango actual
+          // (para quitarlo está "Restablecer").
+          select(g).call(pincel.move, actual.current)
+          return
+        }
+        onRangoRef.current([x.invert(s[0]), x.invert(s[1])])
       })
     comportamiento.current = pincel
     const sel = select(g)

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { ADMIN, entrar, interceptarS3, ir, expect, test } from './ayuda'
+import { ADMIN, ejeConfianzaSinEncimar, entrar, interceptarS3, ir, expect, test } from './ayuda'
 
 // En móvil, si algo desborda a lo ancho, Chrome aleja el zoom de toda la página en vez de mostrar una
 // barra: innerWidth crece por encima del ancho del dispositivo. Pasó con la tabla de análisis.
@@ -71,6 +71,7 @@ test('Gráficos a 360 px: sin desborde horizontal de la página', async ({ page 
   await ir(page, '#/graficos', 'Gráficos')
   await expect(page.getByRole('group', { name: /^Mapa de calor/ })).toBeVisible()
   await sinDesbordeHorizontal(page)
+  await ejeConfianzaSinEncimar(page)
   const capturas = process.env.E2E_CAPTURAS
   if (capturas) {
     await page.waitForTimeout(600)

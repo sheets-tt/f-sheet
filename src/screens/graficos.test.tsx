@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -161,7 +161,7 @@ describe('Gráficos', () => {
     expect(consulta().get('hasta')).toBe('2026-10-06')
     await user.click(screen.getByRole('button', { name: 'Siguiente' }))
     await waitFor(() => expect(consulta().get('desde')).toBe('2026-10-06'))
-    expect(consulta().get('hasta')).toBe('2026-10-08')
+    expect(consulta().get('hasta')).toBeNull() // llega al último día con datos
     await user.click(screen.getByRole('button', { name: 'Alejar' }))
     await waitFor(() => expect(consulta().get('desde')).toBeNull())
   })
@@ -193,3 +193,254 @@ async function abrirSinEsperar(hash: string, rutas: Parameters<typeof mockBacken
   window.location.hash = hash
   render(<App />)
 }
+
+describe('Gráficos: rango y URL acotados', () => {
+  it.each([
+    ['#/graficos?desde=0001-01-01&hasta=9999-12-31'],
+    ['#/graficos?hasta=2025-05-31'],
+    ['#/graficos?desde=2026-02-30'],
+    ['#/graficos?zona=no-existe&resultado=x&tipo=y&confianza=12&otro=1'],
+  ])('%s se normaliza a #/graficos sin paso nuevo en el historial', async (hash) => {
+    const largo = window.history.length
+    await abrir(hash)
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos'))
+    expect(window.history.length).toBe(largo + 1) // solo el de abrir la pantalla
+    expect(grafica(/^Análisis por día: 5 análisis en 6 periodos/)).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Filtros activos' })).not.toBeInTheDocument()
+    expect(document.querySelectorAll('svg *').length).toBeLessThan(2000)
+  })
+
+  it('un rango que se sale por un lado se acota y se reescribe', async () => {
+    await abrir('#/graficos?desde=2026-10-05&hasta=9999-12-31')
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-05'))
+    expect(grafica(/^Análisis por día: 3 análisis en 4 periodos/)).toBeInTheDocument()
+  })
+
+  it('las fechas se aplican al confirmar, no en cada tecla, y solo dentro de los datos', async () => {
+    await abrir()
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    expect(desde).toHaveAttribute('min', '2026-10-03')
+    expect(desde).toHaveAttribute('max', '2026-10-08')
+    const largo = window.history.length
+
+    // Escribir el año pasa por fechas absurdas: nada se aplica mientras se escribe.
+    for (const v of ['0002-10-03', '0020-10-03', '0202-10-03', '2025-10-03']) fireEvent.change(desde, { target: { value: v } })
+    expect(window.location.hash).toBe('#/graficos')
+    expect(window.history.length).toBe(largo)
+
+    // Al salir del campo: fuera de los datos → aviso y vuelve al valor vigente.
+    fireEvent.blur(desde)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Elige una fecha entre el 3 oct 2026 y el 8 oct 2026.')
+    expect(desde).toHaveAttribute('aria-invalid', 'true')
+    expect(desde.value).toBe('2026-10-03')
+    expect(window.location.hash).toBe('#/graficos')
+
+    // Una fecha válida con Enter se aplica.
+    fireEvent.change(desde, { target: { value: '2026-10-06' } })
+    fireEvent.keyDown(desde, { key: 'Enter' })
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-06'))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+describe('Gráficos: fecha a medio confirmar + clic en otro control (R1, R2)', () => {
+  /** Lo que hace el navegador al hacer clic en otro control con el foco en una fecha. */
+  function clicDesdeFecha(input: HTMLElement, control: HTMLElement) {
+    fireEvent.pointerDown(control)
+    // Como Chrome: el control recibe el foco (y la fecha lo pierde) antes del clic.
+    if (control.tabIndex >= 0 || control instanceof HTMLButtonElement) control.focus()
+    else input.blur()
+    fireEvent.click(control)
+  }
+
+  it('la fecha escrita y el clic en la leyenda salen juntos, en un solo paso del historial', async () => {
+    await abrir('#/graficos?hasta=2026-10-06')
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    const largo = window.history.length
+    desde.focus()
+    fireEvent.change(desde, { target: { value: '2026-10-05' } })
+    clicDesdeFecha(desde, screen.getByRole('button', { name: 'Infestado', pressed: false }))
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-05&hasta=2026-10-06&resultado=infestado'))
+    expect(window.history.length).toBe(largo + 1)
+    expect(desde.value).toBe('2026-10-05')
+  })
+
+  it('con Siguiente: el rango se mueve desde la fecha escrita', async () => {
+    await abrir('#/graficos?hasta=2026-10-05')
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    const largo = window.history.length
+    desde.focus()
+    fireEvent.change(desde, { target: { value: '2026-10-04' } })
+    clicDesdeFecha(desde, screen.getByRole('button', { name: 'Siguiente' }))
+    // 4–5 oct → siguientes dos días: 6–7 oct.
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-06&hasta=2026-10-07'))
+    expect(window.history.length).toBe(largo + 1)
+    await waitFor(() => expect(desde.value).toBe('2026-10-06'))
+  })
+
+  it('si el clic no lo consume ningún control, la fecha sale sola', async () => {
+    await abrir()
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    desde.focus()
+    fireEvent.change(desde, { target: { value: '2026-10-05' } })
+    const titulo = screen.getByRole('heading', { level: 1, name: 'Gráficos' })
+    clicDesdeFecha(desde, titulo)
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-05'))
+  })
+
+  it('Enter aplica la fecha sin sacar el foco del campo', async () => {
+    await abrir()
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    desde.focus()
+    fireEvent.change(desde, { target: { value: '2026-10-05' } })
+    fireEvent.keyDown(desde, { key: 'Enter' })
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-05'))
+    expect(screen.getByLabelText('Desde')).toBe(desde) // el mismo nodo: no se volvió a montar
+    expect(desde).toHaveFocus()
+  })
+
+  it('una fecha que intercambia el rango no saca el foco ni deja Hasta desfasado', async () => {
+    await abrir('#/graficos?desde=2026-10-05&hasta=2026-10-06')
+    const hasta = screen.getByLabelText('Hasta') as HTMLInputElement
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    hasta.focus()
+    fireEvent.change(hasta, { target: { value: '2026-10-03' } })
+    fireEvent.keyDown(hasta, { key: 'Enter' })
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos?hasta=2026-10-05'))
+    expect(hasta).toHaveFocus()
+    expect(desde.value).toBe('2026-10-03')
+  })
+
+  it('si el botón usado queda deshabilitado, el foco pasa al texto del rango', async () => {
+    const user = await abrir('#/graficos?desde=2026-10-05')
+    await user.click(screen.getByRole('button', { name: 'Restablecer' }))
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos'))
+    await waitFor(() => expect(document.activeElement).toHaveClass('rango-texto'))
+  })
+
+  it('el aviso de fecha inválida es de su campo y se va al corregirlo', async () => {
+    await abrir()
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    const hasta = screen.getByLabelText('Hasta') as HTMLInputElement
+    fireEvent.change(desde, { target: { value: '2025-01-01' } })
+    fireEvent.blur(desde)
+    expect(await screen.findByRole('alert')).toHaveAttribute('id', 'g-desde-error')
+    expect(desde).toHaveAttribute('aria-invalid', 'true')
+    expect(desde).toHaveAccessibleDescription(/Elige una fecha entre/)
+    expect(hasta).not.toHaveAttribute('aria-invalid')
+    fireEvent.change(hasta, { target: { value: '2026-10-07' } })
+    fireEvent.blur(hasta)
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+    expect(desde).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('si el rango pedido no tiene análisis, lo avisa y muestra todo', async () => {
+    const user = await abrir('#/graficos?desde=2025-05-01&hasta=2025-05-31')
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos'))
+    expect(screen.getByText('El rango pedido no tiene análisis; se muestra todo.')).toHaveAttribute('role', 'status')
+    await user.click(screen.getByRole('button', { name: 'Acercar' }))
+    await waitFor(() => expect(screen.queryByText('El rango pedido no tiene análisis; se muestra todo.')).not.toBeInTheDocument())
+  })
+
+  it('un rango que abarca todos los datos no es "sin análisis"', async () => {
+    await abrir('#/graficos?desde=0001-01-01&hasta=9999-12-31')
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos'))
+    expect(screen.queryByText(/El rango pedido no tiene análisis/)).not.toBeInTheDocument()
+  })
+})
+
+describe('Gráficos: campos de fecha "sucios" (N1), aviso de rango (N2) y foco de los chips', () => {
+  it('intercambio con clic en Hasta: Hasta (con foco) muestra el valor nuevo y salir no lo vuelve a aplicar', async () => {
+    await abrir('#/graficos?desde=2026-10-04&hasta=2026-10-06')
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    const hasta = screen.getByLabelText('Hasta') as HTMLInputElement
+    desde.focus()
+    fireEvent.change(desde, { target: { value: '2026-10-07' } })
+    fireEvent.pointerDown(hasta)
+    hasta.focus()
+    fireEvent.click(hasta)
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-06&hasta=2026-10-07'))
+    expect(hasta).toHaveFocus()
+    await waitFor(() => expect(hasta.value).toBe('2026-10-07'))
+    expect(desde.value).toBe('2026-10-06')
+    const largo = window.history.length
+    hasta.blur()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(window.location.hash).toBe('#/graficos?desde=2026-10-06&hasta=2026-10-07')
+    expect(window.history.length).toBe(largo)
+  })
+
+  it('intercambio con Enter: Desde (con foco) muestra el extremo real y salir no lo colapsa', async () => {
+    await abrir('#/graficos?desde=2026-10-04&hasta=2026-10-06')
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    desde.focus()
+    fireEvent.change(desde, { target: { value: '2026-10-07' } })
+    fireEvent.keyDown(desde, { key: 'Enter' })
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-06&hasta=2026-10-07'))
+    expect(desde).toHaveFocus()
+    await waitFor(() => expect(desde.value).toBe('2026-10-06'))
+    desde.blur()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(window.location.hash).toBe('#/graficos?desde=2026-10-06&hasta=2026-10-07')
+  })
+
+  it('Atrás con el foco en Desde: el campo se sincroniza y salir no rehace el cambio', async () => {
+    await abrir()
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    desde.focus()
+    fireEvent.change(desde, { target: { value: '2026-10-05' } })
+    fireEvent.keyDown(desde, { key: 'Enter' })
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-05'))
+    window.history.back()
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos'))
+    expect(desde).toHaveFocus()
+    await waitFor(() => expect(desde.value).toBe('2026-10-03'))
+    desde.blur()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(window.location.hash).toBe('#/graficos')
+  })
+
+  it.each([
+    ['Restablecer', ['Acercar', 'Restablecer']],
+    ['Acercar → Alejar', ['Acercar', 'Alejar']],
+  ])('el aviso de rango sin análisis no vuelve tras %s', async (_, botones) => {
+    const user = await abrir('#/graficos?hasta=2025-05-31')
+    const aviso = 'El rango pedido no tiene análisis; se muestra todo.'
+    expect(await screen.findByText(aviso)).toBeInTheDocument()
+    for (const b of botones) await user.click(screen.getByRole('button', { name: b }))
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos'))
+    expect(screen.queryByText(aviso)).not.toBeInTheDocument()
+  })
+
+  it('al quitar un chip el foco pasa al siguiente y, sin chips, al texto del rango', async () => {
+    const user = await abrir('#/graficos?tipo=follaje&resultado=sano')
+    await user.click(screen.getByRole('button', { name: 'Quitar Resultado: Sano' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Quitar Tipo: Follaje' })).toHaveFocus())
+    await user.click(screen.getByRole('button', { name: 'Quitar Tipo: Follaje' }))
+    await waitFor(() => expect(document.activeElement).toHaveClass('rango-texto'))
+  })
+
+  it('"Quitar todo" deja el foco en el texto del rango', async () => {
+    const user = await abrir('#/graficos?tipo=follaje&resultado=sano')
+    await user.click(screen.getByRole('button', { name: 'Quitar todo' }))
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos'))
+    await waitFor(() => expect(document.activeElement).toHaveClass('rango-texto'))
+  })
+
+  it('dos cambios de hash seguidos (Enter y enseguida Atrás) también sincronizan el campo', async () => {
+    await abrir()
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    desde.focus()
+    fireEvent.change(desde, { target: { value: '2026-10-05' } })
+    fireEvent.keyDown(desde, { key: 'Enter' })
+    // Sin esperar a que React vuelva a dibujar: la URL regresa a la de antes en la misma tarea.
+    expect(window.location.hash).toBe('#/graficos?desde=2026-10-05')
+    window.history.replaceState(null, '', '#/graficos')
+    window.dispatchEvent(new HashChangeEvent('hashchange'))
+    await waitFor(() => expect(desde.value).toBe('2026-10-03'))
+    desde.blur()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(window.location.hash).toBe('#/graficos')
+  })
+})
+

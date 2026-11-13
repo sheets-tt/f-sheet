@@ -102,3 +102,16 @@ export const test = base.extend<{ mapaBase: void }>({
     { auto: true },
   ],
 })
+
+/** Las etiquetas del eje x del histograma de confianza no se enciman (≥ 4 px entre cajas reales). */
+export async function ejeConfianzaSinEncimar(page: Page): Promise<void> {
+  const cajas = await page.locator('.eje-x-confianza').evaluateAll((els) =>
+    els.map((e) => {
+      const r = e.getBoundingClientRect()
+      return { izq: r.left, der: r.right, texto: e.textContent }
+    }),
+  )
+  expect(cajas.length).toBeGreaterThanOrEqual(3)
+  expect(cajas.at(-1)!.texto).toBe('100')
+  for (let i = 1; i < cajas.length; i++) expect(cajas[i].izq - cajas[i - 1].der, `${cajas[i - 1].texto} → ${cajas[i].texto}`).toBeGreaterThanOrEqual(4)
+}

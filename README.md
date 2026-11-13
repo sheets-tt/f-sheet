@@ -78,9 +78,26 @@ permite `img-src` solo para ese bucket (parámetros `EvidenciasBucket` y `Eviden
   y el área. Todo vive en el chunk perezoso de Gráficos (≈134 kB, ≈42 kB gzip); el resto de la
   app no lo descarga. CSP: sin atributos `style` en el marcado; los colores van por clases y
   atributos SVG. El pincel y el tooltip se posicionan por CSSOM (`el.style.*`), que `style-src
-  'self'` permite. Fechas en hora de CDMX (intervalos `utc*` sobre la hora de pared).
+  'self'` permite. Fechas en hora de CDMX con la zona IANA `America/Mexico_City` (la misma que las tablas), y los intervalos `utc*` sobre esa hora de pared.
 - **Límite**: se piden los 500 análisis más recientes (el máximo de `GET /analisis`); si hay más, la
   pantalla lo avisa.
+- **Rango y URL**: el rango siempre queda dentro de los días con datos; uno que cae entero fuera,
+  fechas que no existen (`2026-02-30`), parámetros inválidos o un árbol o zona que no existe se
+  ignoran y la URL se reescribe sin paso nuevo en el historial. Las fechas Desde/Hasta se aplican al
+  salir del campo o con Enter (no en cada tecla) y solo dentro del rango de los datos, con el aviso
+  en su propio campo. Si se confirma con un clic en otro control (leyenda, Siguiente, una marca…),
+  la fecha y ese cambio salen juntos en un solo paso del historial: todo cambio parte de la URL de
+  ese instante, no de los filtros con que se dibujó la pantalla. Los campos conservan el foco al
+  aplicar y solo se aplica lo que la persona escribió (un campo sin cambios pendientes siempre
+  muestra el rango vigente, también tras Atrás o un intercambio de extremos); si un botón de rango queda deshabilitado, o al quitar el último chip, el foco pasa al texto del
+  rango (al quitar un chip, al chip siguiente). Un rango pedido
+  en la URL que no toca ningún día con datos muestra «El rango pedido no tiene análisis; se muestra
+  todo». Un clic sin
+  arrastrar en la vista general no borra el rango. Como red de seguridad, nunca se dibujan más de
+  400 periodos (día → semana → mes → año según lo acercado).
+- **Nombres largos**: se recortan por el ancho real del texto y por el medio, para que el final
+  ("…número 3") distinga nombres parecidos; el nombre completo va en el `<title>` y en el nombre
+  accesible.
 
 ### Identidad visual
 
@@ -128,7 +145,8 @@ forma y etiqueta. Paleta original: `#320000 #5D2417 #8D4925 #C57D56 #FFB48A`. Va
 | Claro, categórica | los 5 | falla: banda de luminosidad, croma (`#320000`, `#5D2417` se leen grises) y separación normal 14.2 < 15 |
 | Oscuro, como rampa | los 5 | falla: `#320000` a 1.49:1 |
 | Oscuro, como rampa | `#8D4925 #C57D56 #FFB48A` | falla: `#8D4925` a 1.85:1 |
-| Oscuro, como rampa | `#A86038 #C57D56 #E29A70 #FFB48A` | **pasa todo** (extremo a 2.61:1, tono 4°) → `--cafe-1…4` en oscuro |
+| Oscuro, como rampa | `#A86038 #C57D56 #E29A70 #FFB48A` | pasa la rampa (2.61:1 ≥ 2:1), pero `#A86038` no llega a 3:1 (WCAG 1.4.11 para marcas) |
+| Oscuro, como rampa | `#C57D56 #E29A70 #FFB48A #FFD6BE` | **pasa todo** (extremo a 3.82:1, tono 3°; todos los pasos ≥ 3:1) → `--cafe-1…4` en oscuro |
 
 `#FFB48A` (claro) y `#5D2417` (oscuro) quedan como `--cafe-tinte`: solo fondo o relleno con contorno
 (la vista general del pincel). En oscuro la rampa se invierte (más análisis = más claro). Los tokens

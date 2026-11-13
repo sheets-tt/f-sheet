@@ -102,13 +102,14 @@
     --c-infestado: #d9466f;
     --c-neutro: #9a9da4;
     --tinta-oscura: #10211c;
-    /* Rampa café en oscuro: se invierte (más análisis = más claro) y #320000/#5d2417 no se usan
-       como marcas (1.49:1 y 1.03:1 sobre la superficie). #a86038 y #e29a70 son pasos intermedios
-       de la misma tinta, elegidos con el validador. */
-    --cafe-1: #a86038;
-    --cafe-2: #c57d56;
-    --cafe-3: #e29a70;
-    --cafe-4: #ffb48a;
+    /* Rampa café en oscuro: se invierte (más análisis = más claro). Todos los pasos a ≥ 3:1 sobre
+       #1e3932 (WCAG 1.4.11): #c57d56 3.82, #e29a70 5.39, #ffb48a 7.20, #ffd6be 9.26. #320000,
+       #5d2417 y #8d4925 no se usan como marcas (1.49, 1.03 y 1.85:1). #e29a70 y #ffd6be son pasos
+       de la misma tinta elegidos con el validador. */
+    --cafe-1: #c57d56;
+    --cafe-2: #e29a70;
+    --cafe-3: #ffb48a;
+    --cafe-4: #ffd6be;
     --cafe-tinte: #5d2417;
     color-scheme: dark;
   }
@@ -116,10 +117,10 @@
 
 /* Tema oscuro elegido a mano: mismos pasos de la rampa café que arriba. */
 :root[data-theme='dark'] {
-  --cafe-1: #a86038;
-  --cafe-2: #c57d56;
-  --cafe-3: #e29a70;
-  --cafe-4: #ffb48a;
+  --cafe-1: #c57d56;
+  --cafe-2: #e29a70;
+  --cafe-3: #ffb48a;
+  --cafe-4: #ffd6be;
   --cafe-tinte: #5d2417;
 }
 

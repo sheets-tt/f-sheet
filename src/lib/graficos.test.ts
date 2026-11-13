@@ -7,6 +7,8 @@ import {
   diaAPared,
   dominioDatos,
   dominioVisible,
+  enPeriodo,
+  esDia,
   escribirFiltros,
   filtrar,
   histogramaConfianza,
@@ -14,8 +16,10 @@ import {
   intervaloPara,
   leerFiltros,
   mapaCalor,
+  MAX_PERIODOS,
   moverDominio,
   nombresDeLugares,
+  normalizarFiltros,
   porLugar,
   rangoDe,
   serieTiempo,
@@ -155,5 +159,66 @@ describe('rango', () => {
     expect(moverDominio(r, datos, 'anterior')).toEqual(dominio('2026-10-01', '2026-10-11'))
     expect(moverDominio(r, datos, 'siguiente')).toEqual(dominio('2026-10-20', '2026-10-30'))
     expect(moverDominio(dominio('2026-10-25', '2026-10-31'), datos, 'siguiente')).toEqual(dominio('2026-10-25', '2026-10-31'))
+  })
+})
+
+describe('rango acotado a los datos (G1)', () => {
+  const datos = dominioDatos(ANALISIS)! // 3 al 8 oct 2026
+
+  it('solo acepta fechas reales', () => {
+    expect(esDia('2026-02-28')).toBe(true)
+    expect(esDia('2026-02-30')).toBe(false)
+    expect(esDia('2026-13-01')).toBe(false)
+    expect(esDia('0001-01-01')).toBe(true)
+    expect(leerFiltros('desde=2026-02-30').desde).toBeNull()
+  })
+
+  it('un rango enorme se acota a los días con datos', () => {
+    const f = { ...SIN_FILTROS, desde: '0001-01-01', hasta: '9999-12-31' }
+    expect(dominioVisible(f, datos)).toEqual(datos)
+    expect(dominioVisible({ ...SIN_FILTROS, desde: '2026-10-05', hasta: '9999-12-31' }, datos)).toEqual([dia('2026-10-05'), dia('2026-10-09')])
+  })
+
+  it('un rango entero fuera de los datos se ignora', () => {
+    expect(dominioVisible({ ...SIN_FILTROS, desde: '2025-05-31', hasta: '2025-05-31' }, datos)).toEqual(datos)
+    expect(dominioVisible({ ...SIN_FILTROS, desde: '2027-01-01' }, datos)).toEqual(datos)
+  })
+
+  it('normaliza la URL: rango acotado o quitado, sin lugares inexistentes', () => {
+    const lugares = new Set(['zona:c1', 'arbol:b1'])
+    expect(normalizarFiltros({ ...SIN_FILTROS, desde: '0001-01-01', hasta: '9999-12-31' }, datos, lugares)).toEqual(SIN_FILTROS)
+    expect(normalizarFiltros({ ...SIN_FILTROS, hasta: '2025-05-31' }, datos, lugares)).toEqual(SIN_FILTROS)
+    expect(normalizarFiltros({ ...SIN_FILTROS, desde: '2026-10-05', hasta: '9999-12-31' }, datos, lugares)).toMatchObject({
+      desde: '2026-10-05',
+      hasta: null,
+    })
+    expect(normalizarFiltros({ ...SIN_FILTROS, lugar: { tipo: 'zona', id: 'nope' } }, datos, lugares).lugar).toBeNull()
+    expect(normalizarFiltros({ ...SIN_FILTROS, lugar: { tipo: 'zona', id: 'c1' } }, datos, lugares).lugar).toEqual({ tipo: 'zona', id: 'c1' })
+  })
+
+  it('nunca genera más de MAX_PERIODOS periodos, aunque el dominio sea absurdo', () => {
+    const enorme = dominio('0001-01-01', '9999-12-31')
+    const inicio = performance.now()
+    const serie = serieTiempo(ANALISIS, enorme, 'dia')
+    expect(serie.length).toBe(MAX_PERIODOS)
+    expect(performance.now() - inicio).toBeLessThan(500)
+    expect(intervaloPara(dominio('1976-01-01', '2026-01-01'))).toBe('anio')
+  })
+})
+
+describe('textos por intervalo (G3)', () => {
+  it('usa la preposición de cada intervalo y meses en minúscula', () => {
+    expect(enPeriodo(dia('2026-10-03'), 'dia')).toBe('el 3 oct 2026')
+    expect(enPeriodo(dia('2026-10-05'), 'semana')).toBe('en la semana del 5 oct 2026')
+    expect(enPeriodo(dia('2026-10-01'), 'mes')).toBe('en octubre de 2026')
+    expect(enPeriodo(dia('2026-01-01'), 'anio')).toBe('en 2026')
+  })
+})
+
+describe('zona horaria IANA (obs 1)', () => {
+  it('respeta el horario de verano que CDMX tuvo hasta 2022', () => {
+    // 1 jul 2022 05:30 UTC = 00:30 en CDMX (UTC−5 entonces); con −6 fijo caería el 30 de junio.
+    expect(claveDia(aPared('2022-07-01T05:30:00Z'))).toBe('2022-07-01')
+    expect(claveDia(aPared('2026-07-01T05:30:00Z'))).toBe('2026-06-30')
   })
 })
