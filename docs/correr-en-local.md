@@ -158,7 +158,9 @@ encendida; apágala con `cd tt/b-sheet && docker compose stop db` si ya no la us
 
 | Comando | Qué hace |
 |---|---|
-| `pnpm test:e2e` | Corre las 25 pruebas sin ventana, en paralelo (~45 s) |
+| `pnpm test:e2e` | Corre las 90 pruebas sin ventana, en paralelo (~1 min 40 s) |
+| `pnpm test:e2e:evidencia` | Igual, y deja la evidencia con fecha en `evidencia-e2e/` (ver abajo) |
+| `pnpm test:e2e -g "Flujos completos"` | Solo los recorridos de punta a punta (administrador, experto, desactivación, cambio de correo, móvil) |
 | `pnpm test:e2e:ver` | Una sola ventana de Chromium, pruebas una tras otra, 800 ms de pausa por acción |
 | `E2E_LENTO=1500 pnpm test:e2e:ver` | Igual, pero más lento (el número son milisegundos por acción) |
 | `pnpm test:e2e:ver -g "mapa"` | Solo las pruebas cuyo nombre contiene "mapa" |
@@ -175,6 +177,38 @@ con internet y agrega los archivos nuevos al commit.
 
 En modo `ver`, cada prueba abre su propia ventana y la cierra al terminar: verás que una se cierra y
 se abre otra, pero nunca hay más de una a la vez.
+
+### Evidencia de las pruebas E2E
+
+`pnpm test:e2e:evidencia` corre todas las pruebas y guarda el resultado en una carpeta con la fecha y
+la hora (con segundos), por ejemplo `evidencia-e2e/2026-11-13_074215/`:
+
+| Dentro | Qué es |
+|---|---|
+| `resumen.md` | Rama, commit, totales y una tabla **prueba → resultado → duración → capturas**. Es lo primero que hay que abrir |
+| `reporte-html/` | El reporte de Playwright: cada prueba con sus pasos, sus capturas con nombre (`01-login.png`, `02-resumen.png`…) y, si falló, la traza para reproducirla paso a paso |
+| `resultados.json` | Lo mismo en JSON (para procesarlo o archivarlo) |
+| `artefactos/` | Capturas de página completa de cada prueba, y trazas y videos de las que fallaron |
+
+Para ver el reporte: `pnpm exec playwright show-report evidencia-e2e/<fecha>/reporte-html`. Cada
+prueba se llama **Área › función** (por ejemplo «Análisis › cajas › filtran por confianza baja»), y
+[e2e-cobertura.md](e2e-cobertura.md) dice qué prueba cubre cada función de la web.
+
+La carpeta `evidencia-e2e/` no se sube al repo (está en `.gitignore`) ni a la imagen (`.dockerignore`):
+para entregarla, comprime la carpeta de la fecha. Cada corrida ocupa unos **90–100 MB** (capturas de
+página completa de cada paso, en `artefactos/` y copiadas en `reporte-html/`). Para limpiar:
+
+```sh
+rm -rf evidencia-e2e/2026-11-13_074215                                   # una corrida
+find evidencia-e2e -mindepth 1 -maxdepth 1 -type d -mtime +30 -exec rm -rf {} +   # las de hace más de 30 días
+rm -rf evidencia-e2e                                                      # todas
+``` Con `pnpm test:e2e` normal, el JSON queda en
+`test-results/resultados.json` y el reporte en `playwright-report/`.
+
+**Una corrida a la vez.** Las pruebas usan el puerto 8082 y la BD `sheets_e2e`, que se vuelve a crear
+al empezar. Si ya hay otra corrida (en otra terminal, de otra persona o de CI en la misma máquina),
+la nueva se detiene al arrancar con «Ya hay una corrida E2E en curso…». Espera a que termine; si
+quedó un proceso colgado, detenlo y vuelve a correr (el candado viejo se reemplaza solo).
 
 ## Pruebas unitarias y revisiones
 

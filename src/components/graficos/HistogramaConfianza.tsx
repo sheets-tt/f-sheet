@@ -3,7 +3,7 @@ import { scaleBand, scaleLinear } from 'd3-scale'
 import { ETIQUETA_RESULTADO } from '../../lib/format'
 import { desglose, plural, RESULTADOS, type Decena } from '../../lib/graficos'
 import Simbolo, { TONO_RESULTADO } from '../Simbolo'
-import { anchoTexto, MarcoGrafica, Tooltip, useAncho, useResalte, useRoving } from './comunes'
+import { anchoTexto, MarcoGrafica, Tooltip, useAncho, useResalte, useRoving, type Enlace } from './comunes'
 
 const ALTO = 220
 const M = { arriba: 14, derecha: 14, abajo: 34, izquierda: 30 }
@@ -28,10 +28,18 @@ interface Props {
   elegida: number | null
   onElegir: (indice: number) => void
   onQuitarFiltros: () => void
+  descripcion?: string
+  enlace?: Enlace
+  nivel?: 2 | 3
 }
 
 /** Distribución de la confianza del modelo, en decenas. Un clic filtra las demás gráficas. */
-export default function HistogramaConfianza({ decenas, sinConfianza, elegida, onElegir, onQuitarFiltros }: Props) {
+export default function HistogramaConfianza({
+  decenas, sinConfianza, elegida, onElegir, onQuitarFiltros,
+  descripcion = 'Cuántos análisis hay en cada decena de confianza. Clic o Enter en una barra filtra las demás gráficas por esa decena.',
+  enlace,
+  nivel,
+}: Props) {
   const [lienzo, ancho] = useAncho<HTMLDivElement>(320)
   const util = Math.max(40, ancho - M.izquierda - M.derecha)
   const x = scaleBand<number>()
@@ -55,7 +63,9 @@ export default function HistogramaConfianza({ decenas, sinConfianza, elegida, on
     <MarcoGrafica
       id="titulo-confianza"
       titulo="Confianza del modelo"
-      descripcion="Cuántos análisis hay en cada decena de confianza. Clic o Enter en una barra filtra las demás gráficas por esa decena."
+      descripcion={descripcion}
+      enlace={enlace}
+      nivel={nivel}
       vacio={total === 0 && sinConfianza === 0}
       onQuitarFiltros={onQuitarFiltros}
       tabla={

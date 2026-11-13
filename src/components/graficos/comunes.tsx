@@ -87,6 +87,13 @@ export function useRoving(total: number, { columnas, onActivar }: { columnas?: n
 /** Marca bajo el puntero o con el foco: es la que muestra el tooltip. */
 export function useResalte(enfocado: number | null) {
   const [encima, setEncima] = useState<number | null>(null)
+  // Gana la última interacción: si el foco cambia (teclado), deja de mandar la marca bajo el puntero
+  // hasta que el puntero entre en otra.
+  const [focoPrevio, setFocoPrevio] = useState(enfocado)
+  if (focoPrevio !== enfocado) {
+    setFocoPrevio(enfocado)
+    if (enfocado !== null) setEncima(null)
+  }
   const resaltada = encima ?? enfocado
   const eventos = (i: number) => ({
     onPointerEnter: () => setEncima(i),
@@ -108,21 +115,40 @@ interface MarcoProps {
   leyenda?: ReactNode
   children: ReactNode
   className?: string
+  /** Enlace a la vista completa (el Resumen lleva a Gráficos con los mismos filtros). */
+  enlace?: Enlace
+  /** Nivel del título: 2 en Gráficos; 3 dentro de una sección (Resumen). */
+  nivel?: 2 | 3
+}
+
+export interface Enlace {
+  href: string
+  texto: string
+  /** Nombre accesible con contexto ("Ver la actividad en Gráficos"). */
+  etiqueta?: string
 }
 
 /** Panel de una gráfica: título, descripción, "Ver como tabla", leyenda y estado vacío. */
-export function MarcoGrafica({ id, titulo, descripcion, tabla, vacio = false, onQuitarFiltros, leyenda, children, className = '' }: MarcoProps) {
+export function MarcoGrafica({ id, titulo, descripcion, tabla, vacio = false, onQuitarFiltros, leyenda, children, className = '', enlace, nivel = 2 }: MarcoProps) {
+  const Titulo = nivel === 3 ? 'h3' : 'h2'
   const [comoTabla, setComoTabla] = useState(false)
   const descId = useId()
   return (
     <section className={`panel panel-grafica ${className}`} aria-labelledby={id} aria-describedby={descId}>
       <div className="panel-titulo">
-        <h2 id={id}>{titulo}</h2>
-        {!vacio && (
-          <button type="button" className="btn btn-ghost btn-chico" aria-pressed={comoTabla} onClick={() => setComoTabla((v) => !v)}>
-            {comoTabla ? 'Ver gráfica' : 'Ver como tabla'}
-          </button>
-        )}
+        <Titulo id={id}>{titulo}</Titulo>
+        <div className="panel-titulo-acciones">
+          {enlace && (
+            <a className="btn btn-secondary btn-chico" href={enlace.href} aria-label={enlace.etiqueta}>
+              {enlace.texto}
+            </a>
+          )}
+          {!vacio && (
+            <button type="button" className="btn btn-ghost btn-chico" aria-pressed={comoTabla} onClick={() => setComoTabla((v) => !v)}>
+              {comoTabla ? 'Ver gráfica' : 'Ver como tabla'}
+            </button>
+          )}
+        </div>
       </div>
       <p className="muted bloque-nota" id={descId}>
         {descripcion}

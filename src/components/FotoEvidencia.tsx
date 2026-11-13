@@ -16,9 +16,6 @@ interface Props {
 export default function FotoEvidencia({ analisis, onCerrar }: Props) {
   const dialogo = useRef<HTMLDialogElement>(null)
   const tituloId = useId()
-  const evidencia = useCarga((signal) => getEvidencia(analisis.id, signal), [analisis.id])
-  const [rota, setRota] = useState<string | null>(null)
-  const [cargada, setCargada] = useState<string | null>(null)
 
   useEffect(() => {
     const d = dialogo.current
@@ -32,8 +29,6 @@ export default function FotoEvidencia({ analisis, onCerrar }: Props) {
 
   const fecha = formatFecha(analisis.fechaCaptura)
   const tipo = ETIQUETA_TIPO[analisis.tipoImagen]
-  const url = evidencia.datos?.url
-  const fallo = url !== undefined && rota === url
 
   return (
     // Esc dispara "cancel" y luego "close": basta con escuchar "close" (si no, onCerrar corre dos veces).
@@ -47,6 +42,26 @@ export default function FotoEvidencia({ analisis, onCerrar }: Props) {
         </button>
       </header>
 
+      <ImagenEvidencia analisis={analisis} />
+    </dialog>
+  )
+}
+
+/**
+ * La foto firmada de un análisis con sus estados (cargando, error, enlace caducado). La usan el
+ * diálogo de la foto y el detalle del análisis.
+ */
+export function ImagenEvidencia({ analisis }: { analisis: Analisis }) {
+  const evidencia = useCarga((signal) => getEvidencia(analisis.id, signal), [analisis.id])
+  const [rota, setRota] = useState<string | null>(null)
+  const [cargada, setCargada] = useState<string | null>(null)
+  const fecha = formatFecha(analisis.fechaCaptura)
+  const tipo = ETIQUETA_TIPO[analisis.tipoImagen]
+  const url = evidencia.datos?.url
+  const fallo = url !== undefined && rota === url
+
+  return (
+    <>
       {evidencia.estado === 'cargando' && (
         <div className="foto-esqueleto" aria-busy="true">
           <span className="hueso" aria-hidden="true" />
@@ -69,7 +84,7 @@ export default function FotoEvidencia({ analisis, onCerrar }: Props) {
           onReintentar={evidencia.reintentar}
         />
       )}
-    </dialog>
+    </>
   )
 }
 

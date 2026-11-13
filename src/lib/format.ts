@@ -1,4 +1,5 @@
 import type { EstadoSincronizacion, Resultado, TipoImagen } from './api'
+import { esDia } from './dia'
 
 // Los datos son del Bosque de Chapultepec: se muestran en hora del centro de México.
 // Desde octubre de 2022 no hay horario de verano: UTC−6 todo el año.
@@ -47,12 +48,13 @@ export function formatPorcentaje(fraccion: number | null): string {
 
 /** "2026-10-04" (input type=date) → primer instante de ese día en CDMX, en ISO UTC. */
 export function inicioDelDia(dia: string): string | undefined {
-  return dia ? new Date(`${dia}T00:00:00.000${OFFSET_CDMX}`).toISOString() : undefined
+  // Una fecha inválida no se envía (y no rompe: toISOString lanza con un Date inválido).
+  return esDia(dia) ? new Date(`${dia}T00:00:00.000${OFFSET_CDMX}`).toISOString() : undefined
 }
 
 /** "2026-10-07" → último instante de ese día en CDMX, en ISO UTC (el filtro del backend es inclusivo). */
 export function finDelDia(dia: string): string | undefined {
-  return dia ? new Date(`${dia}T23:59:59.999${OFFSET_CDMX}`).toISOString() : undefined
+  return esDia(dia) ? new Date(`${dia}T23:59:59.999${OFFSET_CDMX}`).toISOString() : undefined
 }
 
 const relativo = new Intl.RelativeTimeFormat('es-MX', { numeric: 'auto' })

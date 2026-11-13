@@ -43,3 +43,15 @@ describe('haceCuanto', () => {
     expect(haceCuanto('2024-11-10T18:00:00Z', ahora)).toBe('hace 2 años')
   })
 })
+
+describe('inicioDelDia / finDelDia con fechas inválidas', () => {
+  it('no lanzan: devuelven undefined', async () => {
+    const { inicioDelDia, finDelDia } = await import('./format')
+    for (const d of ['2026-13-45', '2026-10-32', '9999-99-99', '2026-02-30']) {
+      expect(inicioDelDia(d)).toBeUndefined()
+      expect(finDelDia(d)).toBeUndefined()
+    }
+    expect(inicioDelDia('2026-10-04')).toBe('2026-10-04T06:00:00.000Z')
+  })
+})
+

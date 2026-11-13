@@ -7,6 +7,9 @@ const FRONT = 'http://localhost:5174'
 const BACK = 'http://localhost:8082'
 // Para verlo a ritmo humano: E2E_LENTO=800 (ms de pausa por acción). Ver script test:e2e:ver.
 const LENTO = Number(process.env.E2E_LENTO ?? 0)
+// Evidencia (pnpm test:e2e:evidencia, ver scripts/evidencia-e2e.mjs): E2E_EVIDENCIA=<carpeta> deja
+// ahí el reporte HTML, el JSON y los artefactos (capturas, trazas).
+const EVIDENCIA = process.env.E2E_EVIDENCIA
 // El mapa base (OpenFreeMap) es lo único que vendría de internet: las pruebas lo sirven desde la
 // copia de e2e/mapa-base (ver e2e/ayuda.ts) y el navegador no puede resolver el dominio real.
 // E2E_TESELAS=1 usa internet; E2E_GRABAR_MAPA=1 completa la copia.
@@ -25,18 +28,25 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  reporter: [
+    ['list'],
+    ['html', { open: 'never', outputFolder: EVIDENCIA ? `${EVIDENCIA}/reporte-html` : 'playwright-report' }],
+    ['json', { outputFile: EVIDENCIA ? `${EVIDENCIA}/resultados.json` : 'test-results/resultados.json' }],
+  ],
+  outputDir: EVIDENCIA ? `${EVIDENCIA}/artefactos` : 'test-results',
   use: {
     baseURL: FRONT,
     locale: 'es-MX',
     timezoneId: 'America/Mexico_City',
     trace: 'retain-on-failure',
+    // Cada prueba ya adjunta sus capturas (evidencia() y zz-final.png): la de Playwright, solo si falla.
     screenshot: 'only-on-failure',
     launchOptions: { slowMo: LENTO, args: ARGS_CHROMIUM },
   },
   projects: [
-    { name: 'escritorio', use: { ...devices['Desktop Chrome'] }, testIgnore: '**/movil.e2e.ts' },
-    { name: 'movil', use: { ...devices['Pixel 7'] }, testMatch: '**/movil.e2e.ts' },
+    // Las pruebas de móvil (Pixel 7) van en movil.e2e.ts y en los archivos *-movil.e2e.ts.
+    { name: 'escritorio', use: { ...devices['Desktop Chrome'] }, testIgnore: ['**/movil.e2e.ts', '**/*-movil.e2e.ts'] },
+    { name: 'movil', use: { ...devices['Pixel 7'] }, testMatch: ['**/movil.e2e.ts', '**/*-movil.e2e.ts'] },
   ],
   webServer: [
     {

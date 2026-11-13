@@ -7,6 +7,8 @@ interface Props {
   onCerrar: () => void
   /** Mientras se guarda, Esc y "Cancelar" no cierran (la petición ya salió). */
   bloqueado?: boolean
+  /** "ancho" para contenido con foto y datos (detalle de un análisis). */
+  ancho?: 'normal' | 'ancho'
   children: ReactNode
 }
 
@@ -14,7 +16,7 @@ interface Props {
  * <dialog> modal: el navegador atrapa el foco y Esc cierra. Mismo patrón que FotoEvidencia: se abre
  * al montar y quien lo usa lo desmonta en onCerrar (y devuelve el foco a donde corresponda).
  */
-export default function Dialogo({ titulo, descripcion, onCerrar, bloqueado = false, children }: Props) {
+export default function Dialogo({ titulo, descripcion, onCerrar, bloqueado = false, ancho = 'normal', children }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   const tituloId = useId()
   const descripcionId = useId()
@@ -34,7 +36,7 @@ export default function Dialogo({ titulo, descripcion, onCerrar, bloqueado = fal
   return (
     <dialog
       ref={ref}
-      className="dialogo"
+      className={ancho === 'ancho' ? 'dialogo dialogo-ancho' : 'dialogo'}
       aria-labelledby={tituloId}
       aria-describedby={descripcion ? descripcionId : undefined}
       onCancel={(e) => {

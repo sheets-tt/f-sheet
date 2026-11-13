@@ -2,6 +2,7 @@ import { mean } from 'd3-array'
 import { utcDay, utcMonday, utcMonth, utcYear, type CountableTimeInterval } from 'd3-time'
 import { timeFormatLocale } from 'd3-time-format'
 import type { Analisis, Arbol, Resultado, TipoImagen, Zona } from './api'
+import { esDia } from './dia'
 
 // Transformaciones de datos de la sección Gráficos: puras, sin DOM, probadas aparte.
 //
@@ -45,13 +46,7 @@ export function diaAPared(dia: string): Date {
   return new Date(`${dia}T00:00:00Z`)
 }
 
-const DIA_VALIDO = /^\d{4}-\d{2}-\d{2}$/
-/** Una fecha real: "2026-02-30" no (Date la convertiría en el 2 de marzo). */
-export function esDia(s: string | null): s is string {
-  if (!s || !DIA_VALIDO.test(s)) return false
-  const d = diaAPared(s)
-  return !Number.isNaN(d.getTime()) && claveDia(d) === s
-}
+export { esDia }
 
 // ---------------------------------------------------------------------------------------------
 // Formato de fechas con d3-time-format (es-MX, como el resto de la app: "3 oct 2026")
