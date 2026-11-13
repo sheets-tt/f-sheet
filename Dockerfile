@@ -15,7 +15,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN pnpm build
 
 # nginx sin root, escucha en 8080. Las plantillas de /etc/nginx/templates se procesan con envsubst al arrancar.
-FROM nginxinc/nginx-unprivileged:1.29-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 ENV API_UPSTREAM=http://backend:8080 \
     NGINX_ENVSUBST_FILTER=^API_
 COPY docker/default.conf.template /etc/nginx/templates/default.conf.template
