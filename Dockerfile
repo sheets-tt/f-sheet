@@ -3,7 +3,7 @@
 # esta imagen permite servirla en ECS/App Runner/EC2 si alguna vez hace falta.
 # Replica lo que hace CloudFront: caché de assets, cabeceras de seguridad y /api/* -> backend.
 
-FROM --platform=$BUILDPLATFORM node:22-alpine AS build
+FROM --platform=$BUILDPLATFORM node:25-alpine AS build
 WORKDIR /app
 # pnpm en la versión fijada en package.json (packageManager).
 RUN npm install -g pnpm@12.16.1
