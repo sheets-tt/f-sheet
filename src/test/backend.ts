@@ -51,7 +51,7 @@ export function json(status: number, body?: unknown): Response {
   })
 }
 
-type Respuesta = Response | ((url: URL) => Response | Promise<Response>)
+type Respuesta = Response | ((url: URL, init?: RequestInit) => Response | Promise<Response>)
 
 /**
  * Backend falso por ruta (sin el prefijo /api ni la query). Lo que no está en `rutas` responde 404.
@@ -64,24 +64,106 @@ export function mockBackend(fetchMock: Mock<typeof fetch>, rutas: Record<string,
     '/arboles': () => json(200, ARBOLES),
     '/zonas': () => json(200, ZONAS),
     '/analisis': () => json(200, ANALISIS),
-    '/cuentas': () => json(200, CUENTAS),
+    '/cuentas': (_url, init) => cuentas.coleccion(init),
     '/dispositivos': () => json(200, DISPOSITIVOS),
   }
+  const cuentas = cuentasEnMemoria()
   const todas = { ...defecto, ...rutas }
-  fetchMock.mockImplementation(async (input) => {
+  fetchMock.mockImplementation(async (input, init) => {
     const url = new URL(String(input), 'http://localhost')
     const path = url.pathname.replace(/^\/api/, '')
     // Rutas con parámetro: /analisis/{id}/evidencia, /arboles/{id}, /zonas/{id}.
     const foto = /^\/analisis\/([^/]+)\/evidencia$/.exec(path)
     const uno = /^\/(arboles|zonas)\/([^/]+)$/.exec(path)
+    const cuenta = /^\/cuentas\/([^/]+?)(?:\/(desactivar|activar))?$/.exec(path)
+    if (cuenta) {
+      const propia = todas[cuenta[2] ? `/cuentas/:id/${cuenta[2]}` : '/cuentas/:id']
+      if (propia) return typeof propia === 'function' ? propia(url, init) : propia.clone()
+      return cuentas.una(decodeURIComponent(cuenta[1]), cuenta[2] as 'desactivar' | 'activar' | undefined, init)
+    }
     const ruta = foto
       ? (todas['/analisis/:id/evidencia'] ?? evidenciaPorDefecto(foto[1]))
       : uno
         ? (todas[`/${uno[1]}/:id`] ?? unoPorDefecto(uno[1] as 'arboles' | 'zonas', decodeURIComponent(uno[2])))
         : todas[path]
     if (!ruta) return json(404)
-    return typeof ruta === 'function' ? ruta(url) : ruta.clone()
+    return typeof ruta === 'function' ? ruta(url, init) : ruta.clone()
   })
+}
+
+/**
+ * Cuentas con estado en memoria (una copia de CUENTAS por cada mockBackend), con las reglas de
+ * b-sheet: 400 por datos inválidos, 404, 409 por correo repetido o por tocar la cuenta propia.
+ */
+function cuentasEnMemoria() {
+  const lista: CuentaResumen[] = CUENTAS.map((c) => ({ ...c }))
+  let siguiente = 1
+
+  const cuerpo = (init?: RequestInit) => JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>
+  const yo = () => {
+    try {
+      return (JSON.parse(sessionStorage.getItem('sheets-tt.session') ?? '{}') as { username?: string }).username ?? ''
+    } catch {
+      return ''
+    }
+  }
+  const repetido = (correo: string, salvo?: string) =>
+    lista.some((c) => c.id !== salvo && c.correo.toLowerCase() === correo.toLowerCase())
+
+  function invalido(b: Record<string, unknown>, crear: boolean): string | null {
+    const correo = typeof b.correo === 'string' ? b.correo.trim() : ''
+    const nombre = typeof b.nombreCompleto === 'string' ? b.nombreCompleto.trim() : ''
+    const pass = typeof b.contrasena === 'string' ? b.contrasena : ''
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return 'El correo no es válido.'
+    if (!nombre || nombre.length > 255) return 'El nombre completo es obligatorio (máximo 255 caracteres).'
+    if (b.rol !== 'ADMINISTRADOR' && b.rol !== 'EXPERTO_CAMPO') return 'El rol no es válido.'
+    if ((crear || pass) && (pass.length < 8 || new TextEncoder().encode(pass).length > 72))
+      return 'La contraseña debe tener entre 8 caracteres y 72 bytes.'
+    return null
+  }
+
+  return {
+    coleccion(init?: RequestInit): Response {
+      if ((init?.method ?? 'GET') === 'GET') return json(200, lista)
+      if (init?.method !== 'POST') return json(405)
+      const b = cuerpo(init)
+      const error = invalido(b, true)
+      if (error) return json(400, { message: error })
+      const correo = String(b.correo).trim()
+      if (repetido(correo)) return json(409, { message: 'Ya existe una cuenta con ese correo.' })
+      const nueva: CuentaResumen = {
+        id: `n${siguiente++}`,
+        correo,
+        nombreCompleto: String(b.nombreCompleto).trim(),
+        rol: b.rol as CuentaResumen['rol'],
+        activa: true,
+        fechaCreacion: '2026-11-12T18:00:00Z',
+      }
+      lista.unshift(nueva)
+      return json(201, nueva)
+    },
+    una(id: string, accion: 'desactivar' | 'activar' | undefined, init?: RequestInit): Response {
+      const i = lista.findIndex((c) => c.id === id)
+      if (i < 0) return json(404, { message: 'No existe la cuenta.' })
+      const actual = lista[i]
+      const propia = actual.correo.toLowerCase() === yo().toLowerCase()
+      if (accion) {
+        if (init?.method !== 'PATCH') return json(405)
+        if (accion === 'desactivar' && propia) return json(409, { message: 'No puedes desactivar tu propia cuenta.' })
+        lista[i] = { ...actual, activa: accion === 'activar' }
+        return json(200, lista[i])
+      }
+      if (init?.method !== 'PUT') return json(405)
+      const b = cuerpo(init)
+      const error = invalido(b, false)
+      if (error) return json(400, { message: error })
+      const correo = String(b.correo).trim()
+      if (repetido(correo, id)) return json(409, { message: 'Ya existe una cuenta con ese correo.' })
+      if (propia && b.rol !== 'ADMINISTRADOR') return json(409, { message: 'No puedes quitarte el rol de administrador.' })
+      lista[i] = { ...actual, correo, nombreCompleto: String(b.nombreCompleto).trim(), rol: b.rol as CuentaResumen['rol'] }
+      return json(200, lista[i])
+    },
+  }
 }
 
 /** Como b-sheet: el registro, o 404 si no existe. */
