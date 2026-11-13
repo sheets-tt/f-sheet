@@ -3,10 +3,24 @@ import { scaleBand, scaleLinear } from 'd3-scale'
 import { ETIQUETA_RESULTADO } from '../../lib/format'
 import { desglose, plural, RESULTADOS, type Decena } from '../../lib/graficos'
 import Simbolo, { TONO_RESULTADO } from '../Simbolo'
-import { MarcoGrafica, Tooltip, useAncho, useResalte, useRoving } from './comunes'
+import { anchoTexto, MarcoGrafica, Tooltip, useAncho, useResalte, useRoving } from './comunes'
 
 const ALTO = 220
-const M = { arriba: 14, derecha: 8, abajo: 34, izquierda: 30 }
+const M = { arriba: 14, derecha: 14, abajo: 34, izquierda: 30 }
+/** Espacio mínimo entre dos etiquetas del eje x. */
+const HUECO_MIN = 10
+
+/**
+ * Etiquetas del eje x (0, 10 … 100) centradas en los límites de las decenas. Si con el ancho real
+ * quedarían a menos de HUECO_MIN px una de otra, van cada 20 (o cada 50 en lo más angosto).
+ */
+export function ticksConfianza(inicio: number, util: number): { valor: number; x: number }[] {
+  const paso = util / 10
+  const cada = [1, 2, 5].find((c) => c * paso - anchoTexto('100') >= HUECO_MIN) ?? 10
+  return Array.from({ length: 11 }, (_, k) => k)
+    .filter((k) => k % cada === 0)
+    .map((k) => ({ valor: k * 10, x: inicio + k * paso }))
+}
 
 interface Props {
   decenas: Decena[]
@@ -36,8 +50,6 @@ export default function HistogramaConfianza({ decenas, sinConfianza, elegida, on
     (moda ? `; la más frecuente, ${moda.etiqueta} con ${moda.total}` : '') +
     (sinConfianza ? `; ${sinConfianza} sin confianza.` : '.')
   const activa = resaltada !== null ? decenas[resaltada] : null
-  // Etiquetas del eje: todas si caben, si no cada 20 %.
-  const cada = util / 10 < 34 ? 2 : 1
 
   return (
     <MarcoGrafica
@@ -96,16 +108,11 @@ export default function HistogramaConfianza({ decenas, sinConfianza, elegida, on
               </text>
             </g>
           ))}
-          {decenas.map((d, i) =>
-            i % cada === 0 ? (
-              <text key={d.indice} className="eje" x={x(d.indice)!} y={ALTO - 18} textAnchor="middle">
-                {d.indice * 10}
-              </text>
-            ) : null,
-          )}
-          <text className="eje" x={M.izquierda + util} y={ALTO - 18} textAnchor="end">
-            100
-          </text>
+          {ticksConfianza(M.izquierda, util).map((t) => (
+            <text key={t.valor} className="eje eje-x-confianza" x={t.x} y={ALTO - 18} textAnchor="middle">
+              {t.valor}
+            </text>
+          ))}
           <text className="eje eje-titulo" x={M.izquierda + util / 2} y={ALTO - 3} textAnchor="middle">
             Confianza (%)
           </text>

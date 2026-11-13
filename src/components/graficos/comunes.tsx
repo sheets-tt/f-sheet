@@ -164,3 +164,37 @@ export function Tooltip({ x, y, ancho, alto, children }: { x: number; y: number;
     </div>
   )
 }
+
+// ---------------------------------------------------------------------------------------------
+// Recorte de nombres por ancho real
+// ---------------------------------------------------------------------------------------------
+const FUENTE_EJE = '500 12px "Schibsted Grotesk Variable", "Schibsted Grotesk", system-ui, sans-serif'
+let medidor: OffscreenCanvasRenderingContext2D | null | undefined
+
+/** Ancho en px de un texto con la fuente de los ejes (12 px). Sin canvas (jsdom): ~7 px por carácter. */
+export function anchoTexto(texto: string): number {
+  if (medidor === undefined) {
+    medidor = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(1, 1).getContext('2d') : null
+    if (medidor) medidor.font = FUENTE_EJE
+  }
+  return medidor ? medidor.measureText(texto).width : texto.length * 7
+}
+
+/**
+ * Recorta un nombre para que quepa en `px`, por el medio: el final se conserva porque es lo que
+ * distingue nombres parecidos ("Pino número 3" / "Pino número 6" → "Pino nú…ero 3"). El nombre
+ * completo va en el <title> y en el nombre accesible de la marca.
+ */
+export function recortarAlAncho(texto: string, px: number): string {
+  if (anchoTexto(texto) <= px) return texto
+  // Se conserva la última palabra si es corta ("calzada"), o los últimos 5 caracteres ("ero 3").
+  const ultima = texto.split(/\s+/).at(-1) ?? ''
+  const final = ultima.length >= 4 && ultima.length <= 8 && ultima.length < texto.length / 2 ? ultima : texto.slice(-5).trimStart()
+  const inicio = texto.slice(0, texto.length - final.length)
+  for (let n = inicio.length - 1; n > 0; n--) {
+    const t = `${inicio.slice(0, n).trimEnd()}…${final}`
+    if (anchoTexto(t) <= px) return t
+  }
+  const soloFinal = `…${final}`
+  return anchoTexto(soloFinal) <= px ? soloFinal : '…'
+}

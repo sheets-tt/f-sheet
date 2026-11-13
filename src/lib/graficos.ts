@@ -1,23 +1,38 @@
 import { mean } from 'd3-array'
-import { utcDay, utcMonday, utcMonth, type CountableTimeInterval } from 'd3-time'
+import { utcDay, utcMonday, utcMonth, utcYear, type CountableTimeInterval } from 'd3-time'
 import { timeFormatLocale } from 'd3-time-format'
 import type { Analisis, Arbol, Resultado, TipoImagen, Zona } from './api'
 
 // Transformaciones de datos de la sección Gráficos: puras, sin DOM, probadas aparte.
 //
-// Tiempo: los datos son de CDMX (UTC−6 todo el año, ver format.ts). Cada instante se pasa a su
-// "hora de pared" de CDMX como un Date UTC, y ahí se usan los intervalos utc* de d3-time: así un
-// análisis de las 23:00 del 3 de octubre en CDMX cae en el 3 y no en el 4, sin importar la zona
-// horaria del navegador.
+// Tiempo: los datos son de CDMX. Cada instante se pasa a su "hora de pared" en America/Mexico_City
+// (la misma zona IANA que usa format.ts para las tablas) como un Date UTC, y ahí se usan los
+// intervalos utc* de d3-time: así un análisis de las 23:00 del 3 de octubre en CDMX cae en el 3 y
+// no en el 4, sin importar la zona horaria del navegador.
 
 export const RESULTADOS: Resultado[] = ['sano', 'infestado', 'no_determinado']
 export const TIPOS: TipoImagen[] = ['corteza', 'follaje']
 
-const OFFSET_CDMX_MS = 6 * 3_600_000
+const partesCdmx = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Mexico_City',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+})
 
-/** Instante ISO → hora de pared de CDMX (como Date UTC). */
+/** Instante ISO → hora de pared de CDMX (como Date UTC), con las reglas de la zona IANA. */
 export function aPared(iso: string): Date {
-  return new Date(Date.parse(iso) - OFFSET_CDMX_MS)
+  const instante = new Date(iso)
+  const p: Record<string, number> = {}
+  for (const parte of partesCdmx.formatToParts(instante)) if (parte.type !== 'literal') p[parte.type] = Number(parte.value)
+  const pared = new Date(Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second, instante.getUTCMilliseconds()))
+  // Date.UTC interpreta los años 0–99 como 1900–1999.
+  if (p.year < 100) pared.setUTCFullYear(p.year)
+  return pared
 }
 
 /** Date de pared → "2026-10-03". */
@@ -31,8 +46,11 @@ export function diaAPared(dia: string): Date {
 }
 
 const DIA_VALIDO = /^\d{4}-\d{2}-\d{2}$/
-function esDia(s: string | null): s is string {
-  return !!s && DIA_VALIDO.test(s) && !Number.isNaN(diaAPared(s).getTime())
+/** Una fecha real: "2026-02-30" no (Date la convertiría en el 2 de marzo). */
+export function esDia(s: string | null): s is string {
+  if (!s || !DIA_VALIDO.test(s)) return false
+  const d = diaAPared(s)
+  return !Number.isNaN(d.getTime()) && claveDia(d) === s
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -51,31 +69,51 @@ const locale = timeFormatLocale({
 
 export const formatoDia = locale.utcFormat('%-d %b %Y')
 const formatoMes = locale.utcFormat('%B de %Y')
+const formatoAnio = locale.utcFormat('%Y')
 const tickDia = locale.utcFormat('%-d %b')
 const tickMes = locale.utcFormat('%b %Y')
 
 // ---------------------------------------------------------------------------------------------
 // Intervalos de tiempo
 // ---------------------------------------------------------------------------------------------
-export type Intervalo = 'dia' | 'semana' | 'mes'
+export type Intervalo = 'dia' | 'semana' | 'mes' | 'anio'
 
-export const INTERVALO: Record<Intervalo, CountableTimeInterval> = { dia: utcDay, semana: utcMonday, mes: utcMonth }
+export const INTERVALO: Record<Intervalo, CountableTimeInterval> = { dia: utcDay, semana: utcMonday, mes: utcMonth, anio: utcYear }
 
-/** El detalle sigue al acercamiento: días hasta ~2 meses, semanas hasta ~1 año, meses después. */
+/** "día", "semana"… y con artículo ("un día", "una semana") para las frases. */
+export const NOMBRE_INTERVALO: Record<Intervalo, string> = { dia: 'día', semana: 'semana', mes: 'mes', anio: 'año' }
+export const UN_INTERVALO: Record<Intervalo, string> = { dia: 'un día', semana: 'una semana', mes: 'un mes', anio: 'un año' }
+
+/** Tope de periodos dibujados: protege la pestaña aunque llegue un rango absurdo. */
+export const MAX_PERIODOS = 400
+
+/** El detalle sigue al acercamiento: días hasta ~2 meses, semanas hasta ~1 año, meses hasta 10 años. */
 export function intervaloPara(dominio: Dominio): Intervalo {
   const dias = utcDay.count(dominio[0], dominio[1])
   if (dias <= 62) return 'dia'
   if (dias <= 400) return 'semana'
-  return 'mes'
+  if (utcMonth.count(dominio[0], dominio[1]) <= 120) return 'mes'
+  return 'anio'
 }
 
+/** Etiqueta suelta (título de tooltip, fila de tabla): "3 oct 2026", "Semana del 5 oct 2026"… */
 export function etiquetaPeriodo(inicio: Date, intervalo: Intervalo): string {
   if (intervalo === 'dia') return formatoDia(inicio)
   if (intervalo === 'semana') return `Semana del ${formatoDia(inicio)}`
+  if (intervalo === 'anio') return formatoAnio(inicio)
   return formatoMes(inicio).replace(/^./, (c) => c.toUpperCase())
 }
 
+/** Dentro de una frase, con su preposición: "el 3 oct 2026", "en la semana del 5 oct 2026", "en octubre de 2026". */
+export function enPeriodo(inicio: Date, intervalo: Intervalo): string {
+  if (intervalo === 'dia') return `el ${formatoDia(inicio)}`
+  if (intervalo === 'semana') return `en la semana del ${formatoDia(inicio)}`
+  if (intervalo === 'anio') return `en ${formatoAnio(inicio)}`
+  return `en ${formatoMes(inicio)}`
+}
+
 export function etiquetaTick(inicio: Date, intervalo: Intervalo): string {
+  if (intervalo === 'anio') return formatoAnio(inicio)
   return intervalo === 'mes' ? tickMes(inicio) : tickDia(inicio)
 }
 
@@ -95,20 +133,37 @@ export function dominioDatos(analisis: Analisis[]): Dominio | null {
   return [utcDay.floor(new Date(min)), utcDay.offset(utcDay.floor(new Date(max)), 1)]
 }
 
-/** El rango elegido (desde/hasta inclusivos) o, sin rango, todos los datos. */
+/**
+ * El rango elegido (desde/hasta inclusivos) acotado a los días con datos; sin rango, o con uno que
+ * cae entero fuera de los datos, todos los datos. Nunca más ancho que los datos: un ?desde=0001-01-01
+ * no genera miles de periodos.
+ */
 export function dominioVisible(filtros: Filtros, datos: Dominio): Dominio {
-  const d0 = filtros.desde ? diaAPared(filtros.desde) : datos[0]
-  const d1 = filtros.hasta ? utcDay.offset(diaAPared(filtros.hasta), 1) : datos[1]
-  return d1 > d0 ? [d0, d1] : [d0, utcDay.offset(d0, 1)]
+  let d0 = filtros.desde ? diaAPared(filtros.desde) : datos[0]
+  let d1 = filtros.hasta ? utcDay.offset(diaAPared(filtros.hasta), 1) : datos[1]
+  if (d0 < datos[0]) d0 = datos[0]
+  if (d1 > datos[1]) d1 = datos[1]
+  return d1 > d0 ? [d0, d1] : datos
 }
 
-/** Dominio → desde/hasta (inclusivos). Si coincide con los datos, sin rango. */
+/**
+ * Filtros canónicos para estos datos: el rango acotado (o quitado si cubre todo o queda fuera),
+ * y sin árbol o zona que no existan. La pantalla reescribe la URL con esto (replace).
+ */
+export function normalizarFiltros(f: Filtros, datos: Dominio, lugares: Set<string>): Filtros {
+  const rango = f.desde || f.hasta ? rangoDe(dominioVisible(f, datos), datos) : { desde: null, hasta: null }
+  return { ...f, ...rango, lugar: f.lugar && lugares.has(claveLugar(f.lugar)) ? f.lugar : null }
+}
+
+/** Dominio → desde/hasta (inclusivos). Cada extremo que llega al borde de los datos se omite. */
 export function rangoDe(dominio: Dominio, datos: Dominio): Pick<Filtros, 'desde' | 'hasta'> {
   const d0 = utcDay.round(dominio[0])
   let d1 = utcDay.round(dominio[1])
   if (d1 <= d0) d1 = utcDay.offset(d0, 1)
-  if (d0 <= datos[0] && d1 >= datos[1]) return { desde: null, hasta: null }
-  return { desde: claveDia(d0), hasta: claveDia(utcDay.offset(d1, -1)) }
+  return {
+    desde: d0 <= datos[0] ? null : claveDia(d0),
+    hasta: d1 >= datos[1] ? null : claveDia(utcDay.offset(d1, -1)),
+  }
 }
 
 type Mover = 'acercar' | 'alejar' | 'anterior' | 'siguiente'
@@ -264,7 +319,9 @@ export function serieTiempo(
   nombres: Map<string, string> = new Map(),
 ): Periodo[] {
   const int = INTERVALO[intervalo]
-  const inicios = int.range(int.floor(dominio[0]), dominio[1])
+  // Red de seguridad: como mucho MAX_PERIODOS (los más recientes), pase lo que pase con el dominio.
+  const desde = int.count(int.floor(dominio[0]), dominio[1]) > MAX_PERIODOS ? int.offset(int.floor(dominio[1]), -MAX_PERIODOS) : dominio[0]
+  const inicios = int.range(int.floor(desde), dominio[1]).slice(-MAX_PERIODOS)
   const grupos = new Map<string, Analisis[]>()
   for (const a of analisis) {
     const clave = claveDia(int.floor(aPared(a.fechaCaptura)))

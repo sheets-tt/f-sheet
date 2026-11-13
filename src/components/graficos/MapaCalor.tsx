@@ -12,7 +12,7 @@ import {
   type Periodo,
 } from '../../lib/graficos'
 import Simbolo, { Forma, TONO_RESULTADO } from '../Simbolo'
-import { MarcoGrafica, Tooltip, useAncho, useResalte, useRoving } from './comunes'
+import { MarcoGrafica, recortarAlAncho, Tooltip, useAncho, useResalte, useRoving } from './comunes'
 
 const FILA = 30
 const MIN_CELDA = 18
@@ -126,7 +126,8 @@ export default function MapaCalor({ filas, periodos, celdas, intervalo, elegido,
                 y={M.arriba + i * FILA + FILA / 2 + 4}
                 textAnchor="end"
               >
-                {f.nombre.length > Math.floor((izquierda - 12) / 7) ? `${f.nombre.slice(0, Math.floor((izquierda - 12) / 7) - 1)}…` : f.nombre}
+                <title>{f.nombre}</title>
+                {recortarAlAncho(f.nombre, izquierda - 16)}
               </text>
             ))}
             {periodos.map((p, j) =>

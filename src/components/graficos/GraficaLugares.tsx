@@ -4,7 +4,7 @@ import { ETIQUETA_RESULTADO, formatFecha, formatPorcentaje } from '../../lib/for
 import { claveLugar, desglose, plural, RESULTADOS, type FilaLugar, type Lugar } from '../../lib/graficos'
 import { hrefDe } from '../../lib/router'
 import Simbolo, { TONO_RESULTADO } from '../Simbolo'
-import { MarcoGrafica, Tooltip, useAncho, useResalte, useRoving } from './comunes'
+import { MarcoGrafica, recortarAlAncho, Tooltip, useAncho, useResalte, useRoving } from './comunes'
 import { LeyendaResultados } from './GraficaTiempo'
 
 const FILA = 30
@@ -15,12 +15,6 @@ interface Props {
   elegido: Lugar | null
   onAbrir: (l: Lugar) => void
   onQuitarFiltros: () => void
-}
-
-/** Recorta un nombre a los caracteres que caben (aprox. 7 px por carácter a 12 px). */
-function recortar(texto: string, px: number): string {
-  const caben = Math.max(4, Math.floor(px / 7))
-  return texto.length > caben ? `${texto.slice(0, caben - 1)}…` : texto
 }
 
 /** Análisis por árbol y zona, apilados por resultado. Clic o Enter abre el seguimiento. */
@@ -105,7 +99,8 @@ export default function GraficaLugares({ filas, elegido, onAbrir, onQuitarFiltro
               >
                 <rect className="marca-toque" x={0} width={ancho} y={y0} height={FILA} />
                 <text className="eje eje-nombre" x={izquierda - 8} y={y0 + FILA / 2 + 4} textAnchor="end">
-                  {recortar(f.nombre, izquierda - 12)}
+                  <title>{f.nombre}</title>
+                  {recortarAlAncho(f.nombre, izquierda - 16)}
                 </text>
                 {RESULTADOS.map((r) => {
                   const n = f.conteos[r]
