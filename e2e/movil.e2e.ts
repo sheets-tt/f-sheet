@@ -17,6 +17,7 @@ for (const [nombre, hash] of [
   ['Resumen', '#/'],
   ['Mapa', '#/mapa'],
   ['Análisis', '#/analisis'],
+  ['Gráficos', '#/graficos'],
   ['Administración', '#/admin'],
 ] as const) {
   test(`${nombre} cabe a lo ancho`, async ({ page }) => {
@@ -63,4 +64,22 @@ test('el formulario de cuenta cabe en la pantalla y se cierra con Cancelar', asy
   await dialogo.getByRole('button', { name: 'Cancelar' }).click()
   await expect(dialogo).toBeHidden()
   await expect(page.getByRole('button', { name: 'Crear cuenta' })).toBeFocused()
+})
+
+test('Gráficos a 360 px: sin desborde horizontal de la página', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 })
+  await ir(page, '#/graficos', 'Gráficos')
+  await expect(page.getByRole('group', { name: /^Mapa de calor/ })).toBeVisible()
+  await sinDesbordeHorizontal(page)
+  const capturas = process.env.E2E_CAPTURAS
+  if (capturas) {
+    await page.waitForTimeout(600)
+    // Sin fullPage: en el emulador móvil la captura de página completa falla con páginas muy altas.
+    await page.screenshot({ path: `${capturas}/graficos-360.png` })
+    await page.getByRole('heading', { name: 'Actividad por árbol y zona' }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `${capturas}/graficos-360-calor.png` })
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await page.waitForTimeout(200)
+    await page.screenshot({ path: `${capturas}/graficos-360-oscuro.png` })
+  }
 })

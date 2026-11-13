@@ -63,6 +63,14 @@
   --c-neutro: #a6a9b0;
   --tinta-clara: #ffffff;
   --tinta-oscura: #1e3932;
+
+  /* Rampa café de Gráficos (magnitud: 1 = poco … 4 = mucho). Validada: ver README. En claro, los
+     cuatro pasos oscuros de la paleta; #ffb48a solo como fondo o relleno con contorno. */
+  --cafe-1: #c57d56;
+  --cafe-2: #8d4925;
+  --cafe-3: #5d2417;
+  --cafe-4: #320000;
+  --cafe-tinte: #ffb48a;
   color-scheme: light;
 }
 
@@ -94,8 +102,25 @@
     --c-infestado: #d9466f;
     --c-neutro: #9a9da4;
     --tinta-oscura: #10211c;
+    /* Rampa café en oscuro: se invierte (más análisis = más claro) y #320000/#5d2417 no se usan
+       como marcas (1.49:1 y 1.03:1 sobre la superficie). #a86038 y #e29a70 son pasos intermedios
+       de la misma tinta, elegidos con el validador. */
+    --cafe-1: #a86038;
+    --cafe-2: #c57d56;
+    --cafe-3: #e29a70;
+    --cafe-4: #ffb48a;
+    --cafe-tinte: #5d2417;
     color-scheme: dark;
   }
+}
+
+/* Tema oscuro elegido a mano: mismos pasos de la rampa café que arriba. */
+:root[data-theme='dark'] {
+  --cafe-1: #a86038;
+  --cafe-2: #c57d56;
+  --cafe-3: #e29a70;
+  --cafe-4: #ffb48a;
+  --cafe-tinte: #5d2417;
 }
 
 *,
@@ -2360,6 +2385,410 @@ select:disabled {
 @media (forced-colors: active) {
   .dialogo {
     border: 1px solid CanvasText;
+  }
+}
+
+/* ---- Gráficos (D3) ----------------------------------------------------------------------------- */
+
+.graficos > * + * {
+  margin-top: 1.25rem;
+}
+
+.rejilla-graficos {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.rejilla-graficos .panel + .panel {
+  margin-top: 0;
+}
+
+@media (min-width: 64rem) {
+  .rejilla-graficos {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.panel-grafica {
+  min-width: 0;
+}
+
+.panel-grafica .bloque-nota {
+  margin: 0 0 0.75rem;
+  font-size: var(--t-xs);
+  max-width: 70ch;
+}
+
+.grafica-svg {
+  display: block;
+  max-width: none;
+  overflow: visible;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.grafica-lienzo .grafica-svg {
+  width: 100%;
+  height: auto;
+}
+
+.lienzo-desplazable {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.lienzo-interior {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+}
+
+.lienzo-desplazable .grafica-svg {
+  width: auto;
+}
+
+.eje-titulo {
+  font-weight: 650;
+}
+
+.eje-nombre,
+text.eje-valor {
+  fill: var(--text);
+}
+
+text.eje-valor {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.marca {
+  cursor: pointer;
+  outline: none;
+}
+
+.marca-toque {
+  fill: transparent;
+}
+
+.marca:focus-visible .marca-toque,
+.marca-activa .marca-toque {
+  fill: color-mix(in srgb, var(--oro) 16%, transparent);
+  stroke: var(--focus);
+  stroke-width: 2;
+}
+
+.marca.celda:focus-visible .calor,
+.marca.celda.marca-activa .calor {
+  stroke: var(--focus);
+  stroke-width: 2.5;
+}
+
+.marca.celda .marca-toque {
+  display: none;
+}
+
+.segmento {
+  stroke: var(--surface);
+  stroke-width: 1;
+  transition: opacity 0.15s;
+}
+
+.atenuado {
+  opacity: 0.28;
+}
+
+.barra-cafe {
+  fill: var(--cafe-2);
+  transition: opacity 0.15s;
+}
+
+.calor {
+  transition: opacity 0.15s;
+}
+
+.calor-0 {
+  fill: var(--surface-2);
+  stroke: var(--border);
+}
+
+.calor-1 { fill: var(--cafe-1); }
+.calor-2 { fill: var(--cafe-2); }
+.calor-3 { fill: var(--cafe-3); }
+.calor-4 { fill: var(--cafe-4); }
+
+.muestra.calor-0 { background: var(--surface-2); border: 1px solid var(--border); }
+.muestra.calor-1 { background: var(--cafe-1); }
+.muestra.calor-2 { background: var(--cafe-2); }
+.muestra.calor-3 { background: var(--cafe-3); }
+.muestra.calor-4 { background: var(--cafe-4); }
+
+.celda-alerta .forma {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+  paint-order: stroke;
+}
+
+/* Vista general + pincel (d3-brush pone fill/stroke como atributos; CSS los reemplaza). */
+.grafica-vista {
+  margin-top: 0.25rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 0.25rem;
+}
+
+.vista-area {
+  fill: var(--cafe-tinte);
+  stroke: var(--cafe-2);
+  stroke-width: 1;
+}
+
+.pincel .overlay {
+  cursor: crosshair;
+}
+
+.pincel .selection {
+  fill: var(--cafe-2);
+  fill-opacity: 0.22;
+  stroke: var(--cafe-3);
+  stroke-width: 1.5;
+}
+
+.pincel .handle {
+  fill: var(--cafe-3);
+  fill-opacity: 0.6;
+}
+
+/* Tooltip enriquecido: se abre hacia dentro cerca de los bordes. */
+.tooltip-rico {
+  --tx: -50%;
+  --ty: calc(-100% - 14px);
+  translate: var(--tx) var(--ty);
+  min-width: 12rem;
+  max-width: min(18rem, 80vw);
+}
+
+.tooltip-derecha { --tx: -14px; }
+.tooltip-izquierda { --tx: calc(-100% + 14px); }
+.tooltip-abajo { --ty: 22px; }
+
+.tooltip-fila {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* .grafica-lienzo svg estira los SVG al ancho del lienzo; el símbolo del tooltip no. */
+.tooltip-rico .simbolo {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.leyenda-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0.125rem 0.625rem;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.leyenda-boton:hover {
+  background: var(--tinte);
+}
+
+.leyenda-boton[aria-pressed='true'] {
+  color: var(--text);
+  border-color: var(--focus);
+  background: color-mix(in srgb, var(--oro) 18%, transparent);
+}
+
+.leyenda .atenuado {
+  opacity: 0.55;
+}
+
+.nota-grafica {
+  margin-top: 0.5rem;
+}
+
+.grafica-vacia {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.grafica-vacia p {
+  margin: 0;
+}
+
+.tabla-grafica .tabla {
+  min-width: 0;
+}
+
+.tabla-compacta th,
+.tabla-compacta td {
+  padding: 0.5rem 0.75rem;
+}
+
+.celda-detalle {
+  display: block;
+  font-size: var(--t-xs);
+  font-weight: 400;
+}
+
+.filtros.filtros-graficos {
+  grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr));
+  margin-bottom: 0;
+}
+
+.filtros-graficos .rango-acciones {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.rango-texto {
+  margin: 0;
+  font-size: var(--t-s);
+  font-weight: 650;
+}
+
+.botones-rango {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.botones-rango .btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.chips ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.25rem 0.125rem 0.75rem;
+  font-size: var(--t-s);
+  font-weight: 600;
+  background: var(--tinte);
+  border-radius: 999px;
+}
+
+.chip button {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chip button:hover {
+  background: color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 48rem) {
+  .indicadores {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.indicadores li {
+  display: grid;
+  gap: 0.125rem;
+  padding: 0.875rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radio-m);
+}
+
+.indicadores span {
+  font-size: var(--t-xs);
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.indicadores strong {
+  font-size: var(--t-l);
+  font-variant-numeric: tabular-nums;
+}
+
+.indicadores small {
+  font-size: var(--t-s);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.mostrar-mas {
+  margin-top: 1rem;
+}
+
+@media (forced-colors: active) {
+  .segmento,
+  .barra-cafe,
+  .calor,
+  .vista-area {
+    stroke: CanvasText;
+    stroke-width: 1;
+  }
+
+  .marca:focus-visible .marca-toque,
+  .marca-activa .marca-toque,
+  .marca.celda:focus-visible .calor,
+  .marca.celda.marca-activa .calor {
+    stroke: Highlight;
+  }
+
+  .atenuado {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segmento,
+  .barra-cafe,
+  .calor {
+    transition: none;
   }
 }
 

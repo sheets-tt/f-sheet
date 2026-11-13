@@ -11,6 +11,8 @@ const LoginScreen = lazy(() => import('./screens/LoginScreen'))
 const ResumenScreen = lazy(() => import('./screens/ResumenScreen'))
 const MapaScreen = lazy(() => import('./screens/MapaScreen'))
 const AnalisisScreen = lazy(() => import('./screens/AnalisisScreen'))
+// D3 solo viaja en este chunk: el resto de la app no lo descarga.
+const GraficosScreen = lazy(() => import('./screens/GraficosScreen'))
 const AdminScreen = lazy(() => import('./screens/AdminScreen'))
 const SeguimientoScreen = lazy(() => import('./screens/SeguimientoScreen'))
 
@@ -114,6 +116,7 @@ export default function App() {
               {target === 'resumen' && <ResumenScreen />}
               {target === 'mapa' && <MapaScreen />}
               {target === 'analisis' && <AnalisisScreen />}
+              {target === 'graficos' && <GraficosScreen />}
               {target === 'admin' && <AdminScreen username={session.username} onCorreoPropioCambiado={handleCorreoPropioCambiado} />}
               {(target === 'arbol' || target === 'zona') && rutaId && (
                 <SeguimientoScreen key={`${target}-${rutaId}`} tipo={target} id={rutaId} />

@@ -28,7 +28,7 @@ describe('navegación por rol', () => {
     mockBackend(fetchMock)
     abrir('#/')
     const nav = await screen.findByRole('navigation', { name: 'Secciones' })
-    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Resumen', 'Mapa', 'Análisis'])
+    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Resumen', 'Mapa', 'Análisis', 'Gráficos'])
     expect(within(nav).getByRole('link', { name: 'Resumen' })).toHaveAttribute('aria-current', 'page')
   })
 
