@@ -91,6 +91,8 @@ export interface EstadoAnalisis {
   /** null = la URL no lo dice (se usa la preferencia guardada o la tabla). */
   vista: Vista | null
   agrupar: Agrupar
+  /** Análisis abierto en el detalle (enlace directo, p. ej. desde el Resumen). */
+  detalle: string | null
 }
 
 const lista = <T extends string>(valor: string | null, validos: readonly T[]): T[] =>
@@ -118,6 +120,7 @@ export function leerEstado(consulta: string): EstadoAnalisis {
     },
     vista: vista === 'tabla' || vista === 'tarjetas' ? vista : null,
     agrupar: (AGRUPAR as string[]).includes(agrupar ?? '') ? (agrupar as Agrupar) : 'nada',
+    detalle: p.get('detalle') || null,
   }
 }
 
@@ -131,6 +134,7 @@ export function escribirEstado(e: EstadoAnalisis): URLSearchParams {
   if (e.cajas.atencion) p.set('atencion', '1')
   if (e.vista) p.set('vista', e.vista)
   if (e.agrupar !== 'nada') p.set('agrupar', e.agrupar)
+  if (e.detalle) p.set('detalle', e.detalle)
   return p
 }
 

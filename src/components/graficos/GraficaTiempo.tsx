@@ -21,7 +21,7 @@ import {
   type Periodo,
 } from '../../lib/graficos'
 import Simbolo, { TONO_RESULTADO } from '../Simbolo'
-import { MarcoGrafica, Tooltip, useAncho, useResalte, useRoving } from './comunes'
+import { MarcoGrafica, Tooltip, useAncho, useResalte, useRoving, type Enlace } from './comunes'
 
 const ALTO = 240
 const ALTO_MINI = 72
@@ -40,6 +40,10 @@ interface Props {
   onElegirPeriodo: (p: Periodo) => void
   onRango: (d: Dominio | null) => void
   onQuitarFiltros: () => void
+  /** Versión ligera (Resumen): sin la vista general ni el pincel. */
+  compacta?: boolean
+  enlace?: Enlace
+  nivel?: 2 | 3
 }
 
 /** Ticks en inicios de periodo, espaciados para que las etiquetas no choquen. */
@@ -52,7 +56,7 @@ function ticksDe(dominio: Dominio, intervalo: Intervalo, anchoUtil: number): Dat
 }
 
 export default function GraficaTiempo(props: Props) {
-  const { periodos, intervalo, dominio, general, conRango, resultadoElegido, onElegirResultado, onElegirPeriodo, onRango, onQuitarFiltros } = props
+  const { periodos, intervalo, dominio, general, conRango, resultadoElegido, onElegirResultado, onElegirPeriodo, onRango, onQuitarFiltros, compacta = false, enlace, nivel } = props
   const [lienzo, ancho] = useAncho<HTMLDivElement>()
   const util = Math.max(40, ancho - M.izquierda - M.derecha)
 
@@ -94,11 +98,15 @@ export default function GraficaTiempo(props: Props) {
       titulo="Análisis en el tiempo"
       descripcion={
         <>
-          Cada barra es {UN_INTERVALO[intervalo]}, apilada por resultado. Clic o Enter en
-          una barra acerca a ese periodo; arrastra en la franja de abajo para elegir el rango.
+          Cada barra es {UN_INTERVALO[intervalo]}, apilada por resultado.{' '}
+          {compacta
+            ? 'Clic o Enter en una barra la abre en Gráficos.'
+            : 'Clic o Enter en una barra acerca a ese periodo; arrastra en la franja de abajo para elegir el rango.'}
         </>
       }
       vacio={total === 0 && general.dias.every((d) => d.total === 0)}
+      enlace={enlace}
+      nivel={nivel}
       onQuitarFiltros={onQuitarFiltros}
       tabla={
         <table className="tabla tabla-compacta">
@@ -214,7 +222,7 @@ export default function GraficaTiempo(props: Props) {
           </Tooltip>
         )}
       </div>
-      <Vista general={general} dominio={dominio} conRango={conRango} ancho={ancho} onRango={onRango} />
+      {!compacta && <Vista general={general} dominio={dominio} conRango={conRango} ancho={ancho} onRango={onRango} />}
     </MarcoGrafica>
   )
 }

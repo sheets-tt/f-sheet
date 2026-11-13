@@ -62,6 +62,7 @@ describe('estado en la URL', () => {
       cajas: { resultado: ['sano' as const, 'infestado' as const], tipo: [], confianza: ['baja' as const], atencion: true },
       vista: 'tarjetas' as const,
       agrupar: 'lugar' as const,
+      detalle: null,
     }
     const qs = escribirEstado(e).toString()
     expect(qs).toBe('desde=2026-10-04&tipo=follaje&caja_resultado=sano%2Cinfestado&caja_confianza=baja&atencion=1&vista=tarjetas&agrupar=lugar')
@@ -74,6 +75,7 @@ describe('estado en la URL', () => {
       cajas: { ...CAJAS_VACIAS, resultado: ['sano'] },
       vista: null,
       agrupar: 'nada',
+      detalle: null,
     })
   })
 })

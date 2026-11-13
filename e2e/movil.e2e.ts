@@ -108,3 +108,23 @@ test('Análisis a 360 px: cajas, tarjetas y detalle sin desborde horizontal', as
     await page.screenshot({ path: `${capturas}/analisis-360-detalle-oscuro.png` })
   }
 })
+
+test('Resumen a 360 px: atención, indicadores, gráficas y accesos sin desborde horizontal', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 })
+  await ir(page, '#/', 'Resumen')
+  await expect(page.getByRole('group', { name: /^Análisis por día/ })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Ir a' })).toBeVisible()
+  await sinDesbordeHorizontal(page)
+  const capturas = process.env.E2E_CAPTURAS
+  if (capturas) {
+    await page.waitForTimeout(900)
+    await page.getByRole('region', { name: 'Necesita tu atención' }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `${capturas}/resumen-360-atencion.png` })
+    await page.getByRole('navigation', { name: 'Ir a' }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `${capturas}/resumen-360-accesos.png` })
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await page.getByRole('region', { name: 'Análisis en el tiempo' }).scrollIntoViewIfNeeded()
+    await page.waitForTimeout(200)
+    await page.screenshot({ path: `${capturas}/resumen-360-graficas-oscuro.png` })
+  }
+})
