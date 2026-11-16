@@ -36,7 +36,7 @@ export function useRoving(total: number, { columnas, onActivar }: { columnas?: n
 
   function onKeyDown(e: KeyboardEvent, i: number) {
     const c = columnas ?? 0
-    let destino: number | null = null
+    let destino: number
     switch (e.key) {
       case 'ArrowRight':
         destino = c ? (i % c < c - 1 ? i + 1 : i) : i + 1

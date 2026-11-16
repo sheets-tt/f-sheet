@@ -167,7 +167,7 @@ type Mover = 'acercar' | 'alejar' | 'anterior' | 'siguiente'
 export function moverDominio(dominio: Dominio, datos: Dominio, accion: Mover): Dominio {
   const dias = utcDay.count(dominio[0], dominio[1])
   const total = utcDay.count(datos[0], datos[1])
-  let d0 = dominio[0]
+  let d0: Date
   let largo = dias
   if (accion === 'acercar') {
     largo = Math.max(1, Math.round(dias / 2))

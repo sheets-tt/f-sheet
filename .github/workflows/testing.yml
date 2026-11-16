@@ -1,0 +1,57 @@
+# Despliega la web (f-sheet) en el ambiente de pruebas de la Raspberry Pi al hacer push a "testing".
+# Corre en el runner self-hosted de la Pi (etiqueta "raspberry"); no usa AWS ni secretos de GitHub.
+# Necesita que b-sheet ya se haya desplegado una vez (crea /opt/sheets-testing/compose.yaml, db y api).
+name: Testing (Raspberry Pi)
+
+on:
+  push:
+    branches: [testing]
+  workflow_dispatch:
+
+concurrency:
+  group: sheets-testing-web
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  desplegar:
+    runs-on: [self-hosted, linux, ARM64, raspberry]
+    timeout-minutes: 20
+    env:
+      DIR: /opt/sheets-testing
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verificar el ambiente de la Pi
+        run: |
+          test -r "$DIR/.env" || { echo "::error::Falta $DIR/.env. En tu Mac: ops/raspberry-testing.sh entorno"; exit 1; }
+          test -r "$DIR/compose.yaml" || { echo "::error::Falta $DIR/compose.yaml: primero haz push a la rama testing de b-sheet"; exit 1; }
+
+      - name: Construir la imagen de la web
+        run: |
+          docker build --label tt.sheets.testing=web \
+            -t sheets-testing-web:latest -t "sheets-testing-web:${GITHUB_SHA::12}" .
+
+      - name: Levantar la web
+        run: |
+          docker compose -f "$DIR/compose.yaml" --env-file "$DIR/.env" \
+            up -d --wait --wait-timeout 300 web
+
+      - name: Probar la web y el proxy a la API
+        run: |
+          curl -fsS --max-time 10 http://127.0.0.1:8180/healthz
+          curl -fsS --max-time 30 http://127.0.0.1:8180/api/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8180/api/arboles)" = 401
+          echo "Web en http://192.168.100.103:8180 y https://testing.formyke.com (commit ${GITHUB_SHA::12})" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Si falló, mostrar los logs
+        if: failure()
+        run: docker compose -f "$DIR/compose.yaml" --env-file "$DIR/.env" logs --tail 100 web api || true
+
+      - name: Limpiar imágenes viejas de este ambiente
+        if: success()
+        run: |
+          docker images sheets-testing-web --format '{{.Tag}}' \
+            | grep -vxE "latest|${GITHUB_SHA::12}" | xargs -r -I{} docker rmi "sheets-testing-web:{}" || true
