@@ -109,14 +109,22 @@ const pasos = new Map<string, number>()
  * captura sale con la pantalla quieta, sin pausas fijas. Las infinitas (esqueletos, el giro del
  * botón) no cuentan.
  */
-export async function animacionesTerminadas(page: Page): Promise<void> {
-  await page.evaluate(() =>
-    Promise.all(
-      document
-        .getAnimations()
-        .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
-        .map((a) => a.finished.catch(() => undefined)),
-    ),
+export async function animacionesTerminadas(page: Page, tope = 3_000): Promise<void> {
+  // Solo las que corren de verdad: una pausada (o sin línea de tiempo) nunca resuelve `finished`.
+  // El tope no es una pausa fija: es el máximo a esperar, para que una animación atascada no deje
+  // colgado el `page.evaluate` (que no tiene timeout propio) y con él la prueba entera.
+  await page.evaluate(
+    (max) =>
+      Promise.race([
+        Promise.all(
+          document
+            .getAnimations()
+            .filter((a) => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity)
+            .map((a) => a.finished.catch(() => undefined)),
+        ),
+        new Promise((listo) => setTimeout(listo, max)),
+      ]),
+    tope,
   )
 }
 
