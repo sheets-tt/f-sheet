@@ -70,7 +70,9 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
       headers,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       signal: opts.signal,
-      credentials: 'omit',
+      // Mismo origen: la sesión de Cloudflare Access (cookie CF_Authorization) del ambiente de pruebas viaja
+      // con /api. La API no usa cookies (autentica con Bearer) y a otros orígenes no se mandan.
+      credentials: 'same-origin',
       cache: 'no-store',
     })
   } catch (e) {
