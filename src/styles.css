@@ -293,8 +293,38 @@ input {
   padding: 0.5rem 0.875rem;
 }
 
+/* Sin la apariencia nativa: en iPhone (WebKit) el select ignoraba min-height y medía 26 px junto a
+   campos de 44 px. La flecha se dibuja con dos degradados en currentColor (sirve en claro, oscuro y
+   alto contraste, y no necesita imágenes: la CSP no cambia). */
 select {
+  -webkit-appearance: none;
+  appearance: none;
   padding: 0.5rem 2rem 0.5rem 0.75rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.0625rem) 52%,
+    calc(100% - 0.75rem) 52%;
+  background-size: 0.3125rem 0.3125rem;
+  background-repeat: no-repeat;
+}
+
+/* Fecha: misma altura que los demás campos en iPhone y el texto alineado a la izquierda (WebKit lo
+   centraba); el ícono del calendario sin márgenes extra para que no tape el año. */
+input[type='date'] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+}
+
+input[type='date']::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator {
+  margin-inline-start: 0.25rem;
+  padding: 0;
 }
 
 input:hover:not(:disabled),
@@ -3770,6 +3800,14 @@ text.eje-valor {
   .filtros input[type='date'] {
     padding-inline: 0.5rem;
     font-size: var(--t-s);
+  }
+}
+
+/* Teléfono muy angosto (≤ 360 px): «03/10/2026» y el ícono no caben en media columna (el ícono tapaba
+   el año): Desde y Hasta van cada uno a lo ancho; los demás filtros siguen de dos en dos. */
+@media (max-width: 22.5rem) {
+  .filtros .field:has(> input[type='date']) {
+    grid-column: 1 / -1;
   }
 }
 

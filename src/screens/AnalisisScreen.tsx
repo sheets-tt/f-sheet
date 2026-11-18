@@ -128,8 +128,20 @@ export default function AnalisisScreen() {
     fijarConsulta(escribirEstado({ ...estado, ...parcial }))
   }
 
+  // «Hasta» antes que «Desde»: se avisa en el campo y no se consulta (antes llegaba al backend, que
+  // respondía 400 con un aviso genérico en minúsculas).
+  const rangoInvertido = Boolean(borrador.desde && borrador.hasta && borrador.desde > borrador.hasta)
+  const [errorRango, setErrorRango] = useState(false)
+  const hastaRef = useRef<HTMLInputElement>(null)
+
   function aplicar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (rangoInvertido) {
+      setErrorRango(true)
+      hastaRef.current?.focus()
+      return
+    }
+    setErrorRango(false)
     cambiarEstado({ form: borrador })
   }
 
@@ -196,14 +208,28 @@ export default function AnalisisScreen() {
         <p className="muted">Capturas de corteza y follaje clasificadas en campo, de la más reciente a la más antigua.</p>
       </header>
 
-      <form className="filtros panel" onSubmit={aplicar} aria-label="Filtros">
+      <form className="filtros panel" onSubmit={aplicar} aria-label="Filtros" noValidate>
         <div className="field">
           <label htmlFor="f-desde">Desde</label>
-          <input id="f-desde" type="date" {...campo('desde')} />
+          {/* max/min: el calendario no deja elegir un rango al revés. */}
+          <input id="f-desde" type="date" max={borrador.hasta || undefined} {...campo('desde')} />
         </div>
         <div className="field">
           <label htmlFor="f-hasta">Hasta</label>
-          <input id="f-hasta" type="date" {...campo('hasta')} />
+          <input
+            id="f-hasta"
+            ref={hastaRef}
+            type="date"
+            min={borrador.desde || undefined}
+            aria-invalid={errorRango && rangoInvertido ? true : undefined}
+            aria-describedby={errorRango && rangoInvertido ? 'f-hasta-error' : undefined}
+            {...campo('hasta')}
+          />
+          {errorRango && rangoInvertido && (
+            <p className="field-error" id="f-hasta-error" role="alert">
+              «Hasta» no puede ser anterior a «Desde».
+            </p>
+          )}
         </div>
         <div className="field">
           <label htmlFor="f-tipo">Tipo</label>

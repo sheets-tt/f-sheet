@@ -93,6 +93,30 @@ describe('Análisis: cajas por categoría', () => {
     await waitFor(() => expect(window.location.hash).toBe('#/analisis'))
   })
 
+  it('«Hasta» antes que «Desde»: aviso en el campo y no se consulta; el calendario no deja elegirlo', async () => {
+    const usuario = await abrir()
+    const desde = screen.getByLabelText('Desde')
+    const hasta = screen.getByLabelText('Hasta')
+    fireEvent.change(desde, { target: { value: '2026-10-08' } })
+    fireEvent.change(hasta, { target: { value: '2026-10-03' } })
+    // El calendario de cada campo ya no ofrece fechas que lo pongan al revés.
+    expect(hasta).toHaveAttribute('min', '2026-10-08')
+    expect(desde).toHaveAttribute('max', '2026-10-03')
+
+    const antes = llamadasA(fetchMock, '/analisis').length
+    await usuario.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('«Hasta» no puede ser anterior a «Desde».')
+    expect(hasta).toHaveAttribute('aria-invalid', 'true')
+    expect(hasta).toHaveFocus()
+    expect(llamadasA(fetchMock, '/analisis').length).toBe(antes)
+
+    // Al corregirlo, el aviso se va y la consulta sale.
+    fireEvent.change(hasta, { target: { value: '2026-10-08' } })
+    expect(screen.queryByText('«Hasta» no puede ser anterior a «Desde».')).not.toBeInTheDocument()
+    await usuario.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
+    await waitFor(() => expect(llamadasA(fetchMock, '/analisis').length).toBe(antes + 1))
+  })
+
   it('los filtros del formulario siguen consultando al backend y se leen de la URL', async () => {
     await abrir('#/analisis?tipo=follaje')
     expect(screen.getByLabelText('Tipo')).toHaveValue('follaje')

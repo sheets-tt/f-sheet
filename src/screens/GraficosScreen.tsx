@@ -192,6 +192,11 @@ function Vista({ analisis, arboles, zonas, filtros, datos, nombres, rangoDescart
   // escribió algo que aún no se confirma. Un campo limpio siempre muestra el rango aplicado, aunque
   // tenga el foco (Atrás, el intercambio de extremos, botones, pincel); uno sucio no se toca.
   const sucio = useRef<Record<Campo, boolean>>({ desde: false, hasta: false })
+  // ¿La persona tecleó en el campo desde que lo enfocó? Con teclado, cada segmento a medio escribir
+  // (año 0002, 0020…) es una fecha válida: se espera a salir del campo o a Enter. Sin teclas, el cambio
+  // viene del calendario (en el teléfono es la única forma) y se aplica al momento: ahí el campo no
+  // siempre pierde el foco, y antes la fecha elegida no se aplicaba nunca.
+  const tecleo = useRef<Record<Campo, boolean>>({ desde: false, hasta: false })
   // Se sincroniza en cada render y en cada cambio de hash: si dos cambios de hash llegan juntos
   // (Enter y enseguida Atrás), React puede no volver a dibujar, y el valor viejo se quedaría.
   useEffect(() => {
@@ -282,8 +287,15 @@ function Vista({ analisis, arboles, zonas, filtros, datos, nombres, rangoDescart
       confirmarFecha(campo, input)
     },
     alEnter: (campo: Campo, input: HTMLInputElement) => confirmarFecha(campo, input),
-    alEscribir: (campo: Campo) => {
+    alEnfocar: (campo: Campo) => {
+      tecleo.current[campo] = false
+    },
+    alTeclear: (campo: Campo, tecla: string) => {
+      if (!['Tab', 'Enter', 'Escape', 'Shift'].includes(tecla)) tecleo.current[campo] = true
+    },
+    alEscribir: (campo: Campo, input: HTMLInputElement) => {
       sucio.current[campo] = true
+      if (!tecleo.current[campo]) confirmarFecha(campo, input)
     },
   }
 
@@ -480,7 +492,9 @@ interface Fechas {
   hastaRef: RefObject<HTMLInputElement | null>
   alSalir: (campo: Campo, input: HTMLInputElement) => void
   alEnter: (campo: Campo, input: HTMLInputElement) => void
-  alEscribir: (campo: Campo) => void
+  alEnfocar: (campo: Campo) => void
+  alTeclear: (campo: Campo, tecla: string) => void
+  alEscribir: (campo: Campo, input: HTMLInputElement) => void
 }
 
 interface FilaProps {
@@ -536,9 +550,11 @@ function FilaFiltros({ filtros, datos, visible, intervalo, conRango, arboles, zo
           defaultValue={fechas.aplicado[c]}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `g-${c}-error` : undefined}
-          onChange={() => fechas.alEscribir(c)}
+          onFocus={() => fechas.alEnfocar(c)}
+          onChange={(e) => fechas.alEscribir(c, e.currentTarget)}
           onBlur={(e) => fechas.alSalir(c, e.currentTarget)}
           onKeyDown={(e) => {
+            fechas.alTeclear(c, e.key)
             if (e.key === 'Enter') {
               e.preventDefault()
               fechas.alEnter(c, e.currentTarget)

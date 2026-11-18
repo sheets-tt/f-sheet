@@ -69,12 +69,18 @@ test.describe('Análisis › filtros y fotos', () => {
 })
 
 test.describe('Análisis › filtros y fotos', () => {
-  test('un rango invertido muestra el mensaje del backend', async ({ page }) => {
+  test('un rango invertido se avisa en «Hasta» sin llegar al backend', async ({ page }) => {
     await ir(page, '#/analisis', 'Análisis')
     await page.getByLabel('Desde', { exact: true }).fill('2026-10-09')
     await page.getByLabel('Hasta', { exact: true }).fill('2026-10-01')
+    let consultas = 0
+    page.on('request', (r) => {
+      if (r.url().includes('/api/analisis')) consultas++
+    })
     await page.getByRole('button', { name: 'Aplicar filtros' }).click()
-    await expect(page.getByRole('alert')).toHaveText('desde no puede ser posterior a hasta')
+    await expect(page.getByRole('alert')).toHaveText('«Hasta» no puede ser anterior a «Desde».')
+    await expect(page.getByLabel('Hasta', { exact: true })).toBeFocused()
+    expect(consultas).toBe(0)
   })
 })
 

@@ -4,6 +4,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { conSesion, json, llamadasA, mockBackend } from '../test/backend'
 
+/** Escribir con el teclado: una tecla y luego el cambio (sin teclas, el cambio viene del calendario). */
+function teclear(input: HTMLElement, valor: string) {
+  fireEvent.keyDown(input, { key: '1' })
+  fireEvent.change(input, { target: { value: valor } })
+}
+
+/** Elegir en el calendario nativo (el del teléfono): cambia sin teclas y el campo sigue enfocado. */
+function elegirEnCalendario(input: HTMLElement, valor: string) {
+  input.focus()
+  fireEvent.change(input, { target: { value: valor } })
+}
+
+
 const fetchMock = vi.fn<typeof fetch>()
 
 beforeEach(() => {
@@ -216,6 +229,28 @@ describe('Gráficos: rango y URL acotados', () => {
     expect(grafica(/^Análisis por día: 3 análisis en 4 periodos/)).toBeInTheDocument()
   })
 
+  it('en el teléfono: la fecha elegida en el calendario se aplica al momento, sin salir del campo', async () => {
+    await abrir()
+    const desde = screen.getByLabelText('Desde') as HTMLInputElement
+    const largo = window.history.length
+
+    elegirEnCalendario(desde, '2026-10-05')
+    // Antes no se aplicaba nunca: el calendario del teléfono no siempre quita el foco del campo.
+    await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-05'))
+    expect(document.activeElement).toBe(desde)
+    expect(window.history.length).toBe(largo + 1)
+
+    // Salir después no agrega otro paso ni lo rehace.
+    fireEvent.blur(desde)
+    expect(window.location.hash).toBe('#/graficos?desde=2026-10-05')
+    expect(window.history.length).toBe(largo + 1)
+
+    // Fuera de los datos, también desde el calendario: aviso en el campo y nada se aplica.
+    elegirEnCalendario(desde, '2025-01-01')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Elige una fecha entre el 3 oct 2026 y el 8 oct 2026.')
+    expect(window.location.hash).toBe('#/graficos?desde=2026-10-05')
+  })
+
   it('las fechas se aplican al confirmar, no en cada tecla, y solo dentro de los datos', async () => {
     await abrir()
     const desde = screen.getByLabelText('Desde') as HTMLInputElement
@@ -224,7 +259,7 @@ describe('Gráficos: rango y URL acotados', () => {
     const largo = window.history.length
 
     // Escribir el año pasa por fechas absurdas: nada se aplica mientras se escribe.
-    for (const v of ['0002-10-03', '0020-10-03', '0202-10-03', '2025-10-03']) fireEvent.change(desde, { target: { value: v } })
+    for (const v of ['0002-10-03', '0020-10-03', '0202-10-03', '2025-10-03']) teclear(desde, v)
     expect(window.location.hash).toBe('#/graficos')
     expect(window.history.length).toBe(largo)
 
@@ -236,7 +271,7 @@ describe('Gráficos: rango y URL acotados', () => {
     expect(window.location.hash).toBe('#/graficos')
 
     // Una fecha válida con Enter se aplica.
-    fireEvent.change(desde, { target: { value: '2026-10-06' } })
+    teclear(desde, '2026-10-06')
     fireEvent.keyDown(desde, { key: 'Enter' })
     await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-06'))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -258,7 +293,7 @@ describe('Gráficos: fecha a medio confirmar + clic en otro control (R1, R2)', (
     const desde = screen.getByLabelText('Desde') as HTMLInputElement
     const largo = window.history.length
     desde.focus()
-    fireEvent.change(desde, { target: { value: '2026-10-05' } })
+    teclear(desde, '2026-10-05')
     clicDesdeFecha(desde, screen.getByRole('button', { name: 'Infestado', pressed: false }))
     await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-05&hasta=2026-10-06&resultado=infestado'))
     expect(window.history.length).toBe(largo + 1)
@@ -270,7 +305,7 @@ describe('Gráficos: fecha a medio confirmar + clic en otro control (R1, R2)', (
     const desde = screen.getByLabelText('Desde') as HTMLInputElement
     const largo = window.history.length
     desde.focus()
-    fireEvent.change(desde, { target: { value: '2026-10-04' } })
+    teclear(desde, '2026-10-04')
     clicDesdeFecha(desde, screen.getByRole('button', { name: 'Siguiente' }))
     // 4–5 oct → siguientes dos días: 6–7 oct.
     await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-06&hasta=2026-10-07'))
@@ -282,7 +317,7 @@ describe('Gráficos: fecha a medio confirmar + clic en otro control (R1, R2)', (
     await abrir()
     const desde = screen.getByLabelText('Desde') as HTMLInputElement
     desde.focus()
-    fireEvent.change(desde, { target: { value: '2026-10-05' } })
+    teclear(desde, '2026-10-05')
     const titulo = screen.getByRole('heading', { level: 1, name: 'Gráficos' })
     clicDesdeFecha(desde, titulo)
     await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-05'))
@@ -292,7 +327,7 @@ describe('Gráficos: fecha a medio confirmar + clic en otro control (R1, R2)', (
     await abrir()
     const desde = screen.getByLabelText('Desde') as HTMLInputElement
     desde.focus()
-    fireEvent.change(desde, { target: { value: '2026-10-05' } })
+    teclear(desde, '2026-10-05')
     fireEvent.keyDown(desde, { key: 'Enter' })
     await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-05'))
     expect(screen.getByLabelText('Desde')).toBe(desde) // el mismo nodo: no se volvió a montar
@@ -304,7 +339,7 @@ describe('Gráficos: fecha a medio confirmar + clic en otro control (R1, R2)', (
     const hasta = screen.getByLabelText('Hasta') as HTMLInputElement
     const desde = screen.getByLabelText('Desde') as HTMLInputElement
     hasta.focus()
-    fireEvent.change(hasta, { target: { value: '2026-10-03' } })
+    teclear(hasta, '2026-10-03')
     fireEvent.keyDown(hasta, { key: 'Enter' })
     await waitFor(() => expect(window.location.hash).toBe('#/graficos?hasta=2026-10-05'))
     expect(hasta).toHaveFocus()
@@ -322,13 +357,13 @@ describe('Gráficos: fecha a medio confirmar + clic en otro control (R1, R2)', (
     await abrir()
     const desde = screen.getByLabelText('Desde') as HTMLInputElement
     const hasta = screen.getByLabelText('Hasta') as HTMLInputElement
-    fireEvent.change(desde, { target: { value: '2025-01-01' } })
+    teclear(desde, '2025-01-01')
     fireEvent.blur(desde)
     expect(await screen.findByRole('alert')).toHaveAttribute('id', 'g-desde-error')
     expect(desde).toHaveAttribute('aria-invalid', 'true')
     expect(desde).toHaveAccessibleDescription(/Elige una fecha entre/)
     expect(hasta).not.toHaveAttribute('aria-invalid')
-    fireEvent.change(hasta, { target: { value: '2026-10-07' } })
+    teclear(hasta, '2026-10-07')
     fireEvent.blur(hasta)
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
     expect(desde).not.toHaveAttribute('aria-invalid')
@@ -355,7 +390,7 @@ describe('Gráficos: campos de fecha "sucios" (N1), aviso de rango (N2) y foco d
     const desde = screen.getByLabelText('Desde') as HTMLInputElement
     const hasta = screen.getByLabelText('Hasta') as HTMLInputElement
     desde.focus()
-    fireEvent.change(desde, { target: { value: '2026-10-07' } })
+    teclear(desde, '2026-10-07')
     fireEvent.pointerDown(hasta)
     hasta.focus()
     fireEvent.click(hasta)
@@ -374,7 +409,7 @@ describe('Gráficos: campos de fecha "sucios" (N1), aviso de rango (N2) y foco d
     await abrir('#/graficos?desde=2026-10-04&hasta=2026-10-06')
     const desde = screen.getByLabelText('Desde') as HTMLInputElement
     desde.focus()
-    fireEvent.change(desde, { target: { value: '2026-10-07' } })
+    teclear(desde, '2026-10-07')
     fireEvent.keyDown(desde, { key: 'Enter' })
     await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-06&hasta=2026-10-07'))
     expect(desde).toHaveFocus()
@@ -388,7 +423,7 @@ describe('Gráficos: campos de fecha "sucios" (N1), aviso de rango (N2) y foco d
     await abrir()
     const desde = screen.getByLabelText('Desde') as HTMLInputElement
     desde.focus()
-    fireEvent.change(desde, { target: { value: '2026-10-05' } })
+    teclear(desde, '2026-10-05')
     fireEvent.keyDown(desde, { key: 'Enter' })
     await waitFor(() => expect(window.location.hash).toBe('#/graficos?desde=2026-10-05'))
     window.history.back()
@@ -431,7 +466,7 @@ describe('Gráficos: campos de fecha "sucios" (N1), aviso de rango (N2) y foco d
     await abrir()
     const desde = screen.getByLabelText('Desde') as HTMLInputElement
     desde.focus()
-    fireEvent.change(desde, { target: { value: '2026-10-05' } })
+    teclear(desde, '2026-10-05')
     fireEvent.keyDown(desde, { key: 'Enter' })
     // Sin esperar a que React vuelva a dibujar: la URL regresa a la de antes en la misma tarea.
     expect(window.location.hash).toBe('#/graficos?desde=2026-10-05')

@@ -7,7 +7,7 @@ clave; `pnpm test:e2e:evidencia` deja todo en `evidencia-e2e/AAAA-MM-DD_HHMMSS/`
 
 Archivos: `sesion`, `experto`, `resumen`, `analisis`, `graficos`, `admin`, `funciones` (una prueba
 por función que no tenía la suya), `flujos` (recorridos completos), `movil` y `flujos-movil`
-(Pixel 7). **90 pruebas en 10 archivos; 96 funciones, todas cubiertas** (las 85–96 se agregaron en la revisión de QA).
+(Pixel 7). **93 pruebas en 10 archivos; 99 funciones, todas cubiertas** (las 85–96 se agregaron en la revisión de QA; las 97–99, con los arreglos de móvil).
 
 ## Sesión
 
@@ -67,7 +67,7 @@ por función que no tenía la suya), `flujos` (recorridos completos), `movil` y 
 | # | Función | Prueba |
 |---:|---|---|
 | 31 | Filtros del formulario llegan al backend y se quitan | experto › Análisis › filtros y fotos › los filtros llegan al backend y se pueden quitar |
-| 32 | Mensaje del backend ante un rango inválido | experto › Análisis › filtros y fotos › un rango invertido muestra el mensaje del backend |
+| 32 | Rango invertido: aviso en «Hasta» sin llegar al backend | experto › Análisis › filtros y fotos › un rango invertido se avisa en «Hasta» sin llegar al backend |
 | 33 | Foto firmada en diálogo; Esc devuelve el foco | experto › Análisis › filtros y fotos › la foto se abre con la URL que firmó el backend… |
 | 34 | URL completa de S3 (TT_BKN) también se firma | experto › Análisis › filtros y fotos › e2 guarda la URL completa de S3… |
 | 35 | Cajas: cuentan; filtran por resultado y tipo; Atrás | analisis › Análisis › las cajas cuentan y filtran; la tabla sigue como antes |
@@ -117,6 +117,9 @@ por función que no tenía la suya), `flujos` (recorridos completos), `movil` y 
 | 94 | Quitar un chip pasa el foco al siguiente (o al texto del rango) | funciones › Gráficos › URL y avisos › chips › … |
 | 95 | Con 500 análisis avisa que solo entran los más recientes | funciones › Gráficos › URL y avisos › límite › … |
 | 96 | El tooltip sigue a la última interacción (teclado sobre puntero) | graficos › Gráficos › el tooltip sale con el foco… (y Vitest: graficos.test.tsx › tooltip) |
+| 97 | Móvil: tablas apiladas (Rol, Resultado y acciones a la vista) | movil › las tablas se apilan: Rol, Resultado y las acciones caben sin deslizar |
+| 98 | Móvil: actividad reciente sin encimarse y pestaña «Admin» | movil › actividad reciente: el resultado no se encima con el lugar y la pestaña dice «Admin» |
+| 99 | Móvil: fecha del calendario se aplica al momento; rango al revés avisa en el campo | movil › Desde y Hasta: la fecha del calendario se aplica al momento y un rango al revés avisa en el campo |
 
 ## Administración
 
