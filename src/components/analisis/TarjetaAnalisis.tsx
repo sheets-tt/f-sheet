@@ -39,7 +39,7 @@ function useVisible<T extends Element>() {
 function Miniatura({ analisis }: { analisis: Analisis }) {
   const [ref, visible] = useVisible<HTMLDivElement>()
   return (
-    <div className="tarjeta-foto" ref={ref}>
+    <div className={`tarjeta-foto${analisis.tieneEvidencia ? '' : ' tarjeta-foto-vacia'}`} ref={ref}>
       {!analisis.tieneEvidencia ? (
         <span className="tarjeta-sin-foto">Sin foto</span>
       ) : visible ? (

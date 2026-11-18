@@ -365,7 +365,7 @@ function TablaAnalisis({
 }) {
   return (
     <div className="tabla-desplazable panel-tabla">
-      <table className="tabla">
+      <table className="tabla tabla-apilable">
         <caption className="visually-hidden">{titulo}</caption>
         <thead>
           <tr>
@@ -382,19 +382,19 @@ function TablaAnalisis({
         <tbody>
           {analisis.map((a) => (
             <tr key={a.id}>
-              <td className="nowrap">{formatFecha(a.fechaCaptura)}</td>
-              <td>{ETIQUETA_TIPO[a.tipoImagen]}</td>
-              <td><Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{ETIQUETA_RESULTADO[a.resultadoClasificacion]}</Estado></td>
-              <td className="num">{formatPorcentaje(a.confianza)}</td>
-              <td><Estado tono={TONO_SINCRONIZACION[a.estadoSincronizacion]}>{ETIQUETA_SINCRONIZACION[a.estadoSincronizacion]}</Estado></td>
-              <td className="celda-barra">
+              <td className="nowrap celda-titulo">{formatFecha(a.fechaCaptura)}</td>
+              <td data-label="Tipo">{ETIQUETA_TIPO[a.tipoImagen]}</td>
+              <td data-label="Resultado"><Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{ETIQUETA_RESULTADO[a.resultadoClasificacion]}</Estado></td>
+              <td className="num" data-label="Confianza">{formatPorcentaje(a.confianza)}</td>
+              <td data-label="Sincronización"><Estado tono={TONO_SINCRONIZACION[a.estadoSincronizacion]}>{ETIQUETA_SINCRONIZACION[a.estadoSincronizacion]}</Estado></td>
+              <td className="celda-barra" data-label="Cromático">
                 {a.cromatico ? (
                   <BarraSegmentada titulo="Cromático" modo="porcentaje" variante="delgada" partes={partesCromatico(a.cromatico)} />
                 ) : (
                   <span className="muted">—</span>
                 )}
               </td>
-              <td className="observaciones">{a.observaciones ?? <span className="muted">—</span>}</td>
+              <td className="observaciones" data-label="Observaciones">{a.observaciones ?? <span className="muted">—</span>}</td>
               <td>
                 <div className="acciones-celda">
                   {a.tieneEvidencia && (

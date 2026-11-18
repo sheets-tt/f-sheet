@@ -112,4 +112,45 @@ test.describe('Móvil (Pixel 7)', () => {
     await page.getByRole('region', { name: 'Análisis en el tiempo' }).scrollIntoViewIfNeeded()
     await evidencia(page, 'resumen-360-graficas-oscuro', { completa: false })
   })
+
+  test('las tablas se apilan: Rol, Resultado y las acciones caben sin deslizar', async ({ page }) => {
+    const ancho = page.viewportSize()!.width
+    const dentro = async (loc: ReturnType<Page['locator']>) => {
+      const caja = (await loc.boundingBox())!
+      expect(caja.x).toBeGreaterThanOrEqual(0)
+      expect(caja.x + caja.width).toBeLessThanOrEqual(ancho)
+    }
+
+    await ir(page, '#/admin', 'Administración')
+    const cuentas = page.getByRole('table', { name: 'Cuentas' })
+    const fila = cuentas.getByRole('row').filter({ hasText: 'demo@sheets.tt' })
+    await expect(fila.getByRole('cell', { name: 'Experto de campo' })).toBeVisible()
+    await dentro(fila.getByRole('cell', { name: 'Experto de campo' }))
+    await dentro(fila.getByRole('button', { name: 'Editar demo@sheets.tt' }))
+    await dentro(fila.getByRole('button', { name: 'Desactivar demo@sheets.tt' }))
+    await sinDesbordeHorizontal(page)
+    await evidencia(page, 'admin-apilado')
+
+    await ir(page, '#/analisis', 'Análisis')
+    await page.getByRole('button', { name: 'Tabla', exact: true }).click()
+    const primera = page.getByRole('table').first().getByRole('row').nth(1)
+    await dentro(primera.getByText('Infestado').first())
+    await dentro(primera.getByRole('button', { name: /^Ver detalle del/ }))
+    await sinDesbordeHorizontal(page)
+    await evidencia(page, 'analisis-tabla-apilada')
+  })
+
+  test('actividad reciente: el resultado no se encima con el lugar y la pestaña dice «Admin»', async ({ page }) => {
+    await ir(page, '#/', 'Resumen')
+    const item = page.getByRole('region', { name: 'Actividad reciente' }).getByRole('listitem').first()
+    const resultado = (await item.locator('> :first-child').boundingBox())!
+    const lugar = (await item.locator('.actividad-lugar').boundingBox())!
+    // El lugar va en su propio renglón, debajo del resultado.
+    expect(lugar.y).toBeGreaterThanOrEqual(resultado.y + resultado.height - 1)
+
+    const pestana = page.getByRole('navigation', { name: 'Secciones' }).getByRole('link', { name: 'Administración' })
+    await expect(pestana).toBeVisible()
+    await expect(pestana).toContainText('Admin')
+    await evidencia(page, 'actividad-reciente')
+  })
 })

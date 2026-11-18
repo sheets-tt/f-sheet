@@ -22,12 +22,12 @@ const ICONOS: Record<Route, string> = {
   admin: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .8 3 3 3 6',
 }
 
-const SECCIONES: { ruta: Route; nombre: string; soloAdmin?: boolean }[] = [
+const SECCIONES: { ruta: Route; nombre: string; corto?: string; soloAdmin?: boolean }[] = [
   { ruta: 'resumen', nombre: 'Resumen' },
   { ruta: 'mapa', nombre: 'Mapa' },
   { ruta: 'analisis', nombre: 'Análisis' },
   { ruta: 'graficos', nombre: 'Gráficos' },
-  { ruta: 'admin', nombre: 'Administración', soloAdmin: true },
+  { ruta: 'admin', nombre: 'Administración', corto: 'Admin', soloAdmin: true },
 ]
 
 /** El seguimiento de un árbol o zona se llega desde el mapa: el menú marca Mapa. */
@@ -56,7 +56,16 @@ export default function Encabezado({ ruta, esAdmin, username, onCerrarSesion }: 
             <svg className="icono" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
               <path d={ICONOS[s.ruta]} />
             </svg>
-            <span>{s.nombre}</span>
+            {s.corto ? (
+              <>
+                {/* En la barra de pestañas del teléfono no cabe el nombre completo: se ve el corto y el
+                    lector de pantalla lee el completo. */}
+                <span className="seccion-largo">{s.nombre}</span>
+                <span className="seccion-corto" aria-hidden="true">{s.corto}</span>
+              </>
+            ) : (
+              <span>{s.nombre}</span>
+            )}
           </a>
         ))}
       </nav>

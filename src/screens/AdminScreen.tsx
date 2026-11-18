@@ -148,7 +148,7 @@ export default function AdminScreen({ username, onCorreoPropioCambiado }: Props)
             </p>
 
             <div className={`tabla-desplazable panel-tabla${cuentas.recargando ? ' recargando' : ''}`}>
-              <table className="tabla tabla-cuentas" aria-labelledby="titulo-cuentas">
+              <table className="tabla tabla-cuentas tabla-apilable" aria-labelledby="titulo-cuentas">
                 <thead>
                   <tr>
                     <th scope="col">Nombre</th>
@@ -166,16 +166,16 @@ export default function AdminScreen({ username, onCorreoPropioCambiado }: Props)
                     const propia = esPropia(c, username)
                     return (
                       <tr key={c.id}>
-                        <td>
+                        <td className="celda-titulo">
                           {c.nombreCompleto}
                           {propia && <span className="etiqueta-propia"> (tú)</span>}
                         </td>
-                        <td className="correo">{c.correo}</td>
-                        <td>{ETIQUETA_ROL[c.rol]}</td>
-                        <td>
+                        <td className="correo" data-label="Correo">{c.correo}</td>
+                        <td data-label="Rol">{ETIQUETA_ROL[c.rol]}</td>
+                        <td data-label="Estado">
                           <Estado tono={c.activa ? 'bien' : 'neutro'}>{c.activa ? 'Activa' : 'Desactivada'}</Estado>
                         </td>
-                        <td className="nowrap">{formatFecha(c.fechaCreacion)}</td>
+                        <td className="nowrap" data-label="Alta">{formatFecha(c.fechaCreacion)}</td>
                         <td>
                           <div className="acciones-fila">
                             <button
@@ -239,7 +239,7 @@ export default function AdminScreen({ username, onCorreoPropioCambiado }: Props)
         )}
         {dispositivos.datos && (
           <div className="tabla-desplazable panel-tabla">
-            <table className="tabla" aria-labelledby="titulo-dispositivos">
+            <table className="tabla tabla-apilable" aria-labelledby="titulo-dispositivos">
               <thead>
                 <tr>
                   <th scope="col">Identificador</th>
@@ -252,11 +252,11 @@ export default function AdminScreen({ username, onCorreoPropioCambiado }: Props)
               <tbody>
                 {dispositivos.datos.map((d) => (
                   <tr key={d.id}>
-                    <td className="correo">{d.identificadorUnico}</td>
-                    <td>{d.nombreDispositivo ?? <span className="muted">—</span>}</td>
-                    <td><Estado tono={d.estado === 'Activo' ? 'bien' : 'neutro'}>{d.estado}</Estado></td>
-                    <td className="correo">{d.cuentaVigente ?? <span className="muted">Ninguna</span>}</td>
-                    <td className="nowrap">{formatFecha(d.fechaRegistro)}</td>
+                    <td className="correo celda-titulo">{d.identificadorUnico}</td>
+                    <td data-label="Nombre">{d.nombreDispositivo ?? <span className="muted">—</span>}</td>
+                    <td data-label="Estado"><Estado tono={d.estado === 'Activo' ? 'bien' : 'neutro'}>{d.estado}</Estado></td>
+                    <td className="correo" data-label="Cuenta asociada">{d.cuentaVigente ?? <span className="muted">Ninguna</span>}</td>
+                    <td className="nowrap" data-label="Registro">{formatFecha(d.fechaRegistro)}</td>
                   </tr>
                 ))}
               </tbody>
