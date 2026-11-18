@@ -6,7 +6,10 @@ import FotoEvidencia, { IconoFoto } from '../components/FotoEvidencia'
 import GraficaConfianza from '../components/GraficaConfianza'
 import MapaCampo, { type CapturaMapa, type ZonaMapa } from '../components/MapaCampo'
 import { Estado, TONO_RESULTADO, TONO_SINCRONIZACION } from '../components/Simbolo'
-import { buscarAnalisis, getArbol, getZona, type Analisis, type TipoImagen } from '../lib/api'
+import { Autor, Observaciones } from '../components/Campo'
+import { buscarAnalisis, getArbol, getZona, type Analisis, type DatosSeguimiento, type Persona, type Seguidor, type TipoImagen } from '../lib/api'
+import { ETIQUETA_NIVEL, nivelConfianza, seguimientoDe } from '../lib/analisis'
+import { fraseResultado, fraseSeguimiento, partesFollaje, queHacer, TITULO_FOLLAJE } from '../lib/lenguaje'
 import {
   ETIQUETA_RESULTADO,
   ETIQUETA_SINCRONIZACION,
@@ -19,7 +22,6 @@ import { distanciaMetros, formatCoordenadas, limitesDe } from '../lib/geo'
 import { hrefDe } from '../lib/router'
 import { useCarga } from '../lib/useCarga'
 import { estadoDe, marcaDe, puntoDeArbol, puntoDeZona, tonoDe, zonaDe, type Punto } from './MapaScreen'
-import { partesCromatico } from './ResumenScreen'
 
 /** Tope del historial que se pide al backend (el más reciente primero). */
 export const LIMITE_SEGUIMIENTO = 200
@@ -33,11 +35,13 @@ interface Props {
 export default function SeguimientoScreen({ tipo, id }: Props) {
   const carga = useCarga(
     async (signal) => {
-      const [registro, analisis] = await Promise.all([
-        tipo === 'arbol' ? getArbol(id, signal).then(puntoDeArbol) : getZona(id, signal).then(puntoDeZona),
+      const [{ punto, registro }, analisis] = await Promise.all([
+        tipo === 'arbol'
+          ? getArbol(id, signal).then((r) => ({ punto: puntoDeArbol(r), registro: r as DatosSeguimiento }))
+          : getZona(id, signal).then((r) => ({ punto: puntoDeZona(r), registro: r as DatosSeguimiento })),
         buscarAnalisis({ [tipo]: id, limite: LIMITE_SEGUIMIENTO }, signal),
       ])
-      return { punto: registro, analisis }
+      return { punto, analisis, registro }
     },
     [tipo, id],
   )
@@ -63,12 +67,12 @@ export default function SeguimientoScreen({ tipo, id }: Props) {
           <ErrorCarga mensaje={carga.error} onReintentar={carga.reintentar} />
         </>
       )}
-      {carga.datos && <Contenido punto={carga.datos.punto} analisis={carga.datos.analisis} />}
+      {carga.datos && <Contenido punto={carga.datos.punto} analisis={carga.datos.analisis} registro={carga.datos.registro} />}
     </div>
   )
 }
 
-function Contenido({ punto, analisis }: { punto: Punto; analisis: Analisis[] }) {
+function Contenido({ punto, analisis, registro }: { punto: Punto; analisis: Analisis[]; registro: DatosSeguimiento }) {
   const [tipoVisible, setTipoVisible] = useState<TipoImagen | 'todos'>('todos')
   const [capturaElegida, setCapturaElegida] = useState<string | null>(null)
   const [foto, setFoto] = useState<Analisis | null>(null)
@@ -80,6 +84,9 @@ function Contenido({ punto, analisis }: { punto: Punto; analisis: Analisis[] }) 
   )
   const conCromatico = useMemo(() => analisis.filter((a) => a.cromatico), [analisis])
   const infestados = analisis.filter((a) => a.resultadoClasificacion === 'infestado').length
+  const seguidores = useMemo(() => seguimientoDe(registro.seguimiento, analisis), [registro.seguimiento, analisis])
+  // El más reciente (los análisis llegan del más reciente al más antiguo): de él sale «Qué hacer».
+  const reciente = analisis[0] ?? null
 
   return (
     <>
@@ -123,7 +130,7 @@ function Contenido({ punto, analisis }: { punto: Punto; analisis: Analisis[] }) 
             </dd>
           </div>
           <div>
-            <dt>Registrado</dt>
+            <dt>Registrado el</dt>
             <dd>
               {formatFecha(punto.fechaRegistro)}
               {punto.lat !== null && punto.lon !== null && (
@@ -133,7 +140,18 @@ function Contenido({ punto, analisis }: { punto: Punto; analisis: Analisis[] }) 
           </div>
         </dl>
         {punto.descripcion && <p className="detalle-descripcion">{punto.descripcion}</p>}
+        {reciente && (
+          <div className="que-hacer">
+            <h2>Qué hacer</h2>
+            <p>
+              <span className="que-hacer-por">Según el análisis más reciente ({fraseResultado(reciente.resultadoClasificacion).toLowerCase()}):</span>{' '}
+              {queHacer(reciente.resultadoClasificacion, nivelConfianza(reciente.confianza), punto.tipo)}
+            </p>
+          </div>
+        )}
       </section>
+
+      <QuienSigue tipo={punto.tipo} registradoPor={registro.registradoPor ?? null} seguidores={seguidores} />
 
       <div className="seguimiento-rejilla">
         <MiniMapa
@@ -145,7 +163,7 @@ function Contenido({ punto, analisis }: { punto: Punto; analisis: Analisis[] }) 
 
         <section className="panel" aria-labelledby="titulo-confianza">
           <h2 id="titulo-confianza">Resultado de cada análisis</h2>
-          <p className="muted bloque-nota">Qué tan segura estuvo la clasificación, captura por captura</p>
+          <p className="muted bloque-nota">Qué tan seguro fue cada diagnóstico, foto por foto</p>
           {analisis.length ? (
             <GraficaConfianza
               analisis={analisis}
@@ -160,24 +178,24 @@ function Contenido({ punto, analisis }: { punto: Punto; analisis: Analisis[] }) 
 
       {conCromatico.length > 0 && (
         <section className="panel" aria-labelledby="titulo-evolucion">
-          <h2 id="titulo-evolucion">Evolución del follaje</h2>
-          <p className="muted bloque-nota">Porcentaje del dosel en cada condición, de la captura más reciente a la más antigua</p>
+          <h2 id="titulo-evolucion">Evolución del color del follaje</h2>
+          <p className="muted bloque-nota">Qué parte del follaje se ve sana, regular, dañada o incierta en cada foto, de la más reciente a la más antigua</p>
           <ul className="evolucion">
             {conCromatico.map((a) => (
               <li key={a.id}>
                 <span className="evolucion-fecha">{formatFecha(a.fechaCaptura)}</span>
                 <BarraSegmentada
-                  titulo="Cromático"
+                  titulo={TITULO_FOLLAJE}
                   nombre={`Follaje el ${formatFecha(a.fechaCaptura)}`}
                   modo="porcentaje"
                   variante="delgada"
-                  partes={partesCromatico(a.cromatico!)}
+                  partes={partesFollaje(a.cromatico!)}
                 />
               </li>
             ))}
           </ul>
           <ul className="leyenda" aria-hidden="true">
-            {partesCromatico(conCromatico[0].cromatico!).map((p) => (
+            {partesFollaje(conCromatico[0].cromatico!).map((p) => (
               <li key={p.clave}>
                 <span className={`muestra ${p.color}`} />
                 {p.etiqueta}
@@ -278,10 +296,14 @@ function EventoLinea({
           </p>
         )}
         <p className="muted evento-datos">
-          {ETIQUETA_TIPO[a.tipoImagen]}, confianza {formatPorcentaje(a.confianza)}
+          {ETIQUETA_TIPO[a.tipoImagen]}, certeza {ETIQUETA_NIVEL[nivelConfianza(a.confianza)].toLowerCase()}
+          {a.confianza !== null && ` (${formatPorcentaje(a.confianza)})`}
           {lejos !== null && lejos >= 5 && `, tomada a ${lejos} m ${punto.tipo === 'arbol' ? 'del árbol' : 'del centro'}`}
         </p>
-        {a.observaciones && <p className="evento-obs">{a.observaciones}</p>}
+        <p className="evento-autor">
+          <Autor analisis={a} />
+        </p>
+        <Observaciones analisis={a} />
         <div className="evento-pie">
           <Estado tono={TONO_SINCRONIZACION[a.estadoSincronizacion]}>{ETIQUETA_SINCRONIZACION[a.estadoSincronizacion]}</Estado>
           {a.latitudCaptura !== null && a.longitudCaptura !== null && (
@@ -353,6 +375,56 @@ function MiniMapa({
         </>
       ) : (
         <p className="muted">Este registro no tiene coordenadas.</p>
+      )}
+    </section>
+  )
+}
+
+/**
+ * Quién registró el lugar y quién sube sus fotos. Con 2 o más personas se destaca (varias manos
+ * siguiendo el mismo árbol). Un backend sin el dato (autor nulo en todo) lo dice sin inventar.
+ */
+function QuienSigue({ tipo, registradoPor, seguidores }: { tipo: 'arbol' | 'zona'; registradoPor: Persona | null; seguidores: Seguidor[] }) {
+  const varios = seguidores.length >= 2
+  return (
+    <section className={`panel quien-sigue${varios ? ' quien-sigue-varios' : ''}`} aria-labelledby="titulo-quien">
+      <h2 id="titulo-quien">Quién le da seguimiento</h2>
+      {!registradoPor && seguidores.length === 0 ? (
+        <p className="muted">Sin registro de quién sube las fotos todavía.</p>
+      ) : (
+        <>
+          <p className="quien-registro">
+            {registradoPor ? (
+              <>
+                Registrado por <strong>{registradoPor.nombre}</strong>
+              </>
+            ) : (
+              <span className="muted">No se sabe quién lo registró.</span>
+            )}
+          </p>
+          {varios && (
+            <p className="quien-destacado">
+              <svg className="icono" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                <path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .8 3 3 3 6" />
+              </svg>
+              {fraseSeguimiento(seguidores.length, tipo)}
+            </p>
+          )}
+          {seguidores.length > 0 ? (
+            <ul className="quien-lista" aria-label="Personas que suben fotos">
+              {seguidores.map((p) => (
+                <li key={p.id}>
+                  <span className="quien-nombre">{p.nombre}</span>
+                  <span className="muted">
+                    {p.analisis} análisis · última foto {haceCuanto(p.ultimo)} ({formatFecha(p.ultimo)})
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">Todavía nadie ha subido fotos con su nombre.</p>
+          )}
+        </>
       )}
     </section>
   )

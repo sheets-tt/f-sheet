@@ -6,7 +6,7 @@ import { area, curveStepAfter } from 'd3-shape'
 import { utcDay } from 'd3-time'
 import { useEffect, useMemo, useRef } from 'react'
 import type { Resultado } from '../../lib/api'
-import { ETIQUETA_RESULTADO, formatPorcentaje } from '../../lib/format'
+import { ETIQUETA_RESULTADO, formatPromedio } from '../../lib/format'
 import {
   desglose,
   enPeriodo,
@@ -118,7 +118,7 @@ export default function GraficaTiempo(props: Props) {
               {RESULTADOS.map((r) => (
                 <th key={r} scope="col" className="num">{ETIQUETA_RESULTADO[r]}</th>
               ))}
-              <th scope="col" className="num">Confianza media</th>
+              <th scope="col" className="num">Certeza promedio</th>
             </tr>
           </thead>
           <tbody>
@@ -133,7 +133,7 @@ export default function GraficaTiempo(props: Props) {
                 {RESULTADOS.map((r) => (
                   <td key={r} className="num">{p.conteos[r]}</td>
                 ))}
-                <td className="num">{formatPorcentaje(p.confianzaMedia)}</td>
+                <td className="num">{formatPromedio(p.confianzaMedia)}</td>
               </tr>
             ))}
           </tbody>
@@ -166,7 +166,7 @@ export default function GraficaTiempo(props: Props) {
             let base = y(0)
             const etiqueta =
               `${p.etiqueta}: ${plural(p.total, 'análisis', 'análisis')}` +
-              (p.total ? `. ${desglose(p.conteos, ETIQUETA_RESULTADO)}. Confianza media ${formatPorcentaje(p.confianzaMedia)}` : '') +
+              (p.total ? `. ${desglose(p.conteos, ETIQUETA_RESULTADO)}. Certeza promedio ${formatPromedio(p.confianzaMedia)}` : '') +
               (p.lugares.length ? `. ${p.lugares.join(', ')}` : '') +
               '.'
             return (
@@ -211,7 +211,7 @@ export default function GraficaTiempo(props: Props) {
                 {ETIQUETA_RESULTADO[r]}: {activo.conteos[r]} ({Math.round((activo.conteos[r] / activo.total) * 100)} %)
               </span>
             ))}
-            {activo.total > 0 && <span>Confianza media: {formatPorcentaje(activo.confianzaMedia)}</span>}
+            {activo.total > 0 && <span>Certeza promedio: {formatPromedio(activo.confianzaMedia)}</span>}
             {activo.lugares.length > 0 && (
               <span className="muted">
                 {activo.lugares.slice(0, 3).join(', ')}

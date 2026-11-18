@@ -6,6 +6,8 @@ import MapaCampo, { type ControlMapa, type MarcaMapa, type ZonaMapa } from '../c
 import Simbolo, { Estado, TONO_RESULTADO, type Tono } from '../components/Simbolo'
 import { buscarAnalisis, getArboles, getZonas, type Analisis, type Arbol, type UltimoAnalisis, type Zona } from '../lib/api'
 import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha, formatPorcentaje, haceCuanto } from '../lib/format'
+import { ETIQUETA_NIVEL, nivelConfianza } from '../lib/analisis'
+import { Autor, Observaciones } from '../components/Campo'
 import { formatCoordenadas, limitesDe, type Limites } from '../lib/geo'
 import { hrefDe, navigate, useRutaId } from '../lib/router'
 import { useCarga } from '../lib/useCarga'
@@ -69,7 +71,7 @@ const SIN_PUNTOS: Limites = [[-99.19, 19.415], [-99.175, 19.425]]
 
 const ESTADOS: { tono: Tono; etiqueta: string }[] = [
   { tono: 'alerta', etiqueta: 'Infestado' },
-  { tono: 'neutro', etiqueta: 'No determinado' },
+  { tono: 'neutro', etiqueta: ETIQUETA_RESULTADO.no_determinado },
   { tono: 'bien', etiqueta: 'Sano' },
   { tono: 'vacio', etiqueta: 'Sin análisis' },
 ]
@@ -400,10 +402,12 @@ function Historial({ punto }: { punto: Punto }) {
           <li key={a.id}>
             <Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{ETIQUETA_RESULTADO[a.resultadoClasificacion]}</Estado>
             <span className="muted">
-              {ETIQUETA_TIPO[a.tipoImagen]}, confianza {formatPorcentaje(a.confianza)}
+              {ETIQUETA_TIPO[a.tipoImagen]}, certeza {ETIQUETA_NIVEL[nivelConfianza(a.confianza)].toLowerCase()}
+              {a.confianza !== null && ` (${formatPorcentaje(a.confianza)})`}
             </span>
             <span className="historial-fecha">{formatFecha(a.fechaCaptura)}</span>
-            {a.observaciones && <span className="historial-obs">{a.observaciones}</span>}
+            <Autor analisis={a} className="historial-autor" />
+            <Observaciones analisis={a} variante="recortada" />
             {a.tieneEvidencia && (
               <button
                 type="button"

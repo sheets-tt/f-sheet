@@ -142,7 +142,26 @@ export interface UltimoAnalisis {
   fechaCaptura: string
 }
 
-export interface Arbol {
+/** Quién subió una foto o registró un árbol/zona. null en registros anteriores a que se guardara. */
+export interface Persona {
+  id: string
+  nombre: string
+}
+
+/** Una persona que sube fotos de un árbol o zona: cuántos análisis y su última captura. */
+export interface Seguidor extends Persona {
+  analisis: number
+  ultimo: string
+}
+
+/** Solo en GET /arboles/{id} y GET /zonas/{id}; un backend anterior no los manda. */
+export interface DatosSeguimiento {
+  registradoPor?: Persona | null
+  /** Personas distintas que subieron fotos, de la captura más reciente a la más antigua. */
+  seguimiento?: Seguidor[]
+}
+
+export interface Arbol extends DatosSeguimiento {
   id: string
   nombreEspecifico: string
   especie: string
@@ -153,7 +172,7 @@ export interface Arbol {
   ultimoAnalisis: UltimoAnalisis | null
 }
 
-export interface Zona {
+export interface Zona extends DatosSeguimiento {
   id: string
   nombreZona: string
   latitudCentro: number
@@ -187,6 +206,8 @@ export interface Analisis {
   idArbol: string | null
   idZona: string | null
   cromatico: Cromatico | null
+  /** Quién subió la foto (cuenta de la app móvil); null o ausente en análisis antiguos. */
+  autor?: Persona | null
 }
 
 export interface Estadisticas {

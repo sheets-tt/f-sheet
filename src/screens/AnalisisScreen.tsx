@@ -21,10 +21,13 @@ import {
   hayCajas,
   leerEstado,
   NIVELES,
+  nivelConfianza,
   RESULTADOS,
+  SIN_AUTOR_ID,
   TIPOS,
   type Agrupar,
   type Cajas,
+  type ConteosCajas,
   type EstadoAnalisis,
   type Formulario,
   type Grupo,
@@ -50,7 +53,7 @@ import {
 } from '../lib/format'
 import { fijarConsulta, hrefDe, useConsulta } from '../lib/router'
 import { useCarga } from '../lib/useCarga'
-import { partesCromatico } from './ResumenScreen'
+import { ETIQUETA_CERTEZA, observacionesDe, partesFollaje, SIN_AUTOR, TITULO_ENVIO, TITULO_FOLLAJE, TITULO_OBSERVACIONES } from '../lib/lenguaje'
 
 const LIMITE = 100
 const CLAVE_VISTA = 'sheets-tt.analisis.vista'
@@ -186,6 +189,16 @@ export default function AnalisisScreen() {
 
   const datos = carga.datos
   const filtrados = useMemo(() => (datos ? filtrarCajas(datos, estado.cajas) : []), [datos, estado.cajas])
+  const conteos = useMemo(() => (datos ? conteosCajas(datos) : null), [datos])
+  // caja_autor con personas que no están entre los cargados (enlace viejo, id inventado): ya con
+  // los datos, se quitan de la URL sin paso nuevo, como los demás valores inválidos.
+  const autoresSobrantes = conteos && !carga.recargando ? estado.cajas.autor.filter((id) => !conteos.autores.some((x) => x.id === id)) : []
+  const claveSobrantes = autoresSobrantes.join(',')
+  useEffect(() => {
+    if (!claveSobrantes) return
+    const quitar = claveSobrantes.split(',')
+    fijarConsulta(escribirEstado({ ...estado, cajas: { ...estado.cajas, autor: estado.cajas.autor.filter((id) => !quitar.includes(id)) } }), { replace: true })
+  }, [claveSobrantes, estado])
   const grupos = useMemo(() => agrupar(filtrados, estado.agrupar, nombres), [filtrados, estado.agrupar, nombres])
   const conCajas = hayCajas(estado.cajas)
   // Detalle abierto: el elegido aquí o, si no, el de la URL (enlace desde el Resumen).
@@ -205,7 +218,7 @@ export default function AnalisisScreen() {
     <div className="pagina">
       <header className="pagina-encabezado">
         <h1 id="titulo-analisis" tabIndex={-1}>Análisis</h1>
-        <p className="muted">Capturas de corteza y follaje clasificadas en campo, de la más reciente a la más antigua.</p>
+        <p className="muted">Fotos de corteza y follaje tomadas en campo y su diagnóstico, de la más reciente a la más antigua.</p>
       </header>
 
       <form className="filtros panel" onSubmit={aplicar} aria-label="Filtros" noValidate>
@@ -232,7 +245,7 @@ export default function AnalisisScreen() {
           )}
         </div>
         <div className="field">
-          <label htmlFor="f-tipo">Tipo</label>
+          <label htmlFor="f-tipo">Tipo de foto</label>
           <select id="f-tipo" {...campo('tipo')}>
             <option value="">Todos</option>
             <option value="corteza">{ETIQUETA_TIPO.corteza}</option>
@@ -249,7 +262,7 @@ export default function AnalisisScreen() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="f-estado">Sincronización</label>
+          <label htmlFor="f-estado">{TITULO_ENVIO}</label>
           <select id="f-estado" {...campo('estado')}>
             <option value="">Todas</option>
             {(Object.keys(ETIQUETA_SINCRONIZACION) as EstadoSincronizacion[]).map((s) => (
@@ -280,8 +293,8 @@ export default function AnalisisScreen() {
             </div>
           ) : (
             <>
-              <CajasCategoria conteos={conteosCajas(datos)} cajas={estado.cajas} onCambiar={(c) => cambiarEstado({ cajas: c })} />
-              <ChipsCajas cajas={estado.cajas} onCambiar={(c) => cambiarEstado({ cajas: c })} />
+              <CajasCategoria conteos={conteos!} cajas={estado.cajas} onCambiar={(c) => cambiarEstado({ cajas: c })} />
+              <ChipsCajas cajas={estado.cajas} autores={conteos!.autores} onCambiar={(c) => cambiarEstado({ cajas: c })} />
 
               <div className="analisis-barra">
                 <p className="muted conteo" role="status" tabIndex={-1} id="analisis-conteo">
@@ -395,13 +408,14 @@ function TablaAnalisis({
         <caption className="visually-hidden">{titulo}</caption>
         <thead>
           <tr>
-            <th scope="col">Captura</th>
+            <th scope="col">Foto tomada</th>
             <th scope="col">Tipo</th>
             <th scope="col">Resultado</th>
-            <th scope="col" className="num">Confianza</th>
-            <th scope="col">Sincronización</th>
-            <th scope="col">Cromático</th>
-            <th scope="col">Observaciones</th>
+            <th scope="col">Certeza</th>
+            <th scope="col">Subido por</th>
+            <th scope="col">{TITULO_OBSERVACIONES}</th>
+            <th scope="col">{TITULO_FOLLAJE}</th>
+            <th scope="col">Envío</th>
             <th scope="col"><span className="visually-hidden">Foto y detalle</span></th>
           </tr>
         </thead>
@@ -411,16 +425,24 @@ function TablaAnalisis({
               <td className="nowrap celda-titulo">{formatFecha(a.fechaCaptura)}</td>
               <td data-label="Tipo">{ETIQUETA_TIPO[a.tipoImagen]}</td>
               <td data-label="Resultado"><Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{ETIQUETA_RESULTADO[a.resultadoClasificacion]}</Estado></td>
-              <td className="num" data-label="Confianza">{formatPorcentaje(a.confianza)}</td>
-              <td data-label="Sincronización"><Estado tono={TONO_SINCRONIZACION[a.estadoSincronizacion]}>{ETIQUETA_SINCRONIZACION[a.estadoSincronizacion]}</Estado></td>
-              <td className="celda-barra" data-label="Cromático">
+              <td className="nowrap" data-label="Certeza">
+                <span>
+                  {ETIQUETA_CERTEZA[nivelConfianza(a.confianza)]}
+                  {a.confianza !== null && <span className="muted"> · {formatPorcentaje(a.confianza)}</span>}
+                </span>
+              </td>
+              <td data-label="Subido por">{a.autor ? a.autor.nombre : <span className="muted">{SIN_AUTOR}</span>}</td>
+              <td className="observaciones" data-label={TITULO_OBSERVACIONES}>
+                {observacionesDe(a) ? <q className="observaciones-cita">{observacionesDe(a)}</q> : <span className="muted">—</span>}
+              </td>
+              <td className="celda-barra" data-label={TITULO_FOLLAJE}>
                 {a.cromatico ? (
-                  <BarraSegmentada titulo="Cromático" modo="porcentaje" variante="delgada" partes={partesCromatico(a.cromatico)} />
+                  <BarraSegmentada titulo={TITULO_FOLLAJE} modo="porcentaje" variante="delgada" partes={partesFollaje(a.cromatico)} />
                 ) : (
                   <span className="muted">—</span>
                 )}
               </td>
-              <td className="observaciones" data-label="Observaciones">{a.observaciones ?? <span className="muted">—</span>}</td>
+              <td data-label="Envío"><Estado tono={TONO_SINCRONIZACION[a.estadoSincronizacion]}>{ETIQUETA_SINCRONIZACION[a.estadoSincronizacion]}</Estado></td>
               <td>
                 <div className="acciones-celda">
                   {a.tieneEvidencia && (
@@ -477,11 +499,13 @@ function GrupoAnalisis({ grupo: g, children }: { grupo: Grupo; children: ReactNo
 }
 
 /** Chips de las cajas activas; cada una se quita con su botón (el foco pasa a la siguiente o al conteo). */
-function ChipsCajas({ cajas, onCambiar }: { cajas: Cajas; onCambiar: (c: Cajas) => void }) {
+function ChipsCajas({ cajas, autores, onCambiar }: { cajas: Cajas; autores: ConteosCajas['autores']; onCambiar: (c: Cajas) => void }) {
+  const nombreAutor = (id: string) => (id === SIN_AUTOR_ID ? SIN_AUTOR : (autores.find((x) => x.id === id)?.nombre ?? 'Persona sin nombre'))
   const chips = [
     ...cajas.resultado.map((r) => ({ clave: `r-${r}`, texto: `Resultado: ${ETIQUETA_RESULTADO[r]}`, quitar: { ...cajas, resultado: alternar(cajas.resultado, r, RESULTADOS) } })),
     ...cajas.tipo.map((t) => ({ clave: `t-${t}`, texto: `Tipo: ${ETIQUETA_TIPO[t]}`, quitar: { ...cajas, tipo: alternar(cajas.tipo, t, TIPOS) } })),
-    ...cajas.confianza.map((n) => ({ clave: `c-${n}`, texto: `Confianza: ${ETIQUETA_NIVEL[n].toLowerCase()}`, quitar: { ...cajas, confianza: alternar(cajas.confianza, n, NIVELES) } })),
+    ...cajas.confianza.map((n) => ({ clave: `c-${n}`, texto: `Certeza: ${ETIQUETA_NIVEL[n].toLowerCase()}`, quitar: { ...cajas, confianza: alternar(cajas.confianza, n, NIVELES) } })),
+    ...cajas.autor.map((id) => ({ clave: `p-${id}`, texto: `Subido por: ${nombreAutor(id)}`, quitar: { ...cajas, autor: cajas.autor.filter((x) => x !== id) } })),
     ...(cajas.atencion ? [{ clave: 'atencion', texto: 'Requieren atención', quitar: { ...cajas, atencion: false } }] : []),
   ]
   const quitado = useRef<number | null>(null)

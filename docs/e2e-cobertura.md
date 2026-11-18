@@ -6,8 +6,11 @@ clave; `pnpm test:e2e:evidencia` deja todo en `evidencia-e2e/AAAA-MM-DD_HHMMSS/`
 [correr-en-local.md](correr-en-local.md#evidencia-de-las-pruebas-e2e)).
 
 Archivos: `sesion`, `experto`, `resumen`, `analisis`, `graficos`, `admin`, `funciones` (una prueba
-por función que no tenía la suya), `flujos` (recorridos completos), `movil` y `flujos-movil`
-(Pixel 7). **93 pruebas en 10 archivos; 99 funciones, todas cubiertas** (las 85–96 se agregaron en la revisión de QA; las 97–99, con los arreglos de móvil).
+por función que no tenía la suya), `campo` (quién sube cada foto, observaciones de campo y lenguaje
+para agrónomos), `flujos` (recorridos completos), `movil` y `flujos-movil` (Pixel 7). **101 pruebas
+en 11 archivos; 107 funciones, todas cubiertas** (las 85–96 se agregaron en la revisión de QA; las
+97–99, con los arreglos de móvil; las 100–107, con las observaciones de campo, el autor de cada foto
+y el lenguaje para agrónomos).
 
 ## Sesión
 
@@ -40,7 +43,7 @@ por función que no tenía la suya), `flujos` (recorridos completos), `movil` y 
 | 15 | Movimiento reducido | resumen › Resumen › con movimiento reducido no hay desplazamientos |
 | 16 | «Necesita tu atención» → Análisis filtrado | resumen › Resumen › la atención lleva a Análisis filtrado… · flujos › …experto: atención en el Resumen… |
 | 17 | Lugares con infestación → seguimiento | resumen › Resumen › la atención lleva a Análisis filtrado… |
-| 18 | Errores de sincronización = lo que abre su enlace (cifra global aunque no esté entre los cargados) | resumen › Resumen › D1: la cifra de errores de sincronización… |
+| 18 | Errores al enviar = lo que abre su enlace (cifra global aunque no esté entre los cargados) | resumen › Resumen › D1: la cifra de errores al enviar… |
 | 19 | Indicadores de los últimos 7 días | funciones › Resumen › indicadores › últimos 7 días con sus cifras |
 | 20 | Gráficas clave con «Ver en Gráficos» y sus filtros | resumen › Resumen › …"Ver en Gráficos" conserva el filtro · funciones › Resumen › gráficas clave › … |
 | 21 | Accesos rápidos en orden; experto sin Administración | resumen › Resumen › accesos rápidos en orden… |
@@ -50,7 +53,7 @@ por función que no tenía la suya), `flujos` (recorridos completos), `movil` y 
 | 25 | Fallo parcial (/analisis) sin tumbar el resto; Reintentar | funciones › Resumen › fallos parciales › … |
 | 85 | «Ver la actividad en Gráficos» lleva el rango de los últimos 30 días | funciones › Resumen › casos límite › gráficas clave › … |
 | 86 | Periodo recortado por el límite: «500 o más» y sin comparar | funciones › Resumen › casos límite › indicadores › … |
-| 87 | Sin /estadisticas: errores de sincronización sin enlace y «de los N más recientes» | funciones › Resumen › casos límite › atención › … |
+| 87 | Sin /estadisticas: errores al enviar sin enlace y «de los N más recientes» | funciones › Resumen › casos límite › atención › … |
 
 ## Mapa y seguimiento
 
@@ -71,7 +74,7 @@ por función que no tenía la suya), `flujos` (recorridos completos), `movil` y 
 | 33 | Foto firmada en diálogo; Esc devuelve el foco | experto › Análisis › filtros y fotos › la foto se abre con la URL que firmó el backend… |
 | 34 | URL completa de S3 (TT_BKN) también se firma | experto › Análisis › filtros y fotos › e2 guarda la URL completa de S3… |
 | 35 | Cajas: cuentan; filtran por resultado y tipo; Atrás | analisis › Análisis › las cajas cuentan y filtran; la tabla sigue como antes |
-| 36 | Cajas: confianza baja | funciones › Análisis › cajas › filtran por confianza baja |
+| 36 | Cajas: certeza baja | funciones › Análisis › cajas › filtran por certeza baja |
 | 37 | Cajas: «Requieren atención» | funciones › Análisis › cajas › "Requieren atención" junta… |
 | 38 | Chips: quitar uno pasa el foco al siguiente | funciones › Análisis › cajas › quitar un chip pasa el foco al siguiente |
 | 39 | «Quitar filtros» también quita las cajas | analisis › Análisis › las cajas cuentan y filtran… |
@@ -94,7 +97,7 @@ por función que no tenía la suya), `flujos` (recorridos completos), `movil` y 
 | # | Función | Prueba |
 |---:|---|---|
 | 50 | Cada gráfica resume sus totales (nombre accesible) | graficos › Gráficos › un experto ve Gráficos con los totales del backend en cada gráfica |
-| 51 | Eje de confianza sin etiquetas encimadas (1280/760/360) | graficos › Gráficos › un experto ve Gráficos… · movil › …Gráficos a 360 px |
+| 51 | Eje de certeza sin etiquetas encimadas (1280/760/360) | graficos › Gráficos › un experto ve Gráficos… · movil › …Gráficos a 360 px |
 | 52 | Tooltip con el foco; flechas entre marcas | graficos › Gráficos › el tooltip sale con el foco y una barra de lugar abre el seguimiento… |
 | 53 | Barra de lugar → seguimiento | graficos › Gráficos › el tooltip sale con el foco y una barra de lugar abre el seguimiento… |
 | 54 | Clic en un periodo acerca (zoom) | graficos › Gráficos › acercar, crossfilter con chips, Atrás y Restablecer… |
@@ -102,7 +105,7 @@ por función que no tenía la suya), `flujos` (recorridos completos), `movil` y 
 | 56 | Anterior / Siguiente y sus bordes; foco al texto del rango | funciones › Gráficos › rango › Anterior y Siguiente se deshabilitan en los bordes… |
 | 57 | Pincel en la vista general | graficos › Gráficos › arrastrar en la vista general elige el rango (pincel) |
 | 58 | Crossfilter: leyenda + mapa de calor, chips | graficos › Gráficos › acercar, crossfilter con chips… |
-| 59 | Crossfilter: decena de confianza | funciones › Gráficos › confianza › clic en una decena filtra las demás gráficas |
+| 59 | Crossfilter: decena de certeza | funciones › Gráficos › certeza › clic en una decena filtra las demás gráficas |
 | 60 | Filtros Tipo y Árbol o zona | funciones › Gráficos › filtros › Tipo y Árbol o zona se combinan |
 | 61 | Mapa de calor con flechas y Enter | funciones › Gráficos › mapa de calor › se recorre con flechas y Enter filtra por el lugar |
 | 62 | Esc quita la selección | graficos › Gráficos › acercar, crossfilter… |
@@ -120,6 +123,19 @@ por función que no tenía la suya), `flujos` (recorridos completos), `movil` y 
 | 97 | Móvil: tablas apiladas (Rol, Resultado y acciones a la vista) | movil › las tablas se apilan: Rol, Resultado y las acciones caben sin deslizar |
 | 98 | Móvil: actividad reciente sin encimarse y pestaña «Admin» | movil › actividad reciente: el resultado no se encima con el lugar y la pestaña dice «Admin» |
 | 99 | Móvil: fecha del calendario se aplica al momento; rango al revés avisa en el campo | movil › Desde y Hasta: la fecha del calendario se aplica al momento y un rango al revés avisa en el campo |
+
+## Campo y lenguaje para agrónomos
+
+| # | Función | Prueba |
+|---:|---|---|
+| 100 | «Subido por» (o «Autor no registrado») en tabla, tarjetas, detalle y actividad reciente | campo › Campo y lenguaje › autor › "Subido por" en tabla, tarjetas, detalle y actividad reciente |
+| 101 | Cajas «Por quién subió la foto» filtran y dejan su chip | campo › Campo y lenguaje › autor › las cajas por quién subió la foto filtran |
+| 102 | Observaciones de campo completas en el detalle, con quién las escribió; sin observaciones, aviso discreto | campo › Campo y lenguaje › observaciones › completas en el detalle, marcadas como escritas en campo |
+| 103 | «Quién le da seguimiento»: registrado por, 2 personas destacadas en el Oyamel; autor y observaciones en la línea de tiempo; «Qué hacer» | campo › Campo y lenguaje › seguimiento › quién le da seguimiento al Oyamel (2 personas) y sus observaciones |
+| 104 | Seguimiento de una zona con 2 personas | campo › Campo y lenguaje › seguimiento › la Zona lago menor también tiene 2 personas… |
+| 105 | Sin jerga técnica (modelo, confianza del modelo, cromático, sincronización, no determinado…) en Resumen, Análisis, Gráficos, Mapa y Seguimiento | campo › Campo y lenguaje › lenguaje › sin jerga técnica en Resumen, Análisis, Gráficos, Mapa y Seguimiento |
+| 106 | Detalle: diagnóstico en palabras, «Qué hacer», certeza alta/media/baja y «Detalle técnico» plegado con los valores crudos | campo › Campo y lenguaje › lenguaje › el detalle dice el diagnóstico, qué hacer y deja lo técnico plegado |
+| 107 | 360 px: tabla apilada con autor y observaciones, tarjetas, detalle y seguimiento sin desbordar (claro y oscuro) | campo › Campo y lenguaje › 360 px › tarjetas, tabla apilada, detalle y seguimiento sin desbordar |
 
 ## Administración
 

@@ -7,11 +7,11 @@ b-sheet); lo único que escribe es la gestión de cuentas de Administración.
 | Ruta | Pantalla | Datos |
 |---|---|---|
 | `#/login` | Inicio de sesión; guarda el JWT y los `roles` en `sessionStorage` | `POST /auth/login` |
-| `#/` | **Resumen** (dashboard): estado del bosque y totales; **Necesita tu atención** con enlaces a Análisis ya filtrado y a los lugares infestados; indicadores de los últimos 7 días contra los 7 previos; gráficas clave (d3, perezosas) con "Ver en Gráficos"; accesos rápidos; actividad reciente; y el detalle de resultados, cromático y sincronización | `GET /estadisticas`, `GET /analisis?limite=500`, `GET /arboles` y `/zonas`, cada uno por su lado |
+| `#/` | **Resumen** (dashboard): estado del bosque y totales; **Necesita tu atención** con enlaces a Análisis ya filtrado y a los lugares infestados; indicadores de los últimos 7 días contra los 7 previos; gráficas clave (d3, perezosas) con "Ver en Gráficos"; accesos rápidos; actividad reciente con quién subió cada foto; y el detalle de resultados, color del follaje y envío desde el móvil | `GET /estadisticas`, `GET /analisis?limite=500`, `GET /arboles` y `/zonas`, cada uno por su lado |
 | `#/mapa` | **Mapa** interactivo (MapLibre GL JS): árboles y zonas con su último resultado, radio real de las zonas, filtros por estado y tipo, búsqueda y lista sincronizada. Al elegir un punto (`#/mapa/a-<id>`) muestra su detalle y los 5 análisis más recientes | `GET /arboles` y `/zonas` en paralelo; `GET /analisis?arbol=…&limite=50` o `?zona=…` al elegir |
-| `#/arbol/<id>`, `#/zona/<id>` | **Seguimiento**: estado actual, mapa con el punto y dónde se tomó cada foto, confianza de cada análisis en el tiempo, evolución cromática del follaje y línea de tiempo con los cambios de resultado y las fotos | `GET /arboles/{id}` o `/zonas/{id}` y `GET /analisis?arbol=…&limite=200` en paralelo |
-| `#/analisis` | **Análisis**: filtros por fechas, tipo, resultado y sincronización (al backend); cajas por categoría que afinan lo cargado; vista de tarjetas o tabla; agrupar por árbol o zona, resultado o día; detalle de cada análisis con foto y enlaces. Todo en la URL (`#/analisis?tipo=…&caja_resultado=…&vista=tarjetas&agrupar=lugar`) | `GET /analisis?…&limite=100`, `GET /arboles` y `/zonas` (nombres), `GET /analisis/{id}/evidencia` |
-| `#/graficos` | **Gráficos** (D3, ambos roles): análisis en el tiempo con acercamiento, confianza del modelo, por árbol y zona, mapa de calor lugar × periodo y la lista de análisis de la selección. Crossfilter entre gráficas y vista en la URL (`#/graficos?desde=…&hasta=…&resultado=…&tipo=…&arbol=…\|zona=…&confianza=…`) | `GET /analisis?limite=500`, `GET /arboles` y `/zonas` en paralelo; todo se calcula en el navegador |
+| `#/arbol/<id>`, `#/zona/<id>` | **Seguimiento**: estado actual con «Qué hacer», **Quién le da seguimiento** (quién lo registró y las personas que suben fotos, con cuántos análisis y su última foto), mapa con el punto y dónde se tomó cada foto, certeza de cada diagnóstico en el tiempo, evolución del color del follaje y línea de tiempo con los cambios de resultado, quién subió cada foto, sus observaciones de campo y las fotos | `GET /arboles/{id}` o `/zonas/{id}` y `GET /analisis?arbol=…&limite=200` en paralelo |
+| `#/analisis` | **Análisis**: filtros por fechas, tipo de foto, resultado y envío desde el móvil (al backend); cajas por categoría (también por quién subió la foto) que afinan lo cargado; vista de tarjetas o tabla; agrupar por árbol o zona, resultado o día; detalle de cada análisis con foto y enlaces. Todo en la URL (`#/analisis?tipo=…&caja_resultado=…&vista=tarjetas&agrupar=lugar`) | `GET /analisis?…&limite=100`, `GET /arboles` y `/zonas` (nombres), `GET /analisis/{id}/evidencia` |
+| `#/graficos` | **Gráficos** (D3, ambos roles): análisis en el tiempo con acercamiento, certeza del diagnóstico, por árbol y zona, mapa de calor lugar × periodo y la lista de análisis de la selección. Crossfilter entre gráficas y vista en la URL (`#/graficos?desde=…&hasta=…&resultado=…&tipo=…&arbol=…\|zona=…&confianza=…`) | `GET /analisis?limite=500`, `GET /arboles` y `/zonas` en paralelo; todo se calcula en el navegador |
 | `#/admin` | **Administración** (solo `ADMINISTRADOR`): gestión de cuentas (crear, editar, asignar rol, desactivar y activar, con búsqueda y filtros por rol y estado) y dispositivos | `GET /cuentas`, `/dispositivos`; `POST /cuentas`, `PUT /cuentas/{id}`, `PATCH /cuentas/{id}/desactivar` y `/activar` |
 
 El encabezado muestra el nombre de `GET /me`. Sin sesión todo redirige a `#/login`; un experto de campo
@@ -59,8 +59,8 @@ permite `img-src` solo para ese bucket (parámetros `EvidenciasBucket` y `Eviden
   la página usa `entrar` como siempre y cada sección del resumen entra después con la misma
   animación, escalonada por su lugar (`.resumen-secciones`, sin atributos `style`). Con movimiento
   reducido, todo aparece en su estado final.
-- **Orden de prioridad**: el hero de siempre → *Necesita tu atención* (infestados, confianza baja,
-  no determinados y errores de sincronización entre los 100 análisis más recientes —los mismos que
+- **Orden de prioridad**: el hero de siempre → *Necesita tu atención* (infestados, certeza baja,
+  sin diagnóstico claro y errores al enviar entre los 100 análisis más recientes —los mismos que
   muestra Análisis— con enlaces a `#/analisis?caja_resultado=…`, `?caja_confianza=baja`,
   `?estado=error` y `?atencion=1`; y los árboles y zonas cuyo último análisis salió infestado, con
   enlace a su seguimiento) → indicadores de los últimos 7 días con datos contra los 7 previos →
@@ -68,30 +68,67 @@ permite `img-src` solo para ese bucket (parámetros `EvidenciasBucket` y `Eviden
   solo para administradores, Administración) → actividad reciente (abre el detalle en Análisis con
   `#/analisis?detalle=<id>`) → el detalle de siempre.
 - **Gráficas clave**: las de Gráficos en versión ligera (sin pincel): actividad de los últimos 30
-  días con datos, dónde hay más infestación y la confianza. Cada una tiene "Ver en Gráficos" con los
+  días con datos, dónde hay más infestación y la certeza del diagnóstico. Cada una tiene "Ver en Gráficos" con los
   mismos filtros. d3 viaja en un chunk propio (`d3`) que se carga después; los indicadores no lo esperan.
 - **Fallos parciales**: estadísticas, análisis y árboles/zonas se piden por separado; si uno falla,
   su sección lo dice (con Reintentar) y las demás se muestran.
 
+### Lenguaje para agrónomos
+
+La web habla como quien va a campo, no como quien entrenó el modelo. Todo el vocabulario vive en
+`src/lib/lenguaje.ts` (`format.ts` y `analisis.ts` lo reexportan), y Vitest revisa que ninguna
+etiqueta use jerga:
+
+| Antes | Ahora |
+|---|---|
+| No determinado | Sin diagnóstico claro (detalle: «conviene repetir la foto») |
+| Sano / Infestado | Igual en etiquetas; en el detalle y el seguimiento: «Sano: sin señales de descortezador», «Infestado: señales de descortezador» |
+| Confianza del modelo, 0.91 | Certeza del diagnóstico: alta, media o baja, con el % en segundo plano |
+| Cromático (pct_sano…) | Color del follaje: sano, regular, dañado o incierto, con su significado en una línea |
+| Sincronización: sincronizado / pendiente / error | Envío desde el móvil: enviado / pendiente / con error |
+| — | **Qué hacer** según el resultado (infestado: inspeccionar, marcar y avisar al responsable de sanidad; sin diagnóstico claro: repetir la foto con buena luz; sano: seguir el monitoreo) |
+
+Los valores crudos (clasificación, confianza, `pct_*`, estado de sincronización, id) siguen en el
+«Detalle técnico» plegado del detalle de un análisis.
+
+### Quién sube cada foto y lo que escribe
+
+- **Observaciones de campo**: lo que escribió la persona que tomó la foto, con icono de lápiz, en
+  una cita con borde y «escritas por …», separado de los resultados automáticos. Sin texto no se
+  dibuja caja (en el detalle, un «Sin observaciones de campo» discreto).
+- **Autor**: «Subido por <nombre>» en tarjetas, tabla, detalle, actividad reciente, panel del mapa,
+  línea de tiempo y la tabla de Gráficos; los análisis anteriores a que se guardara dicen «Autor no
+  registrado». Llega como `autor: { id, nombre } | null` en cada análisis.
+- **Quién le da seguimiento** (`#/arbol/<id>`, `#/zona/<id>`): «Registrado por …» y las personas que
+  suben fotos (cuántos análisis y su última foto), de `registradoPor` y `seguimiento` de
+  `GET /arboles/{id}` y `/zonas/{id}`. Con 2 o más personas se destaca («2 personas le dan
+  seguimiento a este árbol»). Si el backend no manda la lista, se arma con los autores de los
+  análisis cargados; sin ningún dato dice «Sin registro de quién sube las fotos todavía».
+
 ### Análisis
 
-- **Lo de siempre**: el formulario (Desde, Hasta, Tipo, Resultado, Sincronización) consulta al
+- **Lo de siempre**: el formulario (Desde, Hasta, Tipo de foto, Resultado, Envío desde el móvil) consulta al
   backend al aplicar, con `limite=100` (el máximo de `GET /analisis` es 500; si llegan 100 se pide
   acotar por fechas). La tabla es la vista por defecto y sigue igual, con un botón "Detalle" por fila.
 - **Cajas por categoría** (sobre los análisis cargados, en el navegador): por resultado (color de
-  estado + forma), por tipo de imagen, por confianza del modelo — alta (≥ 80 %), media (50 % a menos de 80 %),
-  baja (< 50 %) y sin confianza, con un medidor café de la proporción — y **Requieren atención**:
-  infestados, no determinados, confianza baja o error de sincronización. Cada caja muestra cuántos
+  estado + forma), por tipo de foto, por certeza del diagnóstico — alta (≥ 80 %), media (50 % a menos de 80 %),
+  baja (< 50 %) y sin dato, con un medidor café de la proporción —, **por quién subió la foto** (si
+  entre los cargados hay más de una opción; `caja_autor=<id>,sin`) y **Requieren atención**:
+  infestados, sin diagnóstico claro, certeza baja o con error al enviar. Cada caja muestra cuántos
   y su porcentaje, es un botón con `aria-pressed` y se combina con las demás (dentro de un grupo
   suman, entre grupos se cruzan). Las elegidas aparecen como chips; "Quitar filtros" quita todo.
 - **Vista "Tarjetas | Tabla"**: se guarda en la URL y, como preferencia, en `localStorage`. Cada
-  tarjeta: miniatura (la URL firmada se pide solo al acercarse a la pantalla), resultado, confianza
-  con medidor, árbol o zona con enlace al seguimiento, tipo, fecha, observaciones y motivos de
-  atención. Toda la tarjeta abre el detalle.
+  tarjeta: miniatura (la URL firmada se pide solo al acercarse a la pantalla), resultado, certeza
+  con medidor, árbol o zona con enlace al seguimiento, tipo, fecha, «Subido por …», observaciones de
+  campo (dos líneas; «Ver completas» las abre sin abrir el detalle) y motivos de atención. Toda la
+  tarjeta abre el detalle. La tabla tiene columnas «Subido por» y «Observaciones de campo» (completas,
+  también en la tabla apilada del teléfono).
 - **Agrupar por** nada, árbol o zona, resultado o día: secciones plegables (`<details>`) con el
   conteo por resultado y cuántas requieren atención; por lugar, con enlace al seguimiento.
-- **Detalle** (diálogo): foto grande firmada, todos los datos, enlaces al seguimiento y a Gráficos
-  filtrado por ese lugar, y el análisis anterior y siguiente del mismo lugar.
+- **Detalle** (diálogo): foto grande firmada, el diagnóstico en palabras («Infestado: señales de
+  descortezador») con **Qué hacer**, certeza, quién la subió, envío desde el móvil, color del follaje,
+  las **observaciones de campo** completas, un «Detalle técnico» plegado con los valores crudos,
+  enlaces al seguimiento y a Gráficos filtrado por ese lugar, y el análisis anterior y siguiente del mismo lugar.
 - La rampa café solo marca magnitudes (medidores); los resultados conservan sus colores de estado.
 
 ### Gráficos
@@ -99,11 +136,11 @@ permite `img-src` solo para ese bucket (parámetros `EvidenciasBucket` y `Eviden
 - **Qué hay**: análisis por día, semana o mes (el intervalo sigue al acercamiento), apilados por
   resultado; una franja con todos los datos y un pincel (`d3-brush`) para elegir el rango
   arrastrando con ratón o dedo; botones Anterior, Acercar, Alejar, Siguiente y Restablecer, y las
-  fechas Desde/Hasta (todo sincronizado). Histograma de confianza por decenas, barras por árbol y
+  fechas Desde/Hasta (todo sincronizado). Histograma de la certeza del diagnóstico por decenas, barras por árbol y
   zona y un mapa de calor lugar × periodo (intensidad = cuántos análisis; triángulo = hubo
   infestación). Encima, indicadores de la selección; debajo, la lista de análisis que cumplen los
   filtros con enlace al seguimiento.
-- **Navegación**: un clic o Enter en un periodo acerca a ese periodo; en una decena de confianza,
+- **Navegación**: un clic o Enter en un periodo acerca a ese periodo; en una decena de certeza,
   en un resultado de la leyenda o en una celda del mapa de calor, filtra las demás gráficas
   (crossfilter: cada gráfica ignora su propia dimensión y la resalta); en una barra de árbol o zona,
   abre su seguimiento (`#/arbol/<id>`, `#/zona/<id>`). Lo elegido aparece como chips que se quitan
@@ -162,10 +199,10 @@ modo claro y oscuro. Ningún estado depende solo del color: cada uno lleva **for
 
 | Significado | Claro | Oscuro |
 |---|---|---|
-| Sano / sincronizado / cromático sano | `#2a78d6` | `#3987e5` |
+| Sano / enviado / follaje sano | `#2a78d6` | `#3987e5` |
 | Regular / pendiente | `#eda100` | `#c98500` |
 | Infestado / con error / dañado | `#d9466f` | `#d9466f` |
-| No determinado / incierto (neutro) | `#a6a9b0` | `#9a9da4` |
+| Sin diagnóstico claro / incierto (neutro) | `#a6a9b0` | `#9a9da4` |
 
 "Sano" es azul y no verde a propósito: verde contra carmín no se distingue con deuteranopia.
 Las fechas se muestran en hora del centro de México (UTC−6, sin horario de verano) y los filtros por
@@ -242,8 +279,10 @@ Chromium ──► vite preview (build de producción, proxy /api como CloudFron
 
 - **Requisitos:** Docker (el Postgres de `b-sheet/docker-compose.yml`), JDK 25 y el repo `b-sheet` al
   lado de este (o `B_SHEET_DIR=/ruta/a/b-sheet`). La primera vez: `pnpm exec playwright install chromium`.
-- **Datos:** Flyway carga la réplica del esquema de TT_BKN y `db/demo` (3 árboles, 2 zonas, 5 análisis,
-  cuentas `demo@`, `admin@` y `baja@sheets.tt` con `Demo1234!`).
+- **Datos:** Flyway carga la réplica del esquema de TT_BKN y `db/demo` (3 árboles, 2 zonas, 6 análisis,
+  cuentas `demo@`, `admin@`, `baja@` y `campo@sheets.tt` con `Demo1234!`). Autores: e1–e3 los subió
+  Usuario Demo; e4 y e6 (Oyamel, 5 oct), Experta de Campo Demo; e5 no tiene autor. Al Oyamel y a la
+  Zona lago menor les dan seguimiento 2 personas.
 - **S3 sin AWS:** b-sheet firma las fotos con credenciales ficticias y el navegador intercepta la
   descarga; el test revisa que la URL sea la firmada (bucket, clave, `X-Amz-Expires=300`, credencial).
 - **Proyectos:** `escritorio` (todo lo demás) y `movil` (Pixel 7: `movil.e2e.ts` y los `*-movil.e2e.ts`;
@@ -375,3 +414,9 @@ se prueban los datos, los nombres accesibles y la interacción, no los píxeles)
 árbol desde su barra, acercar/Atrás/Restablecer, crossfilter con chips y URL compartida, y el pincel
 arrastrando con el ratón. `e2e/movil.e2e.ts` revisa que Gráficos quepa a 360 px.
 `E2E_CAPTURAS=<carpeta> pnpm test:e2e` guarda capturas en claro y oscuro para revisarlas.
+
+`src/lib/lenguaje.test.ts` revisa que ninguna etiqueta use jerga (modelo, confianza, cromático,
+sincronización, no determinado…), qué hacer según resultado y certeza, «Subido por» y quién le da
+seguimiento. `e2e/campo.e2e.ts` lo prueba contra b-sheet: autor en tabla, tarjetas, detalle y
+actividad; cajas por autor; observaciones de campo; 2 personas en el Oyamel y en la Zona lago menor;
+ninguna jerga en las pantallas principales; y todo a 360 px sin desbordar.

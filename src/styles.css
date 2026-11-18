@@ -1468,11 +1468,13 @@ input:disabled {
 
   /* Celdas sin etiqueta (acciones) y las de contenido largo: a lo ancho, debajo de su etiqueta. */
   .tabla.tabla-apilable td:not([data-label]):not(.celda-titulo),
-  .tabla.tabla-apilable td.celda-barra {
+  .tabla.tabla-apilable td.celda-barra,
+  .tabla.tabla-apilable td.observaciones {
     display: block;
     text-align: left;
   }
 
+  .tabla-apilable td.observaciones::before,
   .tabla-apilable td.celda-barra::before {
     display: block;
     margin-bottom: 0.25rem;
@@ -1507,8 +1509,8 @@ input:disabled {
 }
 
 .observaciones {
-  min-width: 8rem;
-  color: var(--muted);
+  min-width: 12rem;
+  max-width: 24rem;
 }
 
 .correo {
@@ -1986,11 +1988,6 @@ input:disabled {
 
 .historial-fecha {
   font-size: var(--t-xs);
-}
-
-.historial-obs {
-  font-size: var(--t-s);
-  font-style: italic;
 }
 
 @media (forced-colors: active) {
@@ -3248,16 +3245,6 @@ text.eje-valor {
   font-size: var(--t-s);
 }
 
-.tarjeta-observaciones {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
-  font-size: var(--t-s);
-  color: var(--muted);
-}
-
 .tarjeta-motivos {
   font-size: var(--t-xs);
   font-weight: 650;
@@ -3831,5 +3818,288 @@ text.eje-valor {
   .lugares-infestados a {
     display: inline-block;
     padding-block: 0.5rem;
+  }
+}
+
+/* ---- Lo que escribe y hace una persona en campo: quién subió la foto y sus observaciones -------
+   Se distingue de los resultados automáticos: icono de persona o de lápiz, cita con borde a la
+   izquierda y fondo propio. Sin colores de estado (no es un resultado) ni café (no es magnitud). */
+
+.autor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: var(--t-xs);
+  color: var(--text);
+}
+
+.autor .icono {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.autor-sin {
+  font-style: italic;
+  color: var(--muted);
+}
+
+.actividad-autor {
+  display: flex;
+  margin-top: 0.125rem;
+}
+
+.historial-autor,
+.tarjeta-autor,
+.evento-autor {
+  margin: 0;
+}
+
+.observaciones-campo {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border-fuerte);
+  border-radius: var(--radio-s);
+}
+
+.observaciones-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: var(--t-xs);
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.observaciones-titulo .icono {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.observaciones-quien {
+  font-weight: 500;
+}
+
+.observaciones-texto {
+  margin: 0;
+}
+
+.observaciones-texto p {
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--text);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.observaciones-recortadas .observaciones-texto p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.btn-texto {
+  justify-self: start;
+  min-height: 24px;
+  padding: 0;
+  font: inherit;
+  font-size: var(--t-xs);
+  font-weight: 650;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* Por encima del área de la tarjeta (que abre el detalle), como el enlace al lugar. */
+.observaciones-mas {
+  position: relative;
+  z-index: 1;
+}
+
+.observaciones-vacias {
+  margin: 0;
+  font-size: var(--t-xs);
+}
+
+.observaciones .observaciones-cita {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* ---- Detalle de un análisis: el diagnóstico en palabras, qué hacer y el detalle técnico ------- */
+
+.detalle-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.detalle-diagnostico {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.detalle-resultado {
+  margin: 0;
+  font-size: var(--t-m);
+  font-weight: 650;
+}
+
+/* La frase completa («Infestado: señales de descortezador») puede ir en dos líneas. */
+.detalle-resultado .estado {
+  white-space: normal;
+}
+
+.que-hacer {
+  padding: 0.625rem 0.875rem;
+  background: var(--info-bg);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radio-s);
+}
+
+.que-hacer h2,
+.que-hacer h3 {
+  margin: 0 0 0.125rem;
+  font-size: var(--t-s);
+  font-weight: 700;
+}
+
+.que-hacer p {
+  margin: 0;
+  font-size: var(--t-s);
+}
+
+.que-hacer-por {
+  color: var(--muted);
+}
+
+.seguimiento-ficha .que-hacer {
+  margin-top: 1rem;
+}
+
+.detalle-tecnico {
+  font-size: var(--t-xs);
+  color: var(--muted);
+}
+
+.detalle-tecnico summary {
+  cursor: pointer;
+  font-weight: 650;
+  padding: 0.25rem 0;
+  border-radius: var(--radio-s);
+}
+
+.detalle-tecnico dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 0.5rem 0 0;
+}
+
+.detalle-tecnico dt {
+  font-weight: 650;
+}
+
+.detalle-tecnico dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.detalle-tecnico code {
+  font-size: var(--t-xs);
+  color: var(--text);
+}
+
+.detalle-datos .bloque-nota {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: var(--t-xs);
+}
+
+/* ---- Seguimiento: quién le da seguimiento ----------------------------------------------------- */
+
+.quien-sigue h2 {
+  margin-top: 0;
+}
+
+.quien-registro {
+  margin: 0 0 0.5rem;
+}
+
+.quien-destacado {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-weight: 650;
+  background: var(--tinte);
+  border-radius: var(--radio-s);
+}
+
+.quien-destacado .icono {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.quien-lista {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quien-lista li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.125rem 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--t-s);
+}
+
+.quien-lista li:last-child {
+  border-bottom: 0;
+}
+
+.quien-lista .muted {
+  font-size: var(--t-xs);
+}
+
+.quien-nombre {
+  font-weight: 650;
+}
+
+@media (forced-colors: active) {
+  .observaciones-campo,
+  .que-hacer,
+  .quien-destacado {
+    border: 1px solid CanvasText;
+    border-left-width: 4px;
   }
 }

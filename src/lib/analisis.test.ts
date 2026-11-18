@@ -31,8 +31,8 @@ describe('categorías', () => {
 
   it('"requieren atención" con sus motivos', () => {
     const e = (id: string) => ANALISIS.find((a) => a.id === id)!
-    expect(motivosAtencion(e('e5'))).toEqual(['Infestado', 'Error de sincronización'])
-    expect(motivosAtencion(e('e4'))).toEqual(['No determinado', 'Confianza baja'])
+    expect(motivosAtencion(e('e5'))).toEqual(['Infestado', 'Error al enviar desde el móvil'])
+    expect(motivosAtencion(e('e4'))).toEqual(['Sin diagnóstico claro', 'Certeza baja'])
     expect(motivosAtencion(e('e2'))).toEqual([])
   })
 
@@ -42,6 +42,12 @@ describe('categorías', () => {
       resultado: { sano: 2, infestado: 2, no_determinado: 1 },
       tipo: { corteza: 2, follaje: 3 },
       confianza: { alta: 3, media: 1, baja: 1, sin: 0 },
+      // Por más análisis (empate: por nombre); «Autor no registrado» (e5) al final.
+      autores: [
+        { id: 'a1', nombre: 'Usuario Demo', n: 3 },
+        { id: 'a4', nombre: 'Experta de Campo Demo', n: 1 },
+        { id: 'sin', nombre: null, n: 1 },
+      ],
       atencion: 3,
     })
   })
@@ -59,7 +65,7 @@ describe('estado en la URL', () => {
   it('ida y vuelta con orden fijo', () => {
     const e = {
       form: { ...FORM_VACIO, tipo: 'follaje' as const, desde: '2026-10-04' },
-      cajas: { resultado: ['sano' as const, 'infestado' as const], tipo: [], confianza: ['baja' as const], atencion: true },
+      cajas: { resultado: ['sano' as const, 'infestado' as const], tipo: [], confianza: ['baja' as const], autor: [], atencion: true },
       vista: 'tarjetas' as const,
       agrupar: 'lugar' as const,
       detalle: null,
@@ -97,7 +103,7 @@ describe('agrupación y vecinos', () => {
     expect(agrupar(ANALISIS, 'resultado', nombres).map((x) => [x.titulo, x.analisis.length])).toEqual([
       ['Sano', 2],
       ['Infestado', 2],
-      ['No determinado', 1],
+      ['Sin diagnóstico claro', 1],
     ])
     const dias = agrupar(ANALISIS, 'dia', nombres)
     expect(dias.map((x) => x.clave)).toEqual(['2026-10-08', '2026-10-07', '2026-10-06', '2026-10-04', '2026-10-03'])
@@ -126,3 +132,16 @@ describe('fechas inválidas y bordes de confianza (A1–A3)', () => {
   })
 })
 
+
+describe('cajas por quién subió la foto', () => {
+  it('filtran por autor, «sin» junta los análisis sin autor registrado', () => {
+    expect(ids(filtrarCajas(ANALISIS, { ...CAJAS_VACIAS, autor: ['a4'] }))).toEqual(['e4'])
+    expect(ids(filtrarCajas(ANALISIS, { ...CAJAS_VACIAS, autor: ['a4', 'sin'] }))).toEqual(['e5', 'e4'])
+  })
+
+  it('se guardan en la URL sin repetir y en orden fijo', () => {
+    const e = leerEstado('caja_autor=a2,a1,a2,,')
+    expect(e.cajas.autor).toEqual(['a1', 'a2'])
+    expect(escribirEstado(e).toString()).toBe('caja_autor=a1%2Ca2')
+  })
+})

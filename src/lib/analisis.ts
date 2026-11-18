@@ -1,5 +1,6 @@
-import type { Analisis, EstadoSincronizacion, Resultado, TipoImagen } from './api'
+import type { Analisis, EstadoSincronizacion, Resultado, Seguidor, TipoImagen } from './api'
 import { esDia } from './dia'
+import { ETIQUETA_CERTEZA, ETIQUETA_RESULTADO, RANGO_CERTEZA, type NivelCerteza } from './lenguaje'
 
 // Lógica de la pantalla Análisis: cajas por categoría, vistas, agrupación y vecinos. Pura (sin DOM),
 // probada aparte. El estado completo vive en la URL: #/analisis?tipo=…&caja_resultado=…&vista=…
@@ -11,20 +12,11 @@ const ESTADOS: EstadoSincronizacion[] = ['pendiente', 'sincronizado', 'error']
 // ---------------------------------------------------------------------------------------------
 // Confianza en categorías
 // ---------------------------------------------------------------------------------------------
-export type NivelConfianza = 'alta' | 'media' | 'baja' | 'sin'
+// (En pantalla se le llama «certeza del diagnóstico»: ver lenguaje.ts.)
+export type NivelConfianza = NivelCerteza
 export const NIVELES: NivelConfianza[] = ['alta', 'media', 'baja', 'sin']
-export const ETIQUETA_NIVEL: Record<NivelConfianza, string> = {
-  alta: 'Alta',
-  media: 'Media',
-  baja: 'Baja',
-  sin: 'Sin confianza',
-}
-export const RANGO_NIVEL: Record<NivelConfianza, string> = {
-  alta: '80 % o más',
-  media: 'de 50 % a menos de 80 %',
-  baja: 'menos de 50 %',
-  sin: 'el modelo no la reportó',
-}
+export const ETIQUETA_NIVEL = ETIQUETA_CERTEZA
+export const RANGO_NIVEL = RANGO_CERTEZA
 
 /**
  * Se clasifica el porcentaje tal como se muestra (redondeado a una décima, ver formatPorcentaje):
@@ -48,9 +40,9 @@ export function nivelConfianza(c: number | null): NivelConfianza {
 export function motivosAtencion(a: Analisis): string[] {
   const motivos: string[] = []
   if (a.resultadoClasificacion === 'infestado') motivos.push('Infestado')
-  if (a.resultadoClasificacion === 'no_determinado') motivos.push('No determinado')
-  if (nivelConfianza(a.confianza) === 'baja') motivos.push('Confianza baja')
-  if (a.estadoSincronizacion === 'error') motivos.push('Error de sincronización')
+  if (a.resultadoClasificacion === 'no_determinado') motivos.push('Sin diagnóstico claro')
+  if (nivelConfianza(a.confianza) === 'baja') motivos.push('Certeza baja')
+  if (a.estadoSincronizacion === 'error') motivos.push('Error al enviar desde el móvil')
   return motivos
 }
 
@@ -75,10 +67,16 @@ export interface Cajas {
   resultado: Resultado[]
   tipo: TipoImagen[]
   confianza: NivelConfianza[]
+  /** Quién subió la foto: id de la cuenta, o SIN_AUTOR_ID para los análisis sin autor registrado. */
+  autor: string[]
   atencion: boolean
 }
 
-export const CAJAS_VACIAS: Cajas = { resultado: [], tipo: [], confianza: [], atencion: false }
+export const CAJAS_VACIAS: Cajas = { resultado: [], tipo: [], confianza: [], autor: [], atencion: false }
+
+/** Valor de la caja «Autor no registrado» (en la URL: caja_autor=sin). */
+export const SIN_AUTOR_ID = 'sin'
+export const autorId = (a: Analisis) => a.autor?.id ?? SIN_AUTOR_ID
 
 export type Vista = 'tabla' | 'tarjetas'
 export type Agrupar = 'nada' | 'lugar' | 'resultado' | 'dia'
@@ -116,6 +114,8 @@ export function leerEstado(consulta: string): EstadoAnalisis {
       resultado: lista(p.get('caja_resultado'), RESULTADOS),
       tipo: lista(p.get('caja_tipo'), TIPOS),
       confianza: lista(p.get('caja_confianza'), NIVELES),
+      // Los ids no se conocen al leer la URL: se aceptan tal cual (sin repetir y en orden fijo).
+      autor: [...new Set((p.get('caja_autor') ?? '').split(',').map((v) => v.trim()).filter(Boolean))].sort(),
       atencion: p.get('atencion') === '1',
     },
     vista: vista === 'tabla' || vista === 'tarjetas' ? vista : null,
@@ -131,6 +131,7 @@ export function escribirEstado(e: EstadoAnalisis): URLSearchParams {
   if (e.cajas.resultado.length) p.set('caja_resultado', e.cajas.resultado.join(','))
   if (e.cajas.tipo.length) p.set('caja_tipo', e.cajas.tipo.join(','))
   if (e.cajas.confianza.length) p.set('caja_confianza', e.cajas.confianza.join(','))
+  if (e.cajas.autor.length) p.set('caja_autor', e.cajas.autor.join(','))
   if (e.cajas.atencion) p.set('atencion', '1')
   if (e.vista) p.set('vista', e.vista)
   if (e.agrupar !== 'nada') p.set('agrupar', e.agrupar)
@@ -138,7 +139,7 @@ export function escribirEstado(e: EstadoAnalisis): URLSearchParams {
   return p
 }
 
-export const hayCajas = (c: Cajas) => c.resultado.length + c.tipo.length + c.confianza.length > 0 || c.atencion
+export const hayCajas = (c: Cajas) => c.resultado.length + c.tipo.length + c.confianza.length + c.autor.length > 0 || c.atencion
 
 /** Activa o quita un valor dentro de un grupo de cajas. */
 export function alternar<T>(valores: T[], valor: T, orden: readonly T[]): T[] {
@@ -152,6 +153,7 @@ export function filtrarCajas(analisis: Analisis[], c: Cajas): Analisis[] {
       (!c.resultado.length || c.resultado.includes(a.resultadoClasificacion)) &&
       (!c.tipo.length || c.tipo.includes(a.tipoImagen)) &&
       (!c.confianza.length || c.confianza.includes(nivelConfianza(a.confianza))) &&
+      (!c.autor.length || c.autor.includes(autorId(a))) &&
       (!c.atencion || requiereAtencion(a)),
   )
 }
@@ -164,6 +166,8 @@ export interface ConteosCajas {
   resultado: Record<Resultado, number>
   tipo: Record<TipoImagen, number>
   confianza: Record<NivelConfianza, number>
+  /** Quién subió las fotos cargadas: por más análisis; «Autor no registrado» al final. */
+  autores: { id: string; nombre: string | null; n: number }[]
   atencion: number
 }
 
@@ -173,14 +177,23 @@ export function conteosCajas(analisis: Analisis[]): ConteosCajas {
     resultado: { sano: 0, infestado: 0, no_determinado: 0 },
     tipo: { corteza: 0, follaje: 0 },
     confianza: { alta: 0, media: 0, baja: 0, sin: 0 },
+    autores: [],
     atencion: 0,
   }
+  const autores = new Map<string, { id: string; nombre: string | null; n: number }>()
   for (const a of analisis) {
+    const id = autorId(a)
+    const actual = autores.get(id) ?? { id, nombre: a.autor?.nombre ?? null, n: 0 }
+    actual.n++
+    autores.set(id, actual)
     c.resultado[a.resultadoClasificacion]++
     c.tipo[a.tipoImagen]++
     c.confianza[nivelConfianza(a.confianza)]++
     if (requiereAtencion(a)) c.atencion++
   }
+  c.autores = [...autores.values()].sort(
+    (x, y) => Number(x.nombre === null) - Number(y.nombre === null) || y.n - x.n || (x.nombre ?? '').localeCompare(y.nombre ?? '', 'es'),
+  )
   return c
 }
 
@@ -232,7 +245,7 @@ export function agrupar(analisis: Analisis[], modo: Agrupar, nombres: Map<string
   }
   for (const a of analisis) mapa.set(claveDe(a), [...(mapa.get(claveDe(a)) ?? []), a])
   const grupos = [...mapa].map(([clave, lista]) => {
-    if (modo === 'resultado') return grupo(clave, ETIQUETA_RESULTADO_LOCAL[clave as Resultado], null, lista)
+    if (modo === 'resultado') return grupo(clave, ETIQUETA_RESULTADO[clave as Resultado], null, lista)
     if (modo === 'dia') {
       const t = diaLargo.format(new Date(lista[0].fechaCaptura))
       return grupo(clave, t.charAt(0).toUpperCase() + t.slice(1), null, lista)
@@ -245,9 +258,6 @@ export function agrupar(analisis: Analisis[], modo: Agrupar, nombres: Map<string
   if (modo === 'dia') return grupos.sort((a, b) => b.clave.localeCompare(a.clave))
   return grupos.sort((a, b) => b.analisis.length - a.analisis.length || a.titulo.localeCompare(b.titulo, 'es'))
 }
-
-// Copia local para no depender de format.ts aquí (mismas etiquetas).
-const ETIQUETA_RESULTADO_LOCAL: Record<Resultado, string> = { sano: 'Sano', infestado: 'Infestado', no_determinado: 'No determinado' }
 
 function grupo(clave: string, titulo: string, lugar: LugarAnalisis | null, analisis: Analisis[]): Grupo {
   const resultado = { sano: 0, infestado: 0, no_determinado: 0 }
@@ -267,4 +277,26 @@ export function vecinos(analisis: Analisis[], a: Analisis): { anterior: Analisis
     .sort((x, y) => x.fechaCaptura.localeCompare(y.fechaCaptura))
   const i = mismos.findIndex((x) => x.id === a.id)
   return { anterior: mismos[i - 1] ?? null, siguiente: mismos[i + 1] ?? null }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Quién le da seguimiento a un árbol o zona
+// ---------------------------------------------------------------------------------------------
+/**
+ * Personas que suben fotos de un lugar, de la captura más reciente a la más antigua. Se usa la
+ * lista del backend (GET /arboles/{id}, /zonas/{id}); si un backend anterior no la manda, se
+ * arma con los análisis cargados que traen autor.
+ */
+export function seguimientoDe(delBackend: Seguidor[] | undefined, analisis: Analisis[]): Seguidor[] {
+  if (delBackend) return delBackend
+  const mapa = new Map<string, Seguidor>()
+  for (const a of analisis) {
+    if (!a.autor) continue
+    const s = mapa.get(a.autor.id)
+    if (s) {
+      s.analisis++
+      if (a.fechaCaptura > s.ultimo) s.ultimo = a.fechaCaptura
+    } else mapa.set(a.autor.id, { id: a.autor.id, nombre: a.autor.nombre, analisis: 1, ultimo: a.fechaCaptura })
+  }
+  return [...mapa.values()].sort((x, y) => y.ultimo.localeCompare(x.ultimo))
 }

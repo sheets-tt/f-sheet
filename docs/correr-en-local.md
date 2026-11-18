@@ -191,7 +191,7 @@ la hora (con segundos), por ejemplo `evidencia-e2e/2026-11-13_074215/`:
 | `artefactos/` | Capturas de página completa de cada prueba, y trazas y videos de las que fallaron |
 
 Para ver el reporte: `pnpm exec playwright show-report evidencia-e2e/<fecha>/reporte-html`. Cada
-prueba se llama **Área › función** (por ejemplo «Análisis › cajas › filtran por confianza baja»), y
+prueba se llama **Área › función** (por ejemplo «Análisis › cajas › filtran por certeza baja»), y
 [e2e-cobertura.md](e2e-cobertura.md) dice qué prueba cubre cada función de la web.
 
 La carpeta `evidencia-e2e/` no se sube al repo (está en `.gitignore`) ni a la imagen (`.dockerignore`):

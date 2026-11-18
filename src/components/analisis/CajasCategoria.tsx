@@ -11,6 +11,7 @@ import {
   type Cajas,
   type ConteosCajas,
 } from '../../lib/analisis'
+import { SIN_AUTOR, TITULO_CERTEZA } from '../../lib/lenguaje'
 import Simbolo, { TONO_RESULTADO } from '../Simbolo'
 
 interface Props {
@@ -78,7 +79,8 @@ function Caja({
 /**
  * Cajas por categoría sobre los análisis cargados: un clic filtra (y se combina con las demás
  * cajas). Dentro de un grupo suman; entre grupos, se cruzan. Los resultados llevan su color de
- * estado + forma; la confianza, un medidor café (magnitud).
+ * estado + forma; la certeza, un medidor café (magnitud). Quién subió la foto aparece si hay más
+ * de una opción entre los cargados.
  */
 export default function CajasCategoria({ conteos, cajas, onCambiar }: Props) {
   const t = conteos.total
@@ -105,7 +107,7 @@ export default function CajasCategoria({ conteos, cajas, onCambiar }: Props) {
       </div>
 
       <div className="cajas-grupo" role="group" aria-labelledby="cajas-tipo">
-        <h3 id="cajas-tipo">Por tipo de imagen</h3>
+        <h3 id="cajas-tipo">Por tipo de foto</h3>
         <div className="cajas-fila">
           {TIPOS.map((tipo) => (
             <Caja
@@ -126,7 +128,7 @@ export default function CajasCategoria({ conteos, cajas, onCambiar }: Props) {
       </div>
 
       <div className="cajas-grupo" role="group" aria-labelledby="cajas-confianza">
-        <h3 id="cajas-confianza">Por confianza del modelo</h3>
+        <h3 id="cajas-confianza">Por {TITULO_CERTEZA.toLowerCase()}</h3>
         <div className="cajas-fila">
           {NIVELES.map((nivel) => (
             <Caja
@@ -144,6 +146,25 @@ export default function CajasCategoria({ conteos, cajas, onCambiar }: Props) {
         </div>
       </div>
 
+      {conteos.autores.length > 1 && (
+        <div className="cajas-grupo" role="group" aria-labelledby="cajas-autor">
+          <h3 id="cajas-autor">Por quién subió la foto</h3>
+          <div className="cajas-fila">
+            {conteos.autores.map((x) => (
+              <Caja
+                key={x.id}
+                activa={cajas.autor.includes(x.id)}
+                etiqueta={x.nombre ?? SIN_AUTOR}
+                n={x.n}
+                total={t}
+                icono={null}
+                onClick={() => onCambiar({ ...cajas, autor: alternar(cajas.autor, x.id, [...new Set([...cajas.autor, x.id])].sort()) })}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="cajas-grupo cajas-atencion" role="group" aria-labelledby="cajas-atencion">
         <h3 id="cajas-atencion">Requieren atención</h3>
         <div className="cajas-fila">
@@ -152,7 +173,7 @@ export default function CajasCategoria({ conteos, cajas, onCambiar }: Props) {
             etiqueta="Requieren atención"
             n={conteos.atencion}
             total={t}
-            detalle="infestados, no determinados, confianza baja o error de sincronización"
+            detalle="infestados, sin diagnóstico claro, certeza baja o con error al enviar"
             icono={<Simbolo tono="alerta" />}
             onClick={() => onCambiar({ ...cajas, atencion: !cajas.atencion })}
           />

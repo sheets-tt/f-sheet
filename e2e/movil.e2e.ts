@@ -85,7 +85,7 @@ test.describe('Móvil (Pixel 7)', () => {
     await interceptarS3(page)
     await page.setViewportSize({ width: 360, height: 780 })
     await ir(page, '#/analisis?vista=tarjetas', 'Análisis')
-    await expect(page.getByRole('list', { name: 'Análisis' }).getByRole('article')).toHaveCount(5)
+    await expect(page.getByRole('list', { name: 'Análisis' }).getByRole('article')).toHaveCount(6)
     await sinDesbordeHorizontal(page)
     await evidencia(page, 'analisis-360', { completa: false })
     await page.getByRole('list', { name: 'Análisis' }).scrollIntoViewIfNeeded()
@@ -157,7 +157,7 @@ test.describe('Móvil (Pixel 7)', () => {
   test('Desde y Hasta: la fecha del calendario se aplica al momento y un rango al revés avisa en el campo', async ({ page }) => {
     // Gráficos: elegir en el calendario del teléfono (sin teclado) aplica la fecha sin salir del campo.
     await ir(page, '#/graficos', 'Gráficos')
-    const desde = page.getByLabel('Desde')
+    const desde = page.getByLabel('Desde', { exact: true })
     await desde.focus()
     await desde.fill('2026-10-05')
     await expect(page).toHaveURL(/#\/graficos\?desde=2026-10-05$/)
@@ -166,15 +166,15 @@ test.describe('Móvil (Pixel 7)', () => {
 
     // Análisis: «Hasta» anterior a «Desde» no se consulta y el aviso queda en el campo.
     await ir(page, '#/analisis', 'Análisis')
-    await page.getByLabel('Desde').fill('2026-10-08')
-    await page.getByLabel('Hasta').fill('2026-10-03')
+    await page.getByLabel('Desde', { exact: true }).fill('2026-10-08')
+    await page.getByLabel('Hasta', { exact: true }).fill('2026-10-03')
     let consultas = 0
     page.on('request', (r) => {
       if (r.url().includes('/api/analisis')) consultas++
     })
     await page.getByRole('button', { name: 'Aplicar filtros' }).click()
     await expect(page.getByRole('alert')).toHaveText('«Hasta» no puede ser anterior a «Desde».')
-    await expect(page.getByLabel('Hasta')).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.getByLabel('Hasta', { exact: true })).toHaveAttribute('aria-invalid', 'true')
     expect(consultas).toBe(0)
     await evidencia(page, 'analisis-rango-invertido')
   })

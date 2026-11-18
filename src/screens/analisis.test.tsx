@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
-import { conSesion, llamadasA, mockBackend } from '../test/backend'
+import { ANALISIS, conSesion, json, llamadasA, mockBackend } from '../test/backend'
 
 const fetchMock = vi.fn<typeof fetch>()
 const proto = HTMLDialogElement.prototype as HTMLDialogElement & Record<string, unknown>
@@ -47,13 +47,13 @@ describe('Análisis: cajas por categoría', () => {
     await abrir()
     expect(caja(/^Sano: 2 análisis, 40 %$/)).toHaveAttribute('aria-pressed', 'false')
     expect(caja(/^Infestado: 2 análisis, 40 %$/)).toBeInTheDocument()
-    expect(caja(/^No determinado: 1 análisis, 20 %$/)).toBeInTheDocument()
+    expect(caja(/^Sin diagnóstico claro: 1 análisis, 20 %$/)).toBeInTheDocument()
     expect(caja(/^Corteza: 2 análisis, 40 %$/)).toBeInTheDocument()
     expect(caja(/^Follaje: 3 análisis, 60 %$/)).toBeInTheDocument()
     expect(caja(/^Alta: 3 análisis, 60 % \(80 % o más\)$/)).toBeInTheDocument()
     expect(caja(/^Baja: 1 análisis, 20 % \(menos de 50 %\)$/)).toBeInTheDocument()
-    expect(caja(/^Sin confianza: 0 análisis, 0 %/)).toBeInTheDocument()
-    expect(caja(/^Requieren atención: 3 análisis, 60 % \(infestados, no determinados, confianza baja o error de sincronización\)$/)).toBeInTheDocument()
+    expect(caja(/^Sin dato: 0 análisis, 0 %/)).toBeInTheDocument()
+    expect(caja(/^Requieren atención: 3 análisis, 60 % \(infestados, sin diagnóstico claro, certeza baja o con error al enviar\)$/)).toBeInTheDocument()
     // La tabla sigue siendo la vista por defecto, con la misma consulta de siempre.
     expect(filas()).toHaveLength(5)
     expect(llamadasA(fetchMock, '/analisis')).toEqual(['/api/analisis?limite=100'])
@@ -65,17 +65,17 @@ describe('Análisis: cajas por categoría', () => {
     await waitFor(() => expect(consulta().get('caja_resultado')).toBe('sano'))
     expect(caja(/^Sano:/)).toHaveAttribute('aria-pressed', 'true')
     expect(filas()).toHaveLength(2)
-    await user.click(caja(/^No determinado:/))
+    await user.click(caja(/^Sin diagnóstico claro:/))
     await waitFor(() => expect(filas()).toHaveLength(3))
     await user.click(caja(/^Follaje:/))
     await waitFor(() => expect(filas()).toHaveLength(2))
     expect(window.location.hash).toBe('#/analisis?caja_resultado=sano%2Cno_determinado&caja_tipo=follaje')
     expect(screen.getByRole('status')).toHaveTextContent('2 de 5 análisis.')
     const chips = screen.getByRole('region', { name: 'Cajas elegidas' })
-    expect(within(chips).getAllByRole('listitem').map((c) => c.textContent)).toEqual(['Resultado: Sano', 'Resultado: No determinado', 'Tipo: Follaje'])
+    expect(within(chips).getAllByRole('listitem').map((c) => c.textContent)).toEqual(['Resultado: Sano', 'Resultado: Sin diagnóstico claro', 'Tipo: Follaje'])
     // Quitar un chip pasa el foco al siguiente.
     await user.click(within(chips).getByRole('button', { name: 'Quitar Resultado: Sano' }))
-    await waitFor(() => expect(within(chips).getByRole('button', { name: 'Quitar Resultado: No determinado' })).toHaveFocus())
+    await waitFor(() => expect(within(chips).getByRole('button', { name: 'Quitar Resultado: Sin diagnóstico claro' })).toHaveFocus())
     // "Quitar filtros" (el de siempre) también quita las cajas.
     await user.click(screen.getByRole('button', { name: 'Quitar filtros' }))
     await waitFor(() => expect(window.location.hash).toBe('#/analisis'))
@@ -85,8 +85,8 @@ describe('Análisis: cajas por categoría', () => {
   it('"Requieren atención" y confianza baja desde la URL; sin coincidencias ofrece quitar la selección', async () => {
     const user = await abrir('#/analisis?atencion=1&caja_confianza=baja')
     expect(filas()).toHaveLength(1)
-    expect(filas()[0]).toHaveTextContent('No determinado')
-    await user.click(caja(/^Sin confianza:/))
+    expect(filas()[0]).toHaveTextContent('Sin diagnóstico claro')
+    await user.click(caja(/^Sin dato:/))
     await user.click(caja(/^Baja:/))
     expect(await screen.findByText('Ninguno de los análisis cargados cumple las cajas elegidas.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Quitar selección' }))
@@ -119,7 +119,7 @@ describe('Análisis: cajas por categoría', () => {
 
   it('los filtros del formulario siguen consultando al backend y se leen de la URL', async () => {
     await abrir('#/analisis?tipo=follaje')
-    expect(screen.getByLabelText('Tipo')).toHaveValue('follaje')
+    expect(screen.getByLabelText('Tipo de foto')).toHaveValue('follaje')
     expect(llamadasA(fetchMock, '/analisis')).toEqual(['/api/analisis?tipo=follaje&limite=100'])
   })
 })
@@ -139,7 +139,11 @@ describe('Análisis: vista de tarjetas, agrupación y detalle', () => {
     const e1 = within(tarjetas).getAllByRole('article').at(-1)!
     expect(e1).toHaveTextContent('3 oct 2026, 09:10')
     expect(e1).toHaveTextContent('Infestado')
-    expect(e1).toHaveTextContent('Confianza 91 % · Alta')
+    expect(e1).toHaveTextContent('Certeza del diagnóstico: alta · 91 %')
+    // Quién la subió y las observaciones, marcadas como escritas en campo; e5 no tiene autor registrado.
+    expect(e1).toHaveTextContent('Subido por Usuario Demo')
+    expect(e1).toHaveTextContent('Observaciones de campo · escritas por Usuario Demo')
+    expect(within(tarjetas).getAllByRole('article')[0]).toHaveTextContent('Autor no registrado')
     expect(within(e1).getByRole('link', { name: 'Oyamel del lago' })).toHaveAttribute('href', '#/arbol/b1')
     expect(e1).toHaveTextContent('Galerías visibles')
     expect(e1).toHaveTextContent('Requiere atención: infestado')
@@ -157,7 +161,7 @@ describe('Análisis: vista de tarjetas, agrupación y detalle', () => {
     await waitFor(() => expect(consulta().get('agrupar')).toBe('lugar'))
     const grupos = document.querySelectorAll('details.grupo')
     expect(grupos).toHaveLength(4)
-    expect(grupos[0].querySelector('summary')).toHaveTextContent('Zona lago menor2 análisis: 1 sano, 1 no determinado · 1 requiere atención')
+    expect(grupos[0].querySelector('summary')).toHaveTextContent('Zona lago menor2 análisis: 1 sano, 1 sin diagnóstico claro · 1 requiere atención')
     expect(within(grupos[0] as HTMLElement).getByRole('link', { name: 'Ver seguimiento de Zona lago menor' })).toHaveAttribute('href', '#/zona/c1')
     expect(within(grupos[0] as HTMLElement).getAllByRole('row')).toHaveLength(3)
     expect(screen.getByRole('table', { name: 'Zona calzada' })).toBeInTheDocument()
@@ -179,15 +183,25 @@ describe('Análisis: vista de tarjetas, agrupación y detalle', () => {
     await user.click(boton)
     const dialogo = screen.getByRole('dialog', { name: 'Análisis del 4 oct 2026, 06:00' })
     expect(await within(dialogo).findByRole('img', { name: /^Foto de follaje capturada el 4 oct 2026, 06:00/ })).toBeInTheDocument()
-    expect(dialogo).toHaveTextContent('Confianza95 % (alta)')
+    expect(dialogo).toHaveTextContent('Sano: sin señales de descortezador')
+    expect(dialogo).toHaveTextContent('Qué hacerSigue con el monitoreo de costumbre.')
+    expect(dialogo).toHaveTextContent('Certeza del diagnósticoAlta (95 %)')
+    expect(dialogo).toHaveTextContent('Subido porUsuario Demo')
+    expect(dialogo).toHaveTextContent('Envío desde el móvilEnviado')
+    expect(dialogo).toHaveTextContent('Sin observaciones de campo')
+    // Los valores crudos quedan en «Detalle técnico», plegado.
+    const tecnico = within(dialogo).getByText('Detalle técnico').closest('details')!
+    expect(tecnico).not.toHaveAttribute('open')
+    expect(tecnico).toHaveTextContent('Confianza del modelo0.95')
+    expect(tecnico).toHaveTextContent('pct_sano 80')
     expect(dialogo).toHaveTextContent('Requiere atenciónNo')
-    expect(within(dialogo).getByRole('img', { name: /^Cromático/ })).toBeInTheDocument()
+    expect(within(dialogo).getByRole('img', { name: /^Color del follaje/ })).toBeInTheDocument()
     expect(within(dialogo).getByRole('link', { name: 'Ver seguimiento de Zona lago menor' })).toHaveAttribute('href', '#/zona/c1')
     expect(within(dialogo).getByRole('link', { name: 'Ver en Gráficos' })).toHaveAttribute('href', '#/graficos?zona=c1')
     expect(within(dialogo).getByRole('button', { name: 'Anterior de este lugar' })).toBeDisabled()
     expect(dialogo).toHaveTextContent('Es el más antiguo de este lugar entre los cargados. Solo se recorren los análisis que trajeron los filtros de arriba.')
     await user.click(within(dialogo).getByRole('button', { name: 'Siguiente de este lugar' }))
-    expect(screen.getByRole('dialog', { name: 'Análisis del 7 oct 2026, 03:00' })).toHaveTextContent('No determinado, Confianza baja')
+    expect(screen.getByRole('dialog', { name: 'Análisis del 7 oct 2026, 03:00' })).toHaveTextContent('Sin diagnóstico claro, Certeza baja')
     // El botón usado queda deshabilitado (último de ese lugar): el foco pasa a Cerrar.
     await waitFor(() => expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cerrar' })).toHaveFocus())
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cerrar' }))
@@ -202,7 +216,7 @@ describe('Análisis: vista de tarjetas, agrupación y detalle', () => {
     await user.keyboard('{Enter}')
     const dialogo = screen.getByRole('dialog', { name: 'Análisis del 8 oct 2026, 05:00' })
     expect(dialogo).toHaveTextContent('Este análisis no tiene foto.')
-    expect(dialogo).toHaveTextContent('Infestado, Error de sincronización')
+    expect(dialogo).toHaveTextContent('Infestado, Error al enviar desde el móvil')
     await user.keyboard('{Escape}')
     ;(screen.getByRole('dialog') as HTMLDialogElement).close()
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -263,3 +277,111 @@ describe('Análisis: miniaturas (obs 1)', () => {
   })
 })
 
+
+describe('Análisis: quién subió la foto, observaciones de campo y lenguaje', () => {
+  it('la tabla dice quién subió cada foto y sus observaciones completas', async () => {
+    await abrir()
+    const tabla = screen.getByRole('table', { name: 'Análisis' })
+    const encabezados = within(tabla).getAllByRole('columnheader').map((c) => c.textContent)
+    expect(encabezados).toEqual(expect.arrayContaining(['Certeza', 'Subido por', 'Observaciones de campo', 'Color del follaje', 'Envío']))
+    expect(filas()[0]).toHaveTextContent('Autor no registrado')
+    expect(filas()[0]).toHaveTextContent('Con error')
+    expect(filas()[1]).toHaveTextContent('Experta de Campo Demo')
+    expect(filas()[1]).toHaveTextContent('Poca luz')
+    expect(filas()[4]).toHaveTextContent('Usuario Demo')
+    expect(filas()[4]).toHaveTextContent('Galerías visibles')
+  })
+
+  it('las cajas por quién subió la foto filtran y dejan su chip', async () => {
+    const user = await abrir()
+    expect(screen.getByRole('group', { name: 'Por quién subió la foto' })).toBeInTheDocument()
+    expect(caja(/^Usuario Demo: 3 análisis, 60 %$/)).toBeInTheDocument()
+    await user.click(caja(/^Experta de Campo Demo: 1 análisis, 20 %$/))
+    await waitFor(() => expect(consulta().get('caja_autor')).toBe('a4'))
+    expect(filas()).toHaveLength(1)
+    await user.click(caja(/^Autor no registrado: 1 análisis, 20 %$/))
+    await waitFor(() => expect(consulta().get('caja_autor')).toBe('a4,sin'))
+    expect(filas()).toHaveLength(2)
+    const chips = screen.getByRole('region', { name: 'Cajas elegidas' })
+    expect(within(chips).getAllByRole('listitem').map((c) => c.textContent)).toEqual(['Subido por: Experta de Campo Demo', 'Subido por: Autor no registrado'])
+  })
+
+  it('con una sola persona (o un backend sin autores) no aparecen las cajas por autor', async () => {
+    const sinAutor = ANALISIS.map((a) => {
+      const copia = { ...a }
+      delete copia.autor
+      return copia
+    })
+    mockBackend(fetchMock, { '/analisis': json(200, sinAutor) })
+    window.location.hash = '#/analisis?vista=tarjetas'
+    render(<App />)
+    await screen.findByRole('group', { name: 'Por resultado' })
+    expect(screen.queryByRole('group', { name: 'Por quién subió la foto' })).not.toBeInTheDocument()
+    expect(screen.getAllByText('Autor no registrado')).toHaveLength(5)
+  })
+
+  it('las observaciones largas de una tarjeta se recortan y se pueden leer completas', async () => {
+    const largo = 'Galerías en forma de S bajo la corteza, aserrín rojizo en la base y resina escurriendo en tres puntos del tronco.'
+    mockBackend(fetchMock, { '/analisis': json(200, [{ ...ANALISIS[4], observaciones: largo }]) })
+    window.location.hash = '#/analisis?vista=tarjetas'
+    render(<App />)
+    const user = userEvent.setup()
+    const tarjeta = await screen.findByRole('article')
+    const mas = within(tarjeta).getByRole('button', { name: 'Ver completas' })
+    expect(mas).toHaveAttribute('aria-expanded', 'false')
+    expect(tarjeta.querySelector('.observaciones-recortadas')).not.toBeNull()
+    await user.click(mas)
+    expect(within(tarjeta).getByRole('button', { name: 'Ver menos' })).toHaveAttribute('aria-expanded', 'true')
+    expect(tarjeta.querySelector('.observaciones-recortadas')).toBeNull()
+    // Leer más no abre el detalle.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(tarjeta).toHaveTextContent(largo)
+  })
+
+  it('el detalle de un infestado dice qué hacer y muestra las observaciones de campo de quien la subió', async () => {
+    const user = await abrir()
+    await user.click(screen.getByRole('button', { name: 'Ver detalle del 3 oct 2026, 09:10' }))
+    const dialogo = screen.getByRole('dialog')
+    expect(dialogo).toHaveTextContent('Infestado: señales de descortezador')
+    expect(within(dialogo).getByRole('heading', { name: 'Qué hacer' }).nextElementSibling).toHaveTextContent(
+      'Inspecciona el árbol en campo, márcalo y avisa al responsable de sanidad forestal.',
+    )
+    expect(within(dialogo).getByRole('heading', { name: /^Observaciones de campo/ })).toBeInTheDocument()
+    expect(dialogo).toHaveTextContent('Observaciones de campo · escritas por Usuario DemoGalerías visibles')
+    expect(dialogo).toHaveTextContent('Subido porUsuario Demo')
+  })
+
+  it('la pantalla principal no usa jerga técnica', async () => {
+    const user = await abrir()
+    const jerga = /confianza del modelo|crom[aá]tico|sincronizaci[oó]n|no determinado|clasificaci[oó]n|inferencia|pct_/i
+    expect(document.querySelector('main')!.textContent).not.toMatch(jerga)
+    await user.click(screen.getByRole('button', { name: 'Ver detalle del 7 oct 2026, 03:00' }))
+    // En el detalle, solo dentro del «Detalle técnico» (plegado).
+    const dialogo = screen.getByRole('dialog')
+    const tecnico = within(dialogo).getByText('Detalle técnico').closest('details')!
+    const copia = dialogo.cloneNode(true) as HTMLElement
+    copia.querySelector('details.detalle-tecnico')!.remove()
+    expect(tecnico).toHaveTextContent('Confianza del modelo')
+    const fuera = copia.textContent ?? ''
+    expect(fuera).not.toMatch(jerga)
+    expect(dialogo).toHaveTextContent('Sin diagnóstico claro: conviene repetir la foto')
+    expect(dialogo).toHaveTextContent('Repite la foto con buena luz')
+  })
+})
+
+describe('Análisis: caja_autor con personas que no existen', () => {
+  it('ya con los datos, se quitan de la URL sin dejar un chip vacío', async () => {
+    await abrir('#/analisis?caja_autor=a4,no-existe')
+    await waitFor(() => expect(consulta().get('caja_autor')).toBe('a4'))
+    const chips = screen.getByRole('region', { name: 'Cajas elegidas' })
+    expect(within(chips).getAllByRole('listitem').map((c) => c.textContent)).toEqual(['Subido por: Experta de Campo Demo'])
+    expect(filas()).toHaveLength(1)
+  })
+
+  it('si ninguna existe, la caja se quita y se ven todos', async () => {
+    await abrir('#/analisis?caja_autor=no-existe')
+    await waitFor(() => expect(consulta().get('caja_autor')).toBeNull())
+    expect(screen.queryByRole('region', { name: 'Cajas elegidas' })).not.toBeInTheDocument()
+    expect(filas()).toHaveLength(5)
+  })
+})

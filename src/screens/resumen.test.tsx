@@ -51,10 +51,10 @@ describe('Resumen (dashboard)', () => {
       'Siguen con infestación en su último análisis',
       'Análisis en el tiempo',
       'Dónde hay más infestación',
-      'Confianza del modelo',
+      'Certeza del diagnóstico',
       'Resultado de los análisis',
-      'Cromático promedio del follaje',
-      'Sincronización desde el móvil',
+      'Color promedio del follaje',
+      'Envío desde el móvil',
     ])
     // Lo de siempre sigue: el hero con sus totales.
     expect(screen.getByText('1 árbol y 1 zona con infestación detectada')).toBeInTheDocument()
@@ -67,9 +67,9 @@ describe('Resumen (dashboard)', () => {
     await within(seccion).findByText('3 análisis requieren atención, de los 5 más recientes.')
     const enlace = (n: RegExp) => within(seccion).getByRole('link', { name: n })
     expect(enlace(/^Infestados: 2\./)).toHaveAttribute('href', '#/analisis?caja_resultado=infestado')
-    expect(enlace(/^Confianza baja: 1\./)).toHaveAttribute('href', '#/analisis?caja_confianza=baja')
-    expect(enlace(/^No determinados: 1\./)).toHaveAttribute('href', '#/analisis?caja_resultado=no_determinado')
-    expect(enlace(/^Errores de sincronización: 1\./)).toHaveAttribute('href', '#/analisis?estado=error')
+    expect(enlace(/^Certeza baja: 1\./)).toHaveAttribute('href', '#/analisis?caja_confianza=baja')
+    expect(enlace(/^Sin diagnóstico claro: 1\./)).toHaveAttribute('href', '#/analisis?caja_resultado=no_determinado')
+    expect(enlace(/^Errores al enviar: 1\./)).toHaveAttribute('href', '#/analisis?estado=error')
     expect(within(seccion).getByRole('link', { name: 'Ver los 3 en Análisis' })).toHaveAttribute('href', '#/analisis?atencion=1')
     expect(within(seccion).getByRole('link', { name: 'Zona calzada' })).toHaveAttribute('href', '#/zona/c2')
     expect(within(seccion).getByRole('link', { name: 'Oyamel del lago' })).toHaveAttribute('href', '#/arbol/b1')
@@ -89,7 +89,7 @@ describe('Resumen (dashboard)', () => {
     const lista = await screen.findByRole('list', { name: 'Indicadores de los últimos 7 días' })
     expect(within(lista).getByText('Análisis').parentElement).toHaveTextContent('Análisis5sin análisis en los 7 días previos para comparar')
     expect(within(lista).getByText('Infestados').parentElement).toHaveTextContent('40 %')
-    expect(within(lista).getByText('Última captura').parentElement).toHaveTextContent('8 oct 2026, 05:00')
+    expect(within(lista).getByText('Última foto').parentElement).toHaveTextContent('8 oct 2026, 05:00')
   })
 
   it('las gráficas clave (perezosas) llevan a Gráficos con los mismos filtros', async () => {
@@ -98,7 +98,7 @@ describe('Resumen (dashboard)', () => {
     // Cada "Ver en Gráficos" dice a qué lleva.
     expect(screen.getByRole('link', { name: 'Ver la actividad en Gráficos' })).toHaveAttribute('href', '#/graficos')
     expect(screen.getByRole('link', { name: 'Ver dónde hay más infestación en Gráficos' })).toHaveAttribute('href', '#/graficos?resultado=infestado')
-    expect(screen.getByRole('link', { name: 'Ver la confianza del modelo en Gráficos' })).toHaveAttribute('href', '#/graficos')
+    expect(screen.getByRole('link', { name: 'Ver la certeza del diagnóstico en Gráficos' })).toHaveAttribute('href', '#/graficos')
     // Sin pincel: la versión ligera no trae la vista general.
     expect(document.querySelector('.grafica-vista')).toBeNull()
     // Top de infestación: primero los que tienen infestados.
@@ -133,6 +133,8 @@ describe('Resumen (dashboard)', () => {
     expect(items).toHaveLength(5)
     expect(items[0]).toHaveTextContent('Infestado')
     expect(items[0]).toHaveTextContent('Zona calzada')
+    expect(items[0]).toHaveTextContent('Autor no registrado')
+    expect(items[4]).toHaveTextContent('Subido por Usuario Demo')
     await user.click(within(seccion).getByRole('link', { name: 'Ver detalle del análisis del 3 oct 2026, 09:10' }))
     expect(await screen.findByRole('dialog', { name: 'Análisis del 3 oct 2026, 09:10' })).toBeInTheDocument()
     expect(window.location.hash).toBe('#/analisis?detalle=e1')
@@ -172,7 +174,7 @@ describe('Resumen (dashboard)', () => {
       rutas: { '/estadisticas': json(200, { ...ESTADISTICAS, analisisPorSincronizacion: { ...ESTADISTICAS.analisisPorSincronizacion, error: 4 } }) },
     })
     const seccion = await screen.findByRole('region', { name: 'Necesita tu atención' })
-    expect(await within(seccion).findByRole('link', { name: /^Errores de sincronización: 4\. No llegaron bien desde el móvil \(en todos los análisis\)/ })).toHaveAttribute(
+    expect(await within(seccion).findByRole('link', { name: /^Errores al enviar: 4\. No llegaron bien desde el móvil \(en todos los análisis\)/ })).toHaveAttribute(
       'href',
       '#/analisis?estado=error',
     )
@@ -227,7 +229,7 @@ describe('Resumen: re-QA', () => {
     const seccion = await screen.findByRole('region', { name: 'Necesita tu atención' })
     const item = await within(seccion).findByText('No llegaron bien desde el móvil (de los 5 más recientes)')
     expect(item.closest('a')).toBeNull()
-    expect(within(seccion).queryByRole('link', { name: /^Errores de sincronización/ })).not.toBeInTheDocument()
+    expect(within(seccion).queryByRole('link', { name: /^Errores al enviar/ })).not.toBeInTheDocument()
   })
 
   it('con el periodo actual recortado por el límite: "500 o más" y "periodo actual incompleto"', async () => {

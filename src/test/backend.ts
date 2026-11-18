@@ -1,5 +1,5 @@
 import type { Mock } from 'vitest'
-import type { Analisis, Arbol, CuentaResumen, DispositivoResumen, Estadisticas, Zona } from '../lib/api'
+import type { Analisis, Arbol, CuentaResumen, DispositivoResumen, Estadisticas, Persona, Seguidor, Zona } from '../lib/api'
 
 // Mismos datos que b-sheet/src/main/resources/db/demo/V2__datos_demo.sql, ya en forma JSON.
 
@@ -14,15 +14,23 @@ export const ZONAS: Zona[] = [
   { id: 'c1', nombreZona: 'Zona lago menor', latitudCentro: 19.421, longitudCentro: -99.1825, radioMetros: 50, fechaRegistro: '2026-10-02T16:00:00Z', descripcion: 'Dosel mixto de oyameles', ultimoAnalisis: { id: 'e4', resultado: 'no_determinado', fechaCaptura: '2026-10-07T09:00:00Z' } },
 ]
 
-const base = { tieneEvidencia: true, latitudCaptura: null, longitudCaptura: null, fechaSincronizacion: null, observaciones: null, idArbol: null, idZona: null, cromatico: null }
+/**
+ * Quién sube las fotos, como b-sheet/src/main/resources/db/demo/V5__datos_demo_autores.sql: dos
+ * personas en la Zona lago menor (e4 y e3); e5 queda sin autor, como los análisis anteriores a la
+ * columna. (V5 agrega además e6 al Oyamel; aquí no, para no mover los conteos de siempre.)
+ */
+export const DEMO: Persona = { id: 'a1', nombre: 'Usuario Demo' }
+export const CAMPO: Persona = { id: 'a4', nombre: 'Experta de Campo Demo' }
+
+const base = { autor: null, tieneEvidencia: true, latitudCaptura: null, longitudCaptura: null, fechaSincronizacion: null, observaciones: null, idArbol: null, idZona: null, cromatico: null }
 
 /** Orden del backend: captura más reciente primero (e5, e4, e2, e3, e1). */
 export const ANALISIS: Analisis[] = [
   { ...base, id: 'e5', tieneEvidencia: false, fechaCaptura: '2026-10-08T11:00:00Z', estadoSincronizacion: 'error', tipoImagen: 'follaje', resultadoClasificacion: 'infestado', confianza: 0.77, idZona: 'c2' },
-  { ...base, id: 'e4', fechaCaptura: '2026-10-07T09:00:00Z', estadoSincronizacion: 'pendiente', tipoImagen: 'follaje', resultadoClasificacion: 'no_determinado', confianza: 0.42, observaciones: 'Poca luz', idZona: 'c1', cromatico: { pctSano: 30, pctRegular: 20, pctDanado: 10, pctIncierto: 40 } },
-  { ...base, id: 'e2', fechaCaptura: '2026-10-06T10:00:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'corteza', resultadoClasificacion: 'sano', confianza: 0.88, idArbol: 'b2' },
-  { ...base, id: 'e3', fechaCaptura: '2026-10-04T12:00:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'follaje', resultadoClasificacion: 'sano', confianza: 0.95, idZona: 'c1', cromatico: { pctSano: 80, pctRegular: 10, pctDanado: 5, pctIncierto: 5 } },
-  { ...base, id: 'e1', fechaCaptura: '2026-10-03T15:10:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'corteza', resultadoClasificacion: 'infestado', confianza: 0.91, observaciones: 'Galerías visibles', idArbol: 'b1' },
+  { ...base, id: 'e4', fechaCaptura: '2026-10-07T09:00:00Z', estadoSincronizacion: 'pendiente', tipoImagen: 'follaje', resultadoClasificacion: 'no_determinado', confianza: 0.42, observaciones: 'Poca luz', idZona: 'c1', autor: CAMPO, cromatico: { pctSano: 30, pctRegular: 20, pctDanado: 10, pctIncierto: 40 } },
+  { ...base, id: 'e2', fechaCaptura: '2026-10-06T10:00:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'corteza', resultadoClasificacion: 'sano', confianza: 0.88, idArbol: 'b2', autor: DEMO },
+  { ...base, id: 'e3', fechaCaptura: '2026-10-04T12:00:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'follaje', resultadoClasificacion: 'sano', confianza: 0.95, idZona: 'c1', autor: DEMO, cromatico: { pctSano: 80, pctRegular: 10, pctDanado: 5, pctIncierto: 5 } },
+  { ...base, id: 'e1', fechaCaptura: '2026-10-03T15:10:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'corteza', resultadoClasificacion: 'infestado', confianza: 0.91, observaciones: 'Galerías visibles', idArbol: 'b1', autor: DEMO },
 ]
 
 export const ESTADISTICAS: Estadisticas = {
@@ -166,10 +174,26 @@ function cuentasEnMemoria() {
   }
 }
 
-/** Como b-sheet: el registro, o 404 si no existe. */
+/** Quién registró cada árbol y zona (GET /arboles/{id}, /zonas/{id}): en la demo, todos Usuario Demo. */
+const REGISTRADO_POR: Record<string, Persona | null> = { b1: DEMO, b2: DEMO, b3: DEMO, c1: DEMO, c2: DEMO }
+
+/** Como b-sheet: personas distintas que subieron fotos, de la captura más reciente a la más antigua. */
+export function seguimientoDe(id: string): Seguidor[] {
+  const mapa = new Map<string, Seguidor>()
+  for (const a of ANALISIS) {
+    if ((a.idArbol !== id && a.idZona !== id) || !a.autor) continue
+    const s = mapa.get(a.autor.id) ?? { ...a.autor, analisis: 0, ultimo: a.fechaCaptura }
+    s.analisis++
+    if (a.fechaCaptura > s.ultimo) s.ultimo = a.fechaCaptura
+    mapa.set(a.autor.id, s)
+  }
+  return [...mapa.values()].sort((x, y) => y.ultimo.localeCompare(x.ultimo))
+}
+
+/** Como b-sheet: el registro con quién lo registró y quién le da seguimiento, o 404 si no existe. */
 function unoPorDefecto(ruta: 'arboles' | 'zonas', id: string): Response {
   const registro = ruta === 'arboles' ? ARBOLES.find((a) => a.id === id) : ZONAS.find((z) => z.id === id)
-  return registro ? json(200, registro) : json(404)
+  return registro ? json(200, { ...registro, registradoPor: REGISTRADO_POR[id] ?? null, seguimiento: seguimientoDe(id) }) : json(404)
 }
 
 /** Como b-sheet: URL firmada para los análisis con foto, 404 para e5 (sin_imagen). */

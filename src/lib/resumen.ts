@@ -47,23 +47,23 @@ export function atencion(analisis: Analisis[], erroresTotales: number | null = n
     },
     {
       clave: 'baja',
-      titulo: 'Confianza baja',
-      descripcion: 'El modelo no estuvo seguro (menos de 50 %)',
+      titulo: 'Certeza baja',
+      descripcion: 'Diagnósticos con certeza menor a 50 %: conviene repetir la foto',
       n: contar((a) => nivelConfianza(a.confianza) === 'baja'),
       href: '#/analisis?caja_confianza=baja',
       tono: 'aviso',
     },
     {
       clave: 'no_determinado',
-      titulo: 'No determinados',
-      descripcion: 'Conviene repetir la captura',
+      titulo: 'Sin diagnóstico claro',
+      descripcion: 'Conviene repetir la foto',
       n: contar((a) => a.resultadoClasificacion === 'no_determinado'),
       href: '#/analisis?caja_resultado=no_determinado',
       tono: 'neutro',
     },
     {
       clave: 'error',
-      titulo: 'Errores de sincronización',
+      titulo: 'Errores al enviar',
       // ?estado=error filtra en el backend sobre todos: solo con la cifra global coincide. Sin ella
       // (estadísticas caídas), se cuenta sobre los recientes, se dice así y no se enlaza.
       descripcion:
@@ -228,10 +228,10 @@ export function accesos(opciones: {
           ? `${analisis > LIMITE_ANALISIS ? `Los ${LIMITE_ANALISIS} más recientes` : p(analisis, 'análisis', 'análisis')}${
               requieren ? `, ${p(requieren, 'requiere', 'requieren')} atención` : ''
             }`
-          : 'Capturas por resultado, tipo y confianza',
+          : 'Fotos por resultado, tipo y certeza',
       href: '#/analisis',
     },
-    { ruta: 'graficos', titulo: 'Gráficos', descripcion: 'Tendencias en el tiempo, confianza y lugares', href: '#/graficos' },
+    { ruta: 'graficos', titulo: 'Gráficos', descripcion: 'Tendencias en el tiempo, certeza y lugares', href: '#/graficos' },
   ]
   if (ultimoInfestado)
     lista.push({

@@ -1,24 +1,18 @@
-import type { EstadoSincronizacion, Resultado, TipoImagen } from './api'
+import type { TipoImagen } from './api'
 import { esDia } from './dia'
+import { ETIQUETA_ENVIO } from './lenguaje'
+
+// Las etiquetas de resultado y de envío viven en lenguaje.ts (vocabulario para agrónomos).
+export { ETIQUETA_RESULTADO } from './lenguaje'
+/** Estado del envío desde el móvil (el backend lo llama «sincronización»). */
+export const ETIQUETA_SINCRONIZACION = ETIQUETA_ENVIO
 
 // Los datos son del Bosque de Chapultepec: se muestran en hora del centro de México.
 // Desde octubre de 2022 no hay horario de verano: UTC−6 todo el año.
 const ZONA_HORARIA = 'America/Mexico_City'
 const OFFSET_CDMX = '-06:00'
 
-export const ETIQUETA_RESULTADO: Record<Resultado, string> = {
-  sano: 'Sano',
-  infestado: 'Infestado',
-  no_determinado: 'No determinado',
-}
-
 export const ETIQUETA_TIPO: Record<TipoImagen, string> = { corteza: 'Corteza', follaje: 'Follaje' }
-
-export const ETIQUETA_SINCRONIZACION: Record<EstadoSincronizacion, string> = {
-  sincronizado: 'Sincronizado',
-  pendiente: 'Pendiente',
-  error: 'Con error',
-}
 
 const fecha = new Intl.DateTimeFormat('es-MX', {
   timeZone: ZONA_HORARIA,
@@ -39,6 +33,12 @@ export function formatFecha(iso: string | null): string {
 }
 
 const porcentaje = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 })
+
+/** Promedio de certeza (fracción 0–1) → "80 %", sin decimales: es un resumen, no un valor exacto. */
+export function formatPromedio(fraccion: number | null): string {
+  if (fraccion === null || Number.isNaN(fraccion)) return '—'
+  return `${Math.round(fraccion * 100)} %`
+}
 
 /** Fracción 0–1 (confianza) → "91 %". */
 export function formatPorcentaje(fraccion: number | null): string {
@@ -63,7 +63,9 @@ const relativo = new Intl.RelativeTimeFormat('es-MX', { numeric: 'auto' })
 export function haceCuanto(iso: string, ahora: number = Date.now()): string {
   const dias = Math.floor((ahora - new Date(iso).getTime()) / 86_400_000)
   if (dias < 0) return relativo.format(0, 'day')
-  if (dias < 45) return relativo.format(-dias, 'day')
-  if (dias < 365) return relativo.format(-Math.round(dias / 30), 'month')
+  // Hasta 60 días se cuenta en días y luego en meses completos (sin redondear hacia arriba): en una
+  // misma lista no se ven «hace 43 días» junto a «hace 2 meses» por una diferencia de dos días.
+  if (dias < 60) return relativo.format(-dias, 'day')
+  if (dias < 365) return relativo.format(-Math.floor(dias / 30), 'month')
   return relativo.format(-Math.round(dias / 365), 'year')
 }

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import type { Analisis } from '../lib/api'
-import { ANALISIS, conSesion, json, llamadasA, mockBackend } from '../test/backend'
+import { ANALISIS, ARBOLES, conSesion, json, llamadasA, mockBackend, ZONAS } from '../test/backend'
 import { motores } from '../test/motorFalso'
 
 const fetchMock = vi.fn<typeof fetch>()
@@ -34,6 +34,7 @@ const HISTORIA_OYAMEL: Analisis[] = [
     resultadoClasificacion: 'sano',
     confianza: 0.83,
     observaciones: null,
+    autor: null,
     tieneEvidencia: false,
     latitudCaptura: null,
     longitudCaptura: null,
@@ -74,7 +75,7 @@ describe('seguimiento de un árbol', () => {
     mockBackend(fetchMock, { '/analisis': json(200, HISTORIA_OYAMEL) })
     abrir('#/arbol/b1')
     expect(
-      await screen.findByRole('img', { name: /^Confianza por análisis: 2 análisis, del 20 sep 2026.* Infestado: 1, Sano: 1\.$/ }),
+      await screen.findByRole('img', { name: /^Certeza de cada diagnóstico: 2 análisis, del 20 sep 2026.* Infestado: 1, Sano: 1\.$/ }),
     ).toBeInTheDocument()
   })
 
@@ -117,7 +118,7 @@ describe('seguimiento de un árbol', () => {
     abrir('#/arbol/b3')
     await screen.findByRole('heading', { level: 1, name: 'Pino del cerro' })
     expect(screen.getByText(/Todavía no tiene análisis/)).toBeInTheDocument()
-    expect(screen.queryByRole('img', { name: /^Confianza/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: /^Certeza/ })).not.toBeInTheDocument()
   })
 
   it('un árbol que no existe lo explica y deja volver al mapa', async () => {
@@ -145,13 +146,76 @@ describe('seguimiento de una zona', () => {
       '/analisis': (url) => json(200, url.searchParams.get('zona') === 'c1' ? ANALISIS.filter((a) => a.idZona === 'c1') : []),
     })
     abrir('#/zona/c1')
-    const evolucion = await screen.findByRole('region', { name: 'Evolución del follaje' })
+    const evolucion = await screen.findByRole('region', { name: 'Evolución del color del follaje' })
     const barras = within(evolucion).getAllByRole('img')
     expect(barras.map((b) => b.getAttribute('aria-label'))).toEqual([
       'Follaje el 7 oct 2026, 03:00: Sano 30 %, Regular 20 %, Dañado 10 %, Incierto 40 %',
       'Follaje el 4 oct 2026, 06:00: Sano 80 %, Regular 10 %, Dañado 5 %, Incierto 5 %',
     ])
-    expect(screen.getByRole('list', { name: 'Línea de tiempo' })).toHaveTextContent('Cambió de sano a no determinado')
+    expect(screen.getByRole('list', { name: 'Línea de tiempo' })).toHaveTextContent('Cambió de sano a sin diagnóstico claro')
     expect(llamadasA(fetchMock, '/zonas/c1')).toHaveLength(1)
+  })
+})
+
+describe('quién le da seguimiento', () => {
+  it('con dos personas se destaca, con cuántos análisis y su última foto', async () => {
+    conSesion()
+    mockBackend(fetchMock, {
+      '/analisis': (url) => json(200, ANALISIS.filter((a) => a.idZona === url.searchParams.get('zona'))),
+    })
+    abrir('#/zona/c1')
+    const quien = await screen.findByRole('region', { name: 'Quién le da seguimiento' })
+    expect(quien).toHaveTextContent('Registrado por Usuario Demo')
+    expect(quien).toHaveTextContent('2 personas le dan seguimiento a esta zona')
+    const personas = within(within(quien).getByRole('list', { name: 'Personas que suben fotos' })).getAllByRole('listitem')
+    expect(personas.map((p) => p.textContent)).toEqual([
+      expect.stringMatching(/^Experta de Campo Demo1 análisis · última foto .* \(7 oct 2026, 03:00\)$/),
+      expect.stringMatching(/^Usuario Demo1 análisis · última foto .* \(4 oct 2026, 06:00\)$/),
+    ])
+    // La línea de tiempo dice quién subió cada foto y lo que escribió.
+    const eventos = within(screen.getByRole('list', { name: 'Línea de tiempo' })).getAllByRole('listitem')
+    expect(eventos[0]).toHaveTextContent('Subido por Experta de Campo Demo')
+    expect(eventos[0]).toHaveTextContent('Observaciones de campo · escritas por Experta de Campo DemoPoca luz')
+    expect(eventos[1]).toHaveTextContent('Subido por Usuario Demo')
+    // Qué hacer, según el análisis más reciente.
+    expect(screen.getByRole('region', { name: 'Estado actual' })).toHaveTextContent(
+      'Según el análisis más reciente (sin diagnóstico claro: conviene repetir la foto): Repite la foto con buena luz',
+    )
+  })
+
+  it('con una sola persona no se destaca; un análisis sin autor lo dice', async () => {
+    conSesion()
+    mockBackend(fetchMock, { '/analisis': json(200, HISTORIA_OYAMEL) })
+    abrir('#/arbol/b1')
+    const quien = await screen.findByRole('region', { name: 'Quién le da seguimiento' })
+    expect(quien).toHaveTextContent('Registrado por Usuario Demo')
+    expect(quien).not.toHaveTextContent('personas le dan seguimiento')
+    expect(quien).toHaveTextContent(/^Quién le da seguimientoRegistrado por Usuario DemoUsuario Demo1 análisis/)
+    const eventos = within(screen.getByRole('list', { name: 'Línea de tiempo' })).getAllByRole('listitem')
+    expect(eventos[0]).toHaveTextContent('Subido por Usuario Demo')
+    expect(eventos[1]).toHaveTextContent('Autor no registrado')
+    expect(screen.getByRole('region', { name: 'Estado actual' })).toHaveTextContent('Inspecciona el árbol en campo, márcalo y avisa al responsable de sanidad forestal.')
+  })
+
+  it('un backend sin el dato: sin sección vacía, lo dice', async () => {
+    conSesion()
+    // ARBOLES no trae registradoPor ni seguimiento (como un backend anterior).
+    mockBackend(fetchMock, { '/arboles/:id': json(200, ARBOLES[0]), '/analisis': json(200, []) })
+    abrir('#/arbol/b3')
+    const quien = await screen.findByRole('region', { name: 'Quién le da seguimiento' })
+    expect(quien).toHaveTextContent('Sin registro de quién sube las fotos todavía.')
+    expect(within(quien).queryByRole('list')).not.toBeInTheDocument()
+  })
+
+  it('si el backend no manda la lista, se arma con los autores de los análisis', async () => {
+    conSesion()
+    mockBackend(fetchMock, {
+      '/zonas/:id': json(200, ZONAS[1]),
+      '/analisis': json(200, ANALISIS.filter((a) => a.idZona === 'c1')),
+    })
+    abrir('#/zona/c1')
+    const quien = await screen.findByRole('region', { name: 'Quién le da seguimiento' })
+    expect(quien).toHaveTextContent('No se sabe quién lo registró.')
+    expect(quien).toHaveTextContent('2 personas le dan seguimiento a esta zona')
   })
 })

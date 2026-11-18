@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { ADMIN, EXPERTO, ejeConfianzaSinEncimar, entrar, evidencia, expect, ir, test } from './ayuda'
 
-// Gráficos con los datos reales de db/demo: 5 análisis del 3 al 8 de octubre de 2026 (CDMX),
+// Gráficos con los datos reales de db/demo: 6 análisis del 3 al 8 de octubre de 2026 (CDMX),
 // 3 árboles y 2 zonas. E2E_CAPTURAS=<carpeta> guarda capturas en claro y oscuro para revisarlas.
 // Cada paso clave queda como captura adjunta (ver evidencia() en ayuda.ts).
 const capturar = (page: Page, nombre: string) => evidencia(page, nombre)
@@ -13,11 +13,11 @@ test.describe('Gráficos', () => {
     await entrar(page, EXPERTO)
     await page.getByRole('navigation', { name: 'Secciones' }).getByRole('link', { name: 'Gráficos' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'Gráficos' })).toBeVisible()
-    await expect(grafica(page, /^Análisis por día: 5 análisis en 6 periodos/)).toBeVisible()
-    await expect(grafica(page, /^Confianza de 5 análisis en decenas/)).toBeVisible()
+    await expect(grafica(page, /^Análisis por día: 6 análisis en 6 periodos/)).toBeVisible()
+    await expect(grafica(page, /^Certeza de 6 diagnósticos en tramos de 10 %/)).toBeVisible()
     await expect(grafica(page, /^Análisis por árbol y zona: 4 lugares con análisis de 5/)).toBeVisible()
     await expect(grafica(page, /^Mapa de calor de 5 lugares por 6 periodos/)).toBeVisible()
-    await expect(page.getByRole('table', { name: 'Análisis de la selección' }).getByRole('row')).toHaveCount(6)
+    await expect(page.getByRole('table', { name: 'Análisis de la selección' }).getByRole('row')).toHaveCount(7)
     await ejeConfianzaSinEncimar(page)
     // A 760 px (donde "90" y "100" se encimaban) tampoco.
     await page.setViewportSize({ width: 760, height: 900 })
@@ -60,7 +60,7 @@ test.describe('Gráficos', () => {
 
     // Atrás deshace el paso; Restablecer vuelve a todo el rango.
     await page.goBack()
-    await expect(grafica(page, /^Análisis por día: 5 análisis/)).toBeVisible()
+    await expect(grafica(page, /^Análisis por día: 6 análisis/)).toBeVisible()
     await page.getByRole('button', { name: 'Acercar' }).click()
     await expect(page).toHaveURL(/desde=2026-10-04&hasta=2026-10-06/)
     await page.getByRole('button', { name: 'Restablecer' }).click()
@@ -88,7 +88,7 @@ test.describe('Gráficos', () => {
     await expect(page).toHaveURL(/#\/graficos$/)
 
     // "Ver como tabla"
-    const panel = page.getByRole('region', { name: 'Confianza del modelo' })
+    const panel = page.getByRole('region', { name: 'Certeza del diagnóstico' })
     await panel.getByRole('button', { name: 'Ver como tabla' }).click()
     await expect(panel.getByRole('table').getByRole('row', { name: /90–100 %/ })).toContainText('2')
   })
@@ -107,7 +107,7 @@ test.describe('Gráficos', () => {
     await page.mouse.move(x(3.4), caja.y + 20, { steps: 6 })
     await page.mouse.up()
     await expect(page).toHaveURL(/desde=2026-10-04&hasta=2026-10-05/)
-    await expect(grafica(page, /^Análisis por día: 1 análisis en 2 periodos/)).toBeVisible()
+    await expect(grafica(page, /^Análisis por día: 2 análisis en 2 periodos/)).toBeVisible()
     await capturar(page, 'graficos-pincel')
   })
 
@@ -141,7 +141,7 @@ test.describe('Gráficos', () => {
     const t0 = Date.now()
     await page.goto('/#/graficos?desde=0001-01-01&hasta=9999-12-31')
     await expect(page).toHaveURL(/#\/graficos$/)
-    await expect(page.getByRole('group', { name: /^Análisis por día: 5 análisis en 6 periodos/ })).toBeVisible()
+    await expect(page.getByRole('group', { name: /^Análisis por día: 6 análisis en 6 periodos/ })).toBeVisible()
     expect(Date.now() - t0).toBeLessThan(5000)
     expect(await nodos()).toBeLessThan(3000)
   })

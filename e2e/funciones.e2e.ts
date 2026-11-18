@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test'
 import { ADMIN, EXPERTO, entrar, evidencia, expect, interceptarS3, ir, test } from './ayuda'
 
 // Una prueba por función que aún no tenía la suya (ver docs/e2e-cobertura.md), contra b-sheet real
-// con los datos de db/demo: 5 análisis (e1…e5), 3 árboles (b1…b3) y 2 zonas (c1, c2).
+// con los datos de db/demo: 6 análisis (e1…e6), 3 árboles (b1…b3) y 2 zonas (c1, c2).
 // Cada prueba adjunta capturas de sus pasos clave como evidencia.
 
 const OYAMEL = 'b0000000-0000-0000-0000-000000000001'
@@ -62,21 +62,21 @@ test.describe('Resumen', () => {
 
   test('indicadores › últimos 7 días con sus cifras', async ({ page }) => {
     const lista = page.getByRole('list', { name: 'Indicadores de los últimos 7 días' })
-    await expect(lista.getByRole('listitem').filter({ hasText: 'Análisis' }).first()).toContainText('5')
-    await expect(lista.getByRole('listitem').filter({ hasText: 'Infestados' })).toContainText('40 %')
-    await expect(lista.getByRole('listitem').filter({ hasText: 'Última captura' })).toContainText('8 oct 2026, 05:00')
+    await expect(lista.getByRole('listitem').filter({ hasText: 'Análisis' }).first()).toContainText('6')
+    await expect(lista.getByRole('listitem').filter({ hasText: 'Infestados' })).toContainText('50 %')
+    await expect(lista.getByRole('listitem').filter({ hasText: 'Última foto' })).toContainText('8 oct 2026, 05:00')
     await lista.scrollIntoViewIfNeeded()
     await evidencia(page, 'indicadores')
   })
 
-  test('gráficas clave › "Ver la actividad en Gráficos" y una decena de confianza abren Gráficos filtrado', async ({ page }) => {
+  test('gráficas clave › "Ver la actividad en Gráficos" y una decena de certeza abren Gráficos filtrado', async ({ page }) => {
     await page.getByRole('link', { name: 'Ver la actividad en Gráficos' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'Gráficos' })).toBeVisible()
     await evidencia(page, 'actividad-en-graficos')
     await page.goBack()
-    await grafica(page, /^Confianza de 5 análisis/).getByRole('button', { name: /^Confianza 90–100 %/ }).click()
+    await grafica(page, /^Certeza de 6 diagnósticos/).getByRole('button', { name: /^Certeza 90–100 %/ }).click()
     await expect(page).toHaveURL(/#\/graficos\?confianza=9$/)
-    await expect(page.getByRole('region', { name: 'Filtros activos' })).toContainText('Confianza: 90–100 %')
+    await expect(page.getByRole('region', { name: 'Filtros activos' })).toContainText('Certeza: 90–100 %')
     await evidencia(page, 'decena-en-graficos')
   })
 
@@ -102,7 +102,7 @@ test.describe('Resumen', () => {
     await evidencia(page, 'analisis-caido')
     fallar = false
     await atencion.getByRole('button', { name: 'Reintentar' }).click()
-    await expect(atencion).toContainText('3 análisis requieren atención')
+    await expect(atencion).toContainText('4 análisis requieren atención')
     await evidencia(page, 'reintentado')
   })
 })
@@ -131,13 +131,13 @@ test.describe('Resumen › casos límite', () => {
     await evidencia(page, 'periodo-recortado')
   })
 
-  test('atención › sin /estadisticas, los errores de sincronización se cuentan sobre los recientes y no se enlazan', async ({ page }) => {
+  test('atención › sin /estadisticas, los errores al enviar se cuentan sobre los recientes y no se enlazan', async ({ page }) => {
     await page.route('**/api/estadisticas', (r) => r.fulfill({ status: 500, contentType: 'application/json', body: '{}' }))
     await entrar(page, EXPERTO)
     const atencion = page.getByRole('region', { name: 'Necesita tu atención' })
-    await expect(atencion).toContainText('No llegaron bien desde el móvil (de los 5 más recientes)')
-    await expect(atencion.getByRole('link', { name: /^Errores de sincronización/ })).toHaveCount(0)
-    await expect(atencion.getByRole('link', { name: /^Infestados: 2\./ })).toBeVisible()
+    await expect(atencion).toContainText('No llegaron bien desde el móvil (de los 6 más recientes)')
+    await expect(atencion.getByRole('link', { name: /^Errores al enviar/ })).toHaveCount(0)
+    await expect(atencion.getByRole('link', { name: /^Infestados: 3\./ })).toBeVisible()
     await evidencia(page, 'errores-sin-enlace')
   })
 })
@@ -153,7 +153,8 @@ test.describe('Análisis', () => {
     page.on('request', (r) => /\/api\/analisis\/[^/]+\/evidencia$/.test(new URL(r.url()).pathname) && firmas.push(r.url()))
     // El bucket rechaza la descarga (como con una firma caducada).
     await page.route(/^https:\/\/descortezadores-archivos-prod\.s3/, (r) => r.fulfill({ status: 403, body: 'Forbidden' }))
-    await ir(page, '#/analisis?vista=tarjetas&caja_resultado=infestado&caja_tipo=corteza', 'Análisis')
+    // Solo e1 (el 3 de octubre): e6, el otro infestado de corteza, no tiene foto.
+    await ir(page, '#/analisis?desde=2026-10-03&hasta=2026-10-03&vista=tarjetas&caja_resultado=infestado&caja_tipo=corteza', 'Análisis')
     const tarjeta = page.getByRole('article')
     await expect(tarjeta).toHaveCount(1)
     // La miniatura se pide al acercarse a la pantalla.
@@ -181,19 +182,19 @@ test.describe('Análisis', () => {
     await evidencia(page, 'siguiente-del-lugar')
   })
 
-  test('cajas › filtran por confianza baja', async ({ page }) => {
+  test('cajas › filtran por certeza baja', async ({ page }) => {
     await ir(page, '#/analisis', 'Análisis')
     await page.getByRole('button', { name: /^Baja: 1 análisis/ }).click()
     await expect(page).toHaveURL(/caja_confianza=baja$/)
     await expect(tablaAnalisis(page)).toHaveCount(2)
-    await expect(tablaAnalisis(page).nth(1)).toContainText('No determinado')
-    await evidencia(page, 'confianza-baja')
+    await expect(tablaAnalisis(page).nth(1)).toContainText('Sin diagnóstico claro')
+    await evidencia(page, 'certeza-baja')
   })
 
-  test('cajas › "Requieren atención" junta infestados, no determinados, confianza baja y errores', async ({ page }) => {
+  test('cajas › "Requieren atención" junta infestados, sin diagnóstico claro, certeza baja y errores', async ({ page }) => {
     await ir(page, '#/analisis', 'Análisis')
-    await page.getByRole('button', { name: /^Requieren atención: 3 análisis/ }).click()
-    await expect(tablaAnalisis(page)).toHaveCount(4)
+    await page.getByRole('button', { name: /^Requieren atención: 4 análisis/ }).click()
+    await expect(tablaAnalisis(page)).toHaveCount(5)
     await expect(page.getByRole('region', { name: 'Cajas elegidas' })).toContainText('Requieren atención')
     await evidencia(page, 'requieren-atencion')
   })
@@ -213,17 +214,17 @@ test.describe('Análisis', () => {
     await page.getByRole('navigation', { name: 'Secciones' }).getByRole('link', { name: 'Resumen' }).click()
     await page.getByRole('navigation', { name: 'Secciones' }).getByRole('link', { name: 'Análisis' }).click()
     await expect(page).toHaveURL(/#\/analisis$/)
-    await expect(page.getByRole('list', { name: 'Análisis' }).getByRole('article')).toHaveCount(5)
+    await expect(page.getByRole('list', { name: 'Análisis' }).getByRole('article')).toHaveCount(6)
     await evidencia(page, 'tarjetas-recordadas')
   })
 
   test('agrupar › por resultado y por día', async ({ page }) => {
     await ir(page, '#/analisis', 'Análisis')
     await page.getByLabel('Agrupar por').selectOption('resultado')
-    await expect(page.locator('details.grupo summary .grupo-titulo')).toHaveText(['Sano', 'Infestado', 'No determinado'])
+    await expect(page.locator('details.grupo summary .grupo-titulo')).toHaveText(['Sano', 'Infestado', 'Sin diagnóstico claro'])
     await evidencia(page, 'por-resultado')
     await page.getByLabel('Agrupar por').selectOption('dia')
-    await expect(page.locator('details.grupo')).toHaveCount(5)
+    await expect(page.locator('details.grupo')).toHaveCount(6)
     await expect(page.locator('details.grupo summary .grupo-titulo').first()).toHaveText('Jueves, 8 de octubre de 2026')
     // Plegar un grupo.
     await page.locator('details.grupo summary').first().click()
@@ -263,8 +264,8 @@ test.describe('Gráficos', () => {
     await ir(page, '#/graficos', 'Gráficos')
   })
 
-  test('confianza › clic en una decena filtra las demás gráficas', async ({ page }) => {
-    await grafica(page, /^Confianza de 5 análisis/).getByRole('button', { name: /^Confianza 90–100 %: 2 análisis/ }).click()
+  test('certeza › clic en una decena filtra las demás gráficas', async ({ page }) => {
+    await grafica(page, /^Certeza de 6 diagnósticos/).getByRole('button', { name: /^Certeza 90–100 %: 2 análisis/ }).click()
     await expect(page).toHaveURL(/confianza=9$/)
     await expect(page.getByRole('table', { name: 'Análisis de la selección' }).getByRole('row')).toHaveCount(3)
     await expect(grafica(page, /^Análisis por día: 2 análisis/)).toBeVisible()
@@ -290,12 +291,13 @@ test.describe('Gráficos', () => {
     await page.keyboard.press('ArrowRight')
     await expect(celdas.nth(7)).toBeFocused()
     await page.keyboard.press('Enter')
-    await expect(page).toHaveURL(/#\/graficos\?arbol=/)
+    // Segunda fila: Zona lago menor (Oyamel y ella tienen 2 análisis; van por nombre).
+    await expect(page).toHaveURL(/#\/graficos\?zona=c0000000-0000-0000-0000-000000000001$/)
     await evidencia(page, 'calor-teclado')
   })
 
   test('tablas › cada gráfica tiene "Ver como tabla"', async ({ page }) => {
-    for (const titulo of ['Análisis en el tiempo', 'Confianza del modelo', 'Por árbol y zona', 'Actividad por árbol y zona']) {
+    for (const titulo of ['Análisis en el tiempo', 'Certeza del diagnóstico', 'Por árbol y zona', 'Actividad por árbol y zona']) {
       const panel = page.getByRole('region', { name: titulo, exact: true })
       await panel.getByRole('button', { name: 'Ver como tabla' }).click()
       await expect(panel.getByRole('table')).toBeVisible()
@@ -341,7 +343,7 @@ test.describe('Gráficos › URL y avisos', () => {
     await ir(page, '#/graficos?zona=no-existe&desde=0001-01-01&hasta=9999-12-31&resultado=x', 'Gráficos')
     await expect(page).toHaveURL(/#\/graficos$/)
     await expect(page.getByRole('region', { name: 'Filtros activos' })).toHaveCount(0)
-    await expect(grafica(page, /^Análisis por día: 5 análisis en 6 periodos/)).toBeVisible()
+    await expect(grafica(page, /^Análisis por día: 6 análisis en 6 periodos/)).toBeVisible()
   })
 
   test('chips › quitar uno pasa el foco al siguiente y, sin chips, al texto del rango', async ({ page }) => {

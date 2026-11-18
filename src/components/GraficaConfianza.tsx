@@ -64,7 +64,7 @@ export default function GraficaConfianza({ analisis, elegido = null, onElegir }:
   return (
     <figure className="grafica-confianza">
       <div className="grafica-lienzo">
-        <svg viewBox={`0 0 ${ANCHO} ${ALTO}`} role="img" aria-label={`Confianza por análisis: ${resumen}`}>
+        <svg viewBox={`0 0 ${ANCHO} ${ALTO}`} role="img" aria-label={`Certeza de cada diagnóstico: ${resumen}`}>
           {[0, 0.5, 1].map((c) => {
             const yy = M.arriba + (1 - c) * (ALTO - M.arriba - M.abajo)
             return (
@@ -109,7 +109,7 @@ export default function GraficaConfianza({ analisis, elegido = null, onElegir }:
           >
             <strong>{ETIQUETA_RESULTADO[activo.a.resultadoClasificacion]}</strong>
             <span>
-              {ETIQUETA_TIPO[activo.a.tipoImagen]}, confianza {activo.sinConfianza ? 'sin dato' : formatPorcentaje(activo.a.confianza)}
+              {ETIQUETA_TIPO[activo.a.tipoImagen]}, certeza {activo.sinConfianza ? 'sin dato' : formatPorcentaje(activo.a.confianza)}
             </span>
             <span className="muted">{formatFecha(activo.a.fechaCaptura)}</span>
           </div>

@@ -53,13 +53,13 @@ test.describe('Flujos completos', () => {
     await expect(page.getByRole('banner').getByText('Experta de Campo')).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Secciones' }).getByRole('link')).toHaveText(['Resumen', 'Mapa', 'Análisis', 'Gráficos'])
     const atencion = page.getByRole('region', { name: 'Necesita tu atención' })
-    await expect(atencion).toContainText('3 análisis requieren atención')
+    await expect(atencion).toContainText('4 análisis requieren atención')
     await evidencia(page, 'resumen-atencion')
 
     // Análisis ya filtrado por la caja "Infestado".
-    await atencion.getByRole('link', { name: /^Infestados: 2\./ }).click()
+    await atencion.getByRole('link', { name: /^Infestados: 3\./ }).click()
     await expect(page).toHaveURL(/#\/analisis\?caja_resultado=infestado$/)
-    await expect(page.getByRole('table', { name: 'Análisis' }).getByRole('row')).toHaveCount(3)
+    await expect(page.getByRole('table', { name: 'Análisis' }).getByRole('row')).toHaveCount(4)
     await evidencia(page, 'analisis-filtrado')
 
     // Detalle con su foto firmada.

@@ -1,6 +1,6 @@
 import { max } from 'd3-array'
 import { scaleLinear } from 'd3-scale'
-import { ETIQUETA_RESULTADO, formatFecha, formatPorcentaje } from '../../lib/format'
+import { ETIQUETA_RESULTADO, formatFecha, formatPromedio } from '../../lib/format'
 import { claveLugar, desglose, plural, RESULTADOS, type FilaLugar, type Lugar } from '../../lib/graficos'
 import { hrefDe } from '../../lib/router'
 import Simbolo, { TONO_RESULTADO } from '../Simbolo'
@@ -65,7 +65,7 @@ export default function GraficaLugares({
               {RESULTADOS.map((r) => (
                 <th key={r} scope="col" className="num">{ETIQUETA_RESULTADO[r]}</th>
               ))}
-              <th scope="col" className="num">Confianza media</th>
+              <th scope="col" className="num">Certeza promedio</th>
               <th scope="col">Último análisis</th>
             </tr>
           </thead>
@@ -80,7 +80,7 @@ export default function GraficaLugares({
                 {RESULTADOS.map((r) => (
                   <td key={r} className="num">{f.conteos[r]}</td>
                 ))}
-                <td className="num">{formatPorcentaje(f.confianzaMedia)}</td>
+                <td className="num">{formatPromedio(f.confianzaMedia)}</td>
                 <td className="nowrap">{f.ultimo ? formatFecha(f.ultimo.fechaCaptura) : '—'}</td>
               </tr>
             ))}
@@ -97,7 +97,7 @@ export default function GraficaLugares({
             const atenuada = elegidoClave !== null && elegidoClave !== f.clave
             const etiqueta =
               `${f.nombre} (${f.lugar.tipo === 'arbol' ? 'árbol' : 'zona'}): ${plural(f.total, 'análisis', 'análisis')}` +
-              (f.total ? `. ${desglose(f.conteos, ETIQUETA_RESULTADO)}. Confianza media ${formatPorcentaje(f.confianzaMedia)}` : '') +
+              (f.total ? `. ${desglose(f.conteos, ETIQUETA_RESULTADO)}. Certeza promedio ${formatPromedio(f.confianzaMedia)}` : '') +
               '. Abre su seguimiento.'
             return (
               <g
@@ -149,7 +149,7 @@ export default function GraficaLugares({
                 {ETIQUETA_RESULTADO[r]}: {activa.conteos[r]} ({Math.round((activa.conteos[r] / activa.total) * 100)} %)
               </span>
             ))}
-            {activa.total > 0 && <span>Confianza media: {formatPorcentaje(activa.confianzaMedia)}</span>}
+            {activa.total > 0 && <span>Certeza promedio: {formatPromedio(activa.confianzaMedia)}</span>}
             {activa.ultimo && <span className="muted">Último: {formatFecha(activa.ultimo.fechaCaptura)}</span>}
             <span className="muted">Clic o Enter: ver seguimiento</span>
           </Tooltip>

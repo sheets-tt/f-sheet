@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { finDelDia, formatFecha, formatPorcentaje, haceCuanto, inicioDelDia, ETIQUETA_RESULTADO } from './format'
+import { finDelDia, formatFecha, formatPorcentaje, formatPromedio, haceCuanto, inicioDelDia, ETIQUETA_RESULTADO } from './format'
 
 describe('fechas (hora del centro de México, UTC−6 sin horario de verano)', () => {
   it('formatFecha muestra fecha y hora locales', () => {
@@ -29,7 +29,7 @@ describe('números y etiquetas', () => {
   })
 
   it('etiquetas en lenguaje de campo', () => {
-    expect(ETIQUETA_RESULTADO.no_determinado).toBe('No determinado')
+    expect(ETIQUETA_RESULTADO.no_determinado).toBe('Sin diagnóstico claro')
   })
 })
 
@@ -40,6 +40,10 @@ describe('haceCuanto', () => {
     expect(haceCuanto('2026-11-09T12:00:00Z', ahora)).toBe('ayer')
     expect(haceCuanto('2026-11-02T18:00:00Z', ahora)).toBe('hace 8 días')
     expect(haceCuanto('2026-08-10T18:00:00Z', ahora)).toBe('hace 3 meses')
+    // 43 y 45 días: los dos en días (antes, 45 ya decía «hace 2 meses»).
+    expect(haceCuanto('2026-09-28T18:00:00Z', ahora)).toBe('hace 43 días')
+    expect(haceCuanto('2026-09-26T08:00:00Z', ahora)).toBe('hace 45 días')
+    expect(haceCuanto('2026-09-01T08:00:00Z', ahora)).toBe('hace 2 meses') // 70 días: no «hace 3»
     expect(haceCuanto('2024-11-10T18:00:00Z', ahora)).toBe('hace 2 años')
   })
 })
@@ -55,3 +59,11 @@ describe('inicioDelDia / finDelDia con fechas inválidas', () => {
   })
 })
 
+
+describe('formatPromedio', () => {
+  it('redondea sin decimales (no se confunde con un valor exacto)', () => {
+    expect(formatPromedio(0.798)).toBe('80 %')
+    expect(formatPromedio(0.4249)).toBe('42 %')
+    expect(formatPromedio(null)).toBe('—')
+  })
+})

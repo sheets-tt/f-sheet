@@ -17,11 +17,11 @@ test.describe('Flujos completos (móvil, 360 px)', () => {
     await evidencia(page, 'resumen', { completa: false })
 
     const atencion = page.getByRole('region', { name: 'Necesita tu atención' })
-    await atencion.getByRole('link', { name: /^Infestados: 2\./ }).click()
+    await atencion.getByRole('link', { name: /^Infestados: 3\./ }).click()
     await expect(page).toHaveURL(/#\/analisis\?caja_resultado=infestado$/)
     await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Tarjetas' }).click()
     const tarjetas = page.getByRole('list', { name: 'Análisis' }).getByRole('article')
-    await expect(tarjetas).toHaveCount(2)
+    await expect(tarjetas).toHaveCount(3)
     await sinDesbordeHorizontal(page)
     await tarjetas.first().scrollIntoViewIfNeeded()
     await evidencia(page, 'analisis-tarjetas', { completa: false })

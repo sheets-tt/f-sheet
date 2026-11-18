@@ -1,7 +1,7 @@
 import { EXPERTO, entrar, interceptarS3, ir, expect, test } from './ayuda'
 
 // Recorrido de un experto de campo con los datos reales de db/demo (b-sheet):
-// 3 árboles (uno sin análisis), 2 zonas, 5 análisis e1..e5, 1 dispositivo.
+// 3 árboles (uno sin análisis), 2 zonas, 6 análisis e1..e6 (e6: Oyamel, 5 oct), 1 dispositivo.
 
 test.beforeEach(async ({ page }) => {
   await entrar(page, EXPERTO)
@@ -12,13 +12,13 @@ test.describe('Resumen', () => {
     await expect(page.getByText('1 árbol y 1 zona con infestación detectada')).toBeVisible()
     const totales = page.getByRole('list', { name: 'Totales' })
     await expect(totales.getByRole('listitem').filter({ hasText: 'Árboles' })).toContainText('3')
-    await expect(totales.getByRole('listitem').filter({ hasText: 'Análisis' })).toContainText('5')
-    await expect(page.getByText('Última captura: 8 oct 2026, 05:00')).toBeVisible()
+    await expect(totales.getByRole('listitem').filter({ hasText: 'Análisis' })).toContainText('6')
+    await expect(page.getByText('Última foto: 8 oct 2026, 05:00')).toBeVisible()
     await expect(
-      page.getByRole('img', { name: 'Resultado de los análisis: Sano 2 (40 %), Infestado 2 (40 %), No determinado 1 (20 %)' }),
+      page.getByRole('img', { name: 'Resultado de los análisis: Sano 2 (33.3 %), Infestado 3 (50 %), Sin diagnóstico claro 1 (16.7 %)' }),
     ).toBeVisible()
     await expect(
-      page.getByRole('img', { name: 'Cromático promedio del follaje: Sano 55 %, Regular 15 %, Dañado 7.5 %, Incierto 22.5 %' }),
+      page.getByRole('img', { name: 'Color promedio del follaje: Sano 55 %, Regular 15 %, Dañado 7.5 %, Incierto 22.5 %' }),
     ).toBeVisible()
   })
 })
@@ -48,9 +48,9 @@ test.describe('Análisis › filtros y fotos', () => {
   test('los filtros llegan al backend y se pueden quitar', async ({ page }) => {
     await page.getByRole('navigation', { name: 'Secciones' }).getByRole('link', { name: 'Análisis' }).click()
     const filas = page.getByRole('table', { name: 'Análisis' }).getByRole('row')
-    await expect(filas).toHaveCount(6) // encabezado + 5
+    await expect(filas).toHaveCount(7) // encabezado + 6
 
-    await page.getByLabel('Tipo', { exact: true }).selectOption('follaje')
+    await page.getByLabel('Tipo de foto', { exact: true }).selectOption('follaje')
     await page.getByLabel('Resultado', { exact: true }).selectOption('infestado')
     const respuesta = page.waitForResponse((r) => r.url().includes('/api/analisis?tipo=follaje&resultado=infestado'))
     await page.getByRole('button', { name: 'Aplicar filtros' }).click()
@@ -59,12 +59,12 @@ test.describe('Análisis › filtros y fotos', () => {
     await expect(filas.nth(1)).toContainText('8 oct 2026, 05:00')
     await expect(filas.nth(1)).toContainText('Con error')
 
-    // Rango por día en hora de CDMX: del 4 al 7 de octubre entran e3, e2 y e4.
+    // Rango por día en hora de CDMX: del 4 al 7 de octubre entran e3, e6, e2 y e4.
     await page.getByRole('button', { name: 'Quitar filtros' }).click()
     await page.getByLabel('Desde', { exact: true }).fill('2026-10-04')
     await page.getByLabel('Hasta', { exact: true }).fill('2026-10-07')
     await page.getByRole('button', { name: 'Aplicar filtros' }).click()
-    await expect(filas).toHaveCount(4)
+    await expect(filas).toHaveCount(5)
   })
 })
 
@@ -128,7 +128,7 @@ test.describe('Mapa', () => {
     await ir(page, '#/mapa', 'Mapa')
     const mapa = page.getByRole('group', { name: 'Mapa de campo: 3 árboles y 2 zonas' })
     await expect(mapa.getByRole('button', { name: 'Pino del cerro (Pinus hartwegii): Sin análisis' })).toBeVisible()
-    await expect(mapa.getByRole('button', { name: 'Zona lago menor, radio 50 m: No determinado' })).toBeVisible()
+    await expect(mapa.getByRole('button', { name: 'Zona lago menor, radio 50 m: Sin diagnóstico claro' })).toBeVisible()
 
     const historial = page.waitForResponse((r) => r.url().includes('/api/analisis?arbol=b0000000-0000-0000-0000-000000000001'))
     await mapa.getByRole('button', { name: 'Oyamel del lago (Abies religiosa): Infestado' }).click()
@@ -136,8 +136,12 @@ test.describe('Mapa', () => {
     await expect(page).toHaveURL(/#\/mapa\/a-b0000000-0000-0000-0000-000000000001$/)
     const detalle = page.getByRole('region', { name: 'Oyamel del lago' })
     await expect(detalle).toContainText('Junto al lago menor')
-    await expect(detalle.getByRole('listitem')).toHaveCount(1)
-    await expect(detalle.getByRole('listitem')).toContainText('Galerías visibles')
+    // e6 (5 oct, Experta de Campo Demo) y e1 (3 oct, Usuario Demo), con quién subió cada uno.
+    const historialOyamel = detalle.getByRole('listitem')
+    await expect(historialOyamel).toHaveCount(2)
+    await expect(historialOyamel.nth(0)).toContainText('Subido por Experta de Campo Demo')
+    await expect(historialOyamel.nth(0)).toContainText('Resina fresca en la base del tronco')
+    await expect(historialOyamel.nth(1)).toContainText('Galerías visibles')
 
     // El mapa también se maneja con teclado; Esc cierra el detalle.
     await page.keyboard.press('Escape')
@@ -173,11 +177,11 @@ test.describe('Seguimiento', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Oyamel del lago' })).toBeVisible()
     await expect(page).toHaveURL(/#\/arbol\/b0000000-0000-0000-0000-000000000001$/)
     await expect(page.getByRole('region', { name: 'Estado actual' })).toContainText('Infestado')
-    await expect(page.getByRole('img', { name: /^Confianza por análisis: 1 análisis/ })).toBeVisible()
+    await expect(page.getByRole('img', { name: /^Certeza de cada diagnóstico: 2 análisis/ })).toBeVisible()
     const linea = page.getByRole('list', { name: 'Línea de tiempo' })
-    await expect(linea.getByRole('listitem')).toHaveCount(1)
+    await expect(linea.getByRole('listitem')).toHaveCount(2)
     await expect(linea).toContainText('Galerías visibles')
-    await expect(page.getByRole('group', { name: 'Ubicación de Oyamel del lago y 1 captura' })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Ubicación de Oyamel del lago y 2 capturas' })).toBeVisible()
 
     await linea.getByRole('button', { name: 'Ver foto del 3 oct 2026, 09:10' }).click()
     await expect(page.getByRole('dialog').getByRole('img')).toBeVisible()
@@ -192,8 +196,8 @@ test.describe('Seguimiento', () => {
 test.describe('Seguimiento', () => {
   test('seguimiento de una zona: evolución del follaje', async ({ page }) => {
     await ir(page, '#/zona/c0000000-0000-0000-0000-000000000001', 'Zona lago menor')
-    const evolucion = page.getByRole('region', { name: 'Evolución del follaje' })
+    const evolucion = page.getByRole('region', { name: 'Evolución del color del follaje' })
     await expect(evolucion.getByRole('img')).toHaveCount(2)
-    await expect(page.getByRole('list', { name: 'Línea de tiempo' })).toContainText('Cambió de sano a no determinado')
+    await expect(page.getByRole('list', { name: 'Línea de tiempo' })).toContainText('Cambió de sano a sin diagnóstico claro')
   })
 })

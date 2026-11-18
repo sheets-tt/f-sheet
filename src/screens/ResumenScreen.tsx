@@ -6,10 +6,12 @@ import Galeria from '../components/Galeria'
 import Simbolo, { Estado, TONO_RESULTADO, TONO_SINCRONIZACION } from '../components/Simbolo'
 import { buscarAnalisis, getArboles, getEstadisticas, getZonas, type Analisis, type Arbol, type Estadisticas, type Zona } from '../lib/api'
 import { claveLugar, lugarDe } from '../lib/analisis'
-import { ETIQUETA_RESULTADO, ETIQUETA_SINCRONIZACION, ETIQUETA_TIPO, formatFecha, formatPorcentaje, haceCuanto } from '../lib/format'
+import { ETIQUETA_RESULTADO, ETIQUETA_SINCRONIZACION, ETIQUETA_TIPO, formatFecha, formatPorcentaje, formatPromedio, haceCuanto } from '../lib/format'
 import { accesos, atencion, cambio, hrefDetalle, indicadoresPeriodo, lugaresInfestados, recientes, type Medida, type PuntoAtencion } from '../lib/resumen'
 import { hrefDe } from '../lib/router'
 import { useCarga, type Carga } from '../lib/useCarga'
+import { partesFollaje, SENTIDO_FOLLAJE, TITULO_ENVIO } from '../lib/lenguaje'
+import { Autor } from '../components/Campo'
 
 // Las gráficas (d3) en su propio chunk: los indicadores y la atención no esperan a que llegue.
 const GraficasResumen = lazy(() => import('../components/resumen/GraficasResumen'))
@@ -59,7 +61,7 @@ export default function ResumenScreen({ esAdmin = false }: Props) {
         <h1>Resumen</h1>
         {carga.datos && (
           <p className="muted">
-            Última captura: {carga.datos.ultimaCaptura ? formatFecha(carga.datos.ultimaCaptura) : 'aún no hay capturas'}
+            Última foto: {carga.datos.ultimaCaptura ? formatFecha(carga.datos.ultimaCaptura) : 'aún no hay fotos'}
           </p>
         )}
       </header>
@@ -118,7 +120,7 @@ function Hero({ e }: { e: Estadisticas }) {
   )
 }
 
-/** El detalle que el Resumen ya mostraba: resultados, cromático y sincronización. */
+/** El detalle que el Resumen ya mostraba: resultados, color del follaje y envío desde el móvil. */
 function Detalle({ e }: { e: Estadisticas }) {
   return (
     <section aria-labelledby="titulo-detalle" className="resumen-bloque">
@@ -141,23 +143,23 @@ function Detalle({ e }: { e: Estadisticas }) {
         </section>
 
         <section className="panel" aria-labelledby="titulo-cromatico">
-          <h3 id="titulo-cromatico" className="panel-h3">Cromático promedio del follaje</h3>
-          <p className="muted bloque-nota">Porcentaje del dosel en cada condición</p>
+          <h3 id="titulo-cromatico" className="panel-h3">Color promedio del follaje</h3>
+          <p className="muted bloque-nota">{SENTIDO_FOLLAJE}</p>
           {e.cromaticoPromedio ? (
             <BarraSegmentada
-              titulo="Cromático promedio del follaje"
+              titulo="Color promedio del follaje"
               modo="porcentaje"
-              partes={partesCromatico(e.cromaticoPromedio)}
+              partes={partesFollaje(e.cromaticoPromedio)}
             />
           ) : (
-            <p className="muted">Aún no hay análisis cromáticos de follaje.</p>
+            <p className="muted">Aún no hay fotos de follaje con el color medido.</p>
           )}
         </section>
 
         <section className="panel" aria-labelledby="titulo-sincronizacion">
-          <h3 id="titulo-sincronizacion" className="panel-h3">Sincronización desde el móvil</h3>
+          <h3 id="titulo-sincronizacion" className="panel-h3">{TITULO_ENVIO}</h3>
           <BarraSegmentada
-            titulo="Sincronización desde el móvil"
+            titulo={TITULO_ENVIO}
             modo="conteo"
             variante="delgada"
             partes={[
@@ -300,10 +302,10 @@ function SeccionIndicadores({ analisis }: { analisis: CargaDe<Analisis[]> }) {
       <h2 id="titulo-indicadores" className="resumen-titulo">Últimos 7 días con datos</h2>
       <p className="muted bloque-nota">
         {ind.incompleto === 'actual'
-          ? `Capturas ${rango}. Solo se cargan los ${LIMITE_GRAFICAS} análisis más recientes: este periodo puede estar incompleto y no se compara.`
+          ? `Fotos ${rango}. Solo se cargan los ${LIMITE_GRAFICAS} análisis más recientes: este periodo puede estar incompleto y no se compara.`
           : ind.incompleto === 'previo'
-            ? `Capturas ${rango}. Solo se cargan los ${LIMITE_GRAFICAS} análisis más recientes: los 7 días anteriores pueden estar incompletos y no se comparan.`
-            : `Capturas ${rango}, comparadas con los 7 días anteriores.`}
+            ? `Fotos ${rango}. Solo se cargan los ${LIMITE_GRAFICAS} análisis más recientes: los 7 días anteriores pueden estar incompletos y no se comparan.`
+            : `Fotos ${rango}, comparadas con los 7 días anteriores.`}
       </p>
       <ul className="indicadores indicadores-resumen" aria-label="Indicadores de los últimos 7 días">
         <li>
@@ -318,8 +320,8 @@ function SeccionIndicadores({ analisis }: { analisis: CargaDe<Analisis[]> }) {
           <Cambio m={ind.pctInfestado} tipo="fraccion" incompleto={ind.incompleto} />
         </li>
         <li>
-          <span>Confianza media</span>
-          <strong>{formatPorcentaje(ind.confianzaMedia.valor)}</strong>
+          <span>Certeza promedio</span>
+          <strong>{formatPromedio(ind.confianzaMedia.valor)}</strong>
           <Cambio m={ind.confianzaMedia} tipo="fraccion" incompleto={ind.incompleto} />
         </li>
         <li>
@@ -328,14 +330,14 @@ function SeccionIndicadores({ analisis }: { analisis: CargaDe<Analisis[]> }) {
           <Cambio m={ind.lugares} tipo="cuenta" incompleto={ind.incompleto} />
         </li>
         <li>
-          <span>Última captura</span>
+          <span>Última foto</span>
           <strong className="indicador-fecha">{ind.ultimaCaptura ? haceCuanto(ind.ultimaCaptura) : '—'}</strong>
           <span className="indicador-cambio">{ind.ultimaCaptura ? formatFecha(ind.ultimaCaptura) : ''}</span>
         </li>
         <li>
-          <span>Última sincronización</span>
+          <span>Último envío desde el móvil</span>
           <strong className="indicador-fecha">{ind.ultimaSincronizacion ? haceCuanto(ind.ultimaSincronizacion) : '—'}</strong>
-          <span className="indicador-cambio">{ind.ultimaSincronizacion ? formatFecha(ind.ultimaSincronizacion) : 'Ninguna aún'}</span>
+          <span className="indicador-cambio">{ind.ultimaSincronizacion ? formatFecha(ind.ultimaSincronizacion) : 'Ninguno aún'}</span>
         </li>
       </ul>
     </section>
@@ -418,6 +420,7 @@ function SeccionActividad({ analisis, lugares }: { analisis: CargaDe<Analisis[]>
               <span className="actividad-lugar">
                 {l ? <a href={hrefDe(l.tipo, l.id)}>{nombre}</a> : <span className="muted">Sin árbol ni zona</span>}
                 <span className="muted"> · {ETIQUETA_TIPO[x.tipoImagen]}</span>
+                <Autor analisis={x} className="actividad-autor" />
               </span>
               <time className="muted actividad-cuando" dateTime={x.fechaCaptura}>
                 {haceCuanto(x.fechaCaptura)} · {formatFecha(x.fechaCaptura)}
@@ -431,13 +434,4 @@ function SeccionActividad({ analisis, lugares }: { analisis: CargaDe<Analisis[]>
       </ol>
     </section>
   )
-}
-
-export function partesCromatico(c: { pctSano: number; pctRegular: number; pctDanado: number; pctIncierto: number }) {
-  return [
-    { clave: 'sano', etiqueta: 'Sano', valor: c.pctSano, color: 'c-sano' },
-    { clave: 'regular', etiqueta: 'Regular', valor: c.pctRegular, color: 'c-regular' },
-    { clave: 'danado', etiqueta: 'Dañado', valor: c.pctDanado, color: 'c-infestado' },
-    { clave: 'incierto', etiqueta: 'Incierto', valor: c.pctIncierto, color: 'c-neutro' },
-  ]
 }

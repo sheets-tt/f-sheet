@@ -4,6 +4,8 @@ import { claveLugar, ETIQUETA_NIVEL, lugarDe, motivosAtencion, nivelConfianza } 
 import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha, formatPorcentaje } from '../../lib/format'
 import { hrefDe } from '../../lib/router'
 import { useCarga } from '../../lib/useCarga'
+import { TITULO_CERTEZA } from '../../lib/lenguaje'
+import { Autor, Observaciones } from '../Campo'
 import { Estado, TONO_RESULTADO } from '../Simbolo'
 import { Medidor } from './CajasCategoria'
 
@@ -75,7 +77,7 @@ function FotoMiniatura({ id }: { id: string }) {
   )
 }
 
-/** Una caja por análisis: foto, resultado, confianza con medidor, lugar, tipo, fecha y observaciones. */
+/** Una caja por análisis: foto, resultado, certeza con medidor, lugar, tipo, fecha, quién la subió y observaciones de campo. */
 export default function TarjetaAnalisis({ analisis: a, nombres, onAbrir }: Props) {
   const l = lugarDe(a)
   const nombre = l ? (nombres.get(claveLugar(l)) ?? (l.tipo === 'arbol' ? 'Árbol' : 'Zona')) : null
@@ -104,8 +106,8 @@ export default function TarjetaAnalisis({ analisis: a, nombres, onAbrir }: Props
         </p>
         <div className="tarjeta-confianza">
           <span>
-            Confianza <strong>{formatPorcentaje(a.confianza)}</strong>
-            <span className="muted"> · {ETIQUETA_NIVEL[nivel]}</span>
+            {TITULO_CERTEZA}: <strong>{ETIQUETA_NIVEL[nivel].toLowerCase()}</strong>
+            {a.confianza !== null && <span className="muted"> · {formatPorcentaje(a.confianza)}</span>}
           </span>
           <Medidor fraccion={a.confianza ?? 0} />
         </div>
@@ -118,7 +120,10 @@ export default function TarjetaAnalisis({ analisis: a, nombres, onAbrir }: Props
             <span className="muted">Sin árbol ni zona</span>
           )}
         </p>
-        {a.observaciones && <p className="tarjeta-observaciones">{a.observaciones}</p>}
+        <p className="tarjeta-autor">
+          <Autor analisis={a} />
+        </p>
+        <Observaciones analisis={a} variante="recortada" />
         {motivos.length > 0 && <p className="tarjeta-motivos">Requiere atención: {motivos.join(', ').toLowerCase()}</p>}
       </div>
     </article>

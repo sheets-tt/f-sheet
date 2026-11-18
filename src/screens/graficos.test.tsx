@@ -57,7 +57,7 @@ describe('Gráficos', () => {
   it('cada gráfica resume sus datos en su nombre accesible', async () => {
     await abrir()
     expect(grafica(/^Análisis por día: 5 análisis en 6 periodos; el máximo, 1 el 3 oct 2026\.$/)).toBeInTheDocument()
-    expect(grafica(/^Confianza de 5 análisis en decenas; la más frecuente, 90–100 % con 2\.$/)).toBeInTheDocument()
+    expect(grafica(/^Certeza de 5 diagnósticos en tramos de 10 %; la más frecuente, 90–100 % con 2\.$/)).toBeInTheDocument()
     expect(grafica(/^Análisis por árbol y zona: 4 lugares con análisis de 5; el que más, Zona lago menor con 2\.$/)).toBeInTheDocument()
     expect(grafica(/^Mapa de calor de 5 lugares por 6 periodos: 5 celdas con análisis; máximo 1 en una celda\.$/)).toBeInTheDocument()
     const indicadores = screen.getByRole('list', { name: 'Indicadores de la selección' })
@@ -70,7 +70,7 @@ describe('Gráficos', () => {
     const barras = within(tiempo).getAllByRole('button')
     expect(barras).toHaveLength(6)
     expect(barras.filter((b) => b.getAttribute('tabindex') === '0')).toHaveLength(1)
-    expect(barras[0]).toHaveAccessibleName(/^3 oct 2026: 1 análisis\. Infestado 1 \(100 %\)\. Confianza media 91 %\. Oyamel del lago\.$/)
+    expect(barras[0]).toHaveAccessibleName(/^3 oct 2026: 1 análisis\. Infestado 1 \(100 %\)\. Certeza promedio 91 %\. Oyamel del lago\.$/)
 
     barras[0].focus()
     await user.keyboard('{ArrowRight}')
@@ -95,8 +95,8 @@ describe('Gráficos', () => {
     const tooltip = document.querySelector('.tooltip-rico')!
     expect(tooltip).toHaveAttribute('aria-hidden', 'true')
     expect(tooltip).toHaveTextContent('7 oct 2026')
-    expect(tooltip).toHaveTextContent('No determinado: 1 (100 %)')
-    expect(tooltip).toHaveTextContent('Confianza media: 42 %')
+    expect(tooltip).toHaveTextContent('Sin diagnóstico claro: 1 (100 %)')
+    expect(tooltip).toHaveTextContent('Certeza promedio: 42 %')
     expect(tooltip).toHaveTextContent('Zona lago menor')
   })
 
@@ -106,7 +106,7 @@ describe('Gráficos', () => {
     await waitFor(() => expect(consulta().get('resultado')).toBe('infestado'))
     expect(screen.getByRole('button', { name: 'Infestado', pressed: true })).toBeInTheDocument()
     expect(screen.getByText('Resultado: Infestado')).toBeInTheDocument()
-    expect(grafica(/^Confianza de 2 análisis/)).toBeInTheDocument()
+    expect(grafica(/^Certeza de 2 diagnósticos/)).toBeInTheDocument()
     expect(grafica(/^Análisis por árbol y zona: 2 lugares con análisis/)).toBeInTheDocument()
     expect(within(screen.getByRole('table', { name: 'Análisis de la selección' })).getAllByRole('row')).toHaveLength(3)
 
@@ -148,11 +148,15 @@ describe('Gráficos', () => {
 
   it('una barra de confianza filtra por su decena', async () => {
     const user = await abrir()
-    await user.click(within(grafica(/^Confianza de/)).getByRole('button', { name: /^Confianza 90–100 %: 2 análisis/ }))
+    await user.click(within(grafica(/^Certeza de/)).getByRole('button', { name: /^Certeza 90–100 %: 2 análisis/ }))
     await waitFor(() => expect(consulta().get('confianza')).toBe('9'))
     const filas = within(screen.getByRole('table', { name: 'Análisis de la selección' })).getAllByRole('row')
     expect(filas).toHaveLength(3)
     expect(within(filas[1]).getByRole('link')).toHaveTextContent('Zona lago menor')
+    // Como en Análisis: el nivel de certeza y el % en segundo plano; quién la subió.
+    expect(filas[1]).toHaveTextContent('Alta · 95 %')
+    expect(filas[1]).toHaveTextContent('Usuario Demo')
+    expect(within(filas[0]).getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Foto tomada', 'Árbol o zona', 'Tipo', 'Resultado', 'Certeza', 'Subido por'])
   })
 
   it('la vista se puede abrir desde la URL', async () => {

@@ -48,10 +48,10 @@ test.describe('Resumen', () => {
   test('la atención lleva a Análisis filtrado y "Ver en Gráficos" conserva el filtro', async ({ page }) => {
     await entrar(page, EXPERTO)
     const atencion = page.getByRole('region', { name: 'Necesita tu atención' })
-    await expect(atencion).toContainText('3 análisis requieren atención, de los 5 más recientes.')
-    await atencion.getByRole('link', { name: /^Infestados: 2\./ }).click()
+    await expect(atencion).toContainText('4 análisis requieren atención, de los 6 más recientes.')
+    await atencion.getByRole('link', { name: /^Infestados: 3\./ }).click()
     await expect(page).toHaveURL(/#\/analisis\?caja_resultado=infestado$/)
-    await expect(page.getByRole('table', { name: 'Análisis' }).getByRole('row')).toHaveCount(3)
+    await expect(page.getByRole('table', { name: 'Análisis' }).getByRole('row')).toHaveCount(4)
 
     await page.goBack()
     const lugares = page.getByRole('region', { name: 'Dónde hay más infestación' })
@@ -85,7 +85,7 @@ test.describe('Resumen', () => {
     await expect(accesos.locator('strong').last()).toHaveText('Administración')
   })
 
-  test('D1: la cifra de errores de sincronización coincide con lo que abre su enlace', async ({ page }) => {
+  test('D1: la cifra de errores al enviar coincide con lo que abre su enlace', async ({ page }) => {
     // Al Resumen le llegan los análisis recientes SIN el que tiene error: si contara sobre los
     // cargados diría 0; la cifra correcta es la global (/estadisticas), la misma que abre el enlace.
     await page.route(
@@ -97,11 +97,11 @@ test.describe('Resumen', () => {
       },
     )
     await entrar(page, EXPERTO)
-    const panel = page.getByRole('region', { name: 'Sincronización desde el móvil' })
+    const panel = page.getByRole('region', { name: 'Envío desde el móvil' })
     const conError = Number((await panel.locator('li').filter({ hasText: 'Con error' }).locator('.num').textContent())!.trim())
-    const enlace = page.getByRole('region', { name: 'Necesita tu atención' }).getByRole('link', { name: /^Errores de sincronización: / })
+    const enlace = page.getByRole('region', { name: 'Necesita tu atención' }).getByRole('link', { name: /^Errores al enviar: / })
     expect(conError).toBeGreaterThan(0)
-    await expect(enlace).toHaveAccessibleName(new RegExp(`^Errores de sincronización: ${conError}\\.`))
+    await expect(enlace).toHaveAccessibleName(new RegExp(`^Errores al enviar: ${conError}\\.`))
     await enlace.click()
     await expect(page).toHaveURL(/#\/analisis\?estado=error$/)
     await expect(page.getByRole('table', { name: 'Análisis' }).getByRole('row')).toHaveCount(conError + 1)

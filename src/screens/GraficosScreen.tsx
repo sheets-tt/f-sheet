@@ -1,3 +1,5 @@
+import { ETIQUETA_CERTEZA, SIN_AUTOR } from '../lib/lenguaje'
+import { nivelConfianza } from '../lib/analisis'
 import { utcDay } from 'd3-time'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react'
 import { ErrorCarga } from '../components/EstadoCarga'
@@ -8,7 +10,7 @@ import HistogramaConfianza from '../components/graficos/HistogramaConfianza'
 import MapaCalor from '../components/graficos/MapaCalor'
 import { Estado, TONO_RESULTADO } from '../components/Simbolo'
 import { buscarAnalisis, getArboles, getZonas, type Analisis, type Arbol, type Zona } from '../lib/api'
-import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha, formatPorcentaje } from '../lib/format'
+import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha, formatPorcentaje, formatPromedio } from '../lib/format'
 import {
   claveDia,
   claveLugar,
@@ -73,7 +75,7 @@ export default function GraficosScreen() {
       <header className="pagina-encabezado">
         <h1>Gráficos</h1>
         <p className="muted">
-          Explora los análisis por fecha, resultado, confianza y lugar. Lo que eliges en una gráfica filtra las demás, y la vista queda en la
+          Explora los análisis por fecha, resultado, certeza del diagnóstico y lugar. Lo que eliges en una gráfica filtra las demás, y la vista queda en la
           dirección para compartirla.
         </p>
       </header>
@@ -406,8 +408,8 @@ function Vista({ analisis, arboles, zonas, filtros, datos, nombres, rangoDescart
           </strong>
         </li>
         <li>
-          <span>Confianza media</span>
-          <strong>{formatPorcentaje(ind.confianzaMedia)}</strong>
+          <span>Certeza promedio</span>
+          <strong>{formatPromedio(ind.confianzaMedia)}</strong>
         </li>
         <li>
           <span>Árboles y zonas</span>
@@ -479,7 +481,7 @@ function chipsDe(f: Filtros, nombres: Map<string, string>, visible: Dominio): Ch
     chips.push({ clave: 'lugar', texto: `${f.lugar.tipo === 'arbol' ? 'Árbol' : 'Zona'}: ${nombre}`, quitar: { lugar: null } })
   }
   if (f.confianza !== null)
-    chips.push({ clave: 'confianza', texto: `Confianza: ${f.confianza * 10}–${(f.confianza + 1) * 10} %`, quitar: { confianza: null } })
+    chips.push({ clave: 'confianza', texto: `Certeza: ${f.confianza * 10}–${(f.confianza + 1) * 10} %`, quitar: { confianza: null } })
   return chips
 }
 
@@ -661,11 +663,12 @@ function ListaSeleccion({ analisis, nombres }: { analisis: Analisis[]; nombres: 
             <table className="tabla" aria-labelledby="titulo-seleccion">
               <thead>
                 <tr>
-                  <th scope="col">Captura</th>
+                  <th scope="col">Foto tomada</th>
                   <th scope="col">Árbol o zona</th>
                   <th scope="col">Tipo</th>
                   <th scope="col">Resultado</th>
-                  <th scope="col" className="num">Confianza</th>
+                  <th scope="col">Certeza</th>
+                  <th scope="col">Subido por</th>
                 </tr>
               </thead>
               <tbody>
@@ -685,7 +688,11 @@ function ListaSeleccion({ analisis, nombres }: { analisis: Analisis[]; nombres: 
                       <td>
                         <Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{ETIQUETA_RESULTADO[a.resultadoClasificacion]}</Estado>
                       </td>
-                      <td className="num">{formatPorcentaje(a.confianza)}</td>
+                      <td className="nowrap">
+                        {ETIQUETA_CERTEZA[nivelConfianza(a.confianza)]}
+                        {a.confianza !== null && <span className="muted"> · {formatPorcentaje(a.confianza)}</span>}
+                      </td>
+                      <td>{a.autor ? a.autor.nombre : <span className="muted">{SIN_AUTOR}</span>}</td>
                     </tr>
                   )
                 })}

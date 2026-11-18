@@ -1,10 +1,20 @@
 import { useEffect, useRef } from 'react'
 import type { Analisis } from '../../lib/api'
 import { claveLugar, ETIQUETA_NIVEL, lugarDe, motivosAtencion, nivelConfianza, vecinos } from '../../lib/analisis'
-import { ETIQUETA_RESULTADO, ETIQUETA_SINCRONIZACION, ETIQUETA_TIPO, formatFecha, formatPorcentaje } from '../../lib/format'
+import { ETIQUETA_TIPO, formatFecha, formatPorcentaje } from '../../lib/format'
 import { hrefDe } from '../../lib/router'
-import { partesCromatico } from '../../screens/ResumenScreen'
+import {
+  ETIQUETA_ENVIO,
+  fraseResultado,
+  partesFollaje,
+  queHacer,
+  SENTIDO_FOLLAJE,
+  TITULO_CERTEZA,
+  TITULO_ENVIO,
+  TITULO_FOLLAJE,
+} from '../../lib/lenguaje'
 import BarraSegmentada from '../BarraSegmentada'
+import { Autor, Observaciones } from '../Campo'
 import Dialogo from '../Dialogo'
 import { ImagenEvidencia } from '../FotoEvidencia'
 import { Estado, TONO_RESULTADO, TONO_SINCRONIZACION } from '../Simbolo'
@@ -27,6 +37,7 @@ export default function DetalleAnalisis({ analisis: a, todos, nombres, onCambiar
   const nombre = l ? (nombres.get(claveLugar(l)) ?? (l.tipo === 'arbol' ? 'Árbol' : 'Zona')) : null
   const { anterior, siguiente } = vecinos(todos, a)
   const motivos = motivosAtencion(a)
+  const nivel = nivelConfianza(a.confianza)
   const fecha = formatFecha(a.fechaCaptura)
   const cerrar = useRef<HTMLButtonElement>(null)
 
@@ -49,64 +60,78 @@ export default function DetalleAnalisis({ analisis: a, todos, nombres, onCambiar
           )}
         </div>
 
-        <dl className="detalle-datos">
-          <div>
-            <dt>Resultado</dt>
-            <dd>
-              <Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{ETIQUETA_RESULTADO[a.resultadoClasificacion]}</Estado>
-            </dd>
+        <div className="detalle-info">
+          <div className="detalle-diagnostico">
+            <p className={`detalle-resultado detalle-resultado-${TONO_RESULTADO[a.resultadoClasificacion]}`}>
+              <Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{fraseResultado(a.resultadoClasificacion)}</Estado>
+            </p>
+            <div className="que-hacer">
+              <h3>Qué hacer</h3>
+              <p>{queHacer(a.resultadoClasificacion, nivel, l?.tipo ?? null)}</p>
+            </div>
           </div>
-          <div>
-            <dt>Confianza</dt>
-            <dd>
-              {formatPorcentaje(a.confianza)} <span className="muted">({ETIQUETA_NIVEL[nivelConfianza(a.confianza)].toLowerCase()})</span>
-              <Medidor fraccion={a.confianza ?? 0} />
-            </dd>
-          </div>
-          <div>
-            <dt>Tipo de imagen</dt>
-            <dd>{ETIQUETA_TIPO[a.tipoImagen]}</dd>
-          </div>
-          <div>
-            <dt>Árbol o zona</dt>
-            <dd>{l ? <a href={hrefDe(l.tipo, l.id)}>{nombre}</a> : <span className="muted">Sin árbol ni zona</span>}</dd>
-          </div>
-          <div>
-            <dt>Captura</dt>
-            <dd>{fecha}</dd>
-          </div>
-          <div>
-            <dt>Sincronización</dt>
-            <dd>
-              <Estado tono={TONO_SINCRONIZACION[a.estadoSincronizacion]}>{ETIQUETA_SINCRONIZACION[a.estadoSincronizacion]}</Estado>
-              {a.fechaSincronizacion && <span className="muted"> · {formatFecha(a.fechaSincronizacion)}</span>}
-            </dd>
-          </div>
-          {a.latitudCaptura !== null && a.longitudCaptura !== null && (
+
+          <dl className="detalle-datos">
             <div>
-              <dt>Ubicación de la captura</dt>
+              <dt>{TITULO_CERTEZA}</dt>
               <dd>
-                {coord.format(a.latitudCaptura)}, {coord.format(a.longitudCaptura)}
+                {ETIQUETA_NIVEL[nivel]}
+                {a.confianza !== null && <span className="muted"> ({formatPorcentaje(a.confianza)})</span>}
+                <Medidor fraccion={a.confianza ?? 0} />
               </dd>
             </div>
-          )}
-          <div>
-            <dt>Requiere atención</dt>
-            <dd>{motivos.length ? motivos.join(', ') : 'No'}</dd>
-          </div>
-          <div className="detalle-ancho">
-            <dt>Observaciones</dt>
-            <dd>{a.observaciones ?? <span className="muted">Sin observaciones</span>}</dd>
-          </div>
-          {a.cromatico && (
-            <div className="detalle-ancho">
-              <dt>Cromático del follaje</dt>
+            <div>
+              <dt>Tipo de foto</dt>
+              <dd>{ETIQUETA_TIPO[a.tipoImagen]}</dd>
+            </div>
+            <div>
+              <dt>Árbol o zona</dt>
+              <dd>{l ? <a href={hrefDe(l.tipo, l.id)}>{nombre}</a> : <span className="muted">Sin árbol ni zona</span>}</dd>
+            </div>
+            <div>
+              <dt>Foto tomada</dt>
+              <dd>{fecha}</dd>
+            </div>
+            <div>
+              <dt>Subido por</dt>
               <dd>
-                <BarraSegmentada titulo="Cromático" modo="porcentaje" variante="delgada" partes={partesCromatico(a.cromatico)} />
+                <Autor analisis={a} soloNombre />
               </dd>
             </div>
-          )}
-        </dl>
+            <div>
+              <dt>{TITULO_ENVIO}</dt>
+              <dd>
+                <Estado tono={TONO_SINCRONIZACION[a.estadoSincronizacion]}>{ETIQUETA_ENVIO[a.estadoSincronizacion]}</Estado>
+                {a.fechaSincronizacion && <span className="muted"> · {formatFecha(a.fechaSincronizacion)}</span>}
+              </dd>
+            </div>
+            {a.latitudCaptura !== null && a.longitudCaptura !== null && (
+              <div>
+                <dt>Dónde se tomó</dt>
+                <dd>
+                  {coord.format(a.latitudCaptura)}, {coord.format(a.longitudCaptura)}
+                </dd>
+              </div>
+            )}
+            <div>
+              <dt>Requiere atención</dt>
+              <dd>{motivos.length ? motivos.join(', ') : 'No'}</dd>
+            </div>
+            {a.cromatico && (
+              <div className="detalle-ancho">
+                <dt>{TITULO_FOLLAJE}</dt>
+                <dd>
+                  <BarraSegmentada titulo={TITULO_FOLLAJE} modo="porcentaje" variante="delgada" partes={partesFollaje(a.cromatico)} />
+                  <span className="muted bloque-nota">{SENTIDO_FOLLAJE}</span>
+                </dd>
+              </div>
+            )}
+          </dl>
+
+          <Observaciones analisis={a} vacio="discreto" titulo="h3" />
+
+          <DetalleTecnico analisis={a} />
+        </div>
 
         {l && (
           <p className="detalle-enlaces">
@@ -146,5 +171,51 @@ export default function DetalleAnalisis({ analisis: a, todos, nombres, onCambiar
         </div>
       </div>
     </Dialogo>
+  )
+}
+
+const decimal = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 4 })
+
+/** Los valores tal como los guarda el sistema, para quien los necesite (plegado por defecto). */
+function DetalleTecnico({ analisis: a }: { analisis: Analisis }) {
+  return (
+    <details className="detalle-tecnico">
+      <summary>Detalle técnico</summary>
+      <dl>
+        <div>
+          <dt>Clasificación del modelo</dt>
+          <dd>
+            <code>{a.resultadoClasificacion}</code>
+          </dd>
+        </div>
+        <div>
+          <dt>Confianza del modelo</dt>
+          <dd>{a.confianza === null ? 'sin dato' : <code>{decimal.format(a.confianza)}</code>}</dd>
+        </div>
+        {a.cromatico && (
+          <div>
+            <dt>Análisis cromático</dt>
+            <dd>
+              <code>
+                pct_sano {decimal.format(a.cromatico.pctSano)} · pct_regular {decimal.format(a.cromatico.pctRegular)} · pct_danado{' '}
+                {decimal.format(a.cromatico.pctDanado)} · pct_incierto {decimal.format(a.cromatico.pctIncierto)}
+              </code>
+            </dd>
+          </div>
+        )}
+        <div>
+          <dt>Estado de sincronización</dt>
+          <dd>
+            <code>{a.estadoSincronizacion}</code>
+          </dd>
+        </div>
+        <div>
+          <dt>Identificador del análisis</dt>
+          <dd>
+            <code>{a.id}</code>
+          </dd>
+        </div>
+      </dl>
+    </details>
   )
 }

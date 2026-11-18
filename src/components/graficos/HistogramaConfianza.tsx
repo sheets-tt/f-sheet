@@ -33,10 +33,10 @@ interface Props {
   nivel?: 2 | 3
 }
 
-/** Distribución de la confianza del modelo, en decenas. Un clic filtra las demás gráficas. */
+/** Distribución de la certeza del diagnóstico (la «confianza» del modelo), en decenas. Un clic filtra las demás gráficas. */
 export default function HistogramaConfianza({
   decenas, sinConfianza, elegida, onElegir, onQuitarFiltros,
-  descripcion = 'Cuántos análisis hay en cada decena de confianza. Clic o Enter en una barra filtra las demás gráficas por esa decena.',
+  descripcion = 'Cuántos diagnósticos hay en cada tramo de certeza, de 10 en 10 %. Clic o Enter en una barra filtra las demás gráficas por ese tramo.',
   enlace,
   nivel,
 }: Props) {
@@ -54,15 +54,15 @@ export default function HistogramaConfianza({
   const total = decenas.reduce((s, d) => s + d.total, 0)
   const moda = decenas.reduce<Decena | null>((m, d) => (d.total && (!m || d.total > m.total) ? d : m), null)
   const resumen =
-    `Confianza de ${plural(total, 'análisis', 'análisis')} en decenas` +
+    `Certeza de ${plural(total, 'diagnóstico', 'diagnósticos')} en tramos de 10 %` +
     (moda ? `; la más frecuente, ${moda.etiqueta} con ${moda.total}` : '') +
-    (sinConfianza ? `; ${sinConfianza} sin confianza.` : '.')
+    (sinConfianza ? `; ${sinConfianza} sin dato de certeza.` : '.')
   const activa = resaltada !== null ? decenas[resaltada] : null
 
   return (
     <MarcoGrafica
       id="titulo-confianza"
-      titulo="Confianza del modelo"
+      titulo="Certeza del diagnóstico"
       descripcion={descripcion}
       enlace={enlace}
       nivel={nivel}
@@ -70,10 +70,10 @@ export default function HistogramaConfianza({
       onQuitarFiltros={onQuitarFiltros}
       tabla={
         <table className="tabla tabla-compacta">
-          <caption className="visually-hidden">Análisis por decena de confianza</caption>
+          <caption className="visually-hidden">Diagnósticos por tramo de certeza</caption>
           <thead>
             <tr>
-              <th scope="col">Confianza</th>
+              <th scope="col">Certeza</th>
               <th scope="col" className="num">Total</th>
               {RESULTADOS.map((r) => (
                 <th key={r} scope="col" className="num">{ETIQUETA_RESULTADO[r]}</th>
@@ -96,7 +96,7 @@ export default function HistogramaConfianza({
             ))}
             {sinConfianza > 0 && (
               <tr>
-                <th scope="row">Sin confianza</th>
+                <th scope="row">Sin dato de certeza</th>
                 <td className="num">{sinConfianza}</td>
                 <td colSpan={3} />
               </tr>
@@ -105,7 +105,7 @@ export default function HistogramaConfianza({
         </table>
       }
       leyenda={
-        sinConfianza > 0 ? <p className="muted bloque-nota nota-grafica">{plural(sinConfianza, 'análisis no trae', 'análisis no traen')} confianza y no aparece.</p> : null
+        sinConfianza > 0 ? <p className="muted bloque-nota nota-grafica">{plural(sinConfianza, 'análisis no trae', 'análisis no traen')} dato de certeza y no aparece.</p> : null
       }
     >
       <div className="grafica-lienzo" ref={lienzo}>
@@ -124,7 +124,7 @@ export default function HistogramaConfianza({
             </text>
           ))}
           <text className="eje eje-titulo" x={M.izquierda + util / 2} y={ALTO - 3} textAnchor="middle">
-            Confianza (%)
+            Certeza (%)
           </text>
           {decenas.map((d, i) => {
             const bx = x(d.indice)!
@@ -136,7 +136,7 @@ export default function HistogramaConfianza({
                 className={`marca${resaltada === i ? ' marca-activa' : ''}`}
                 role="button"
                 aria-pressed={elegida === d.indice}
-                aria-label={`Confianza ${d.etiqueta}: ${plural(d.total, 'análisis', 'análisis')}${d.total ? `. ${desglose(d.conteos, ETIQUETA_RESULTADO)}` : ''}.`}
+                aria-label={`Certeza ${d.etiqueta}: ${plural(d.total, 'análisis', 'análisis')}${d.total ? `. ${desglose(d.conteos, ETIQUETA_RESULTADO)}` : ''}.`}
                 {...roving.props(i)}
                 {...eventos(i)}
                 onClick={() => onElegir(d.indice)}
@@ -151,7 +151,7 @@ export default function HistogramaConfianza({
         </svg>
         {activa && (
           <Tooltip x={x(activa.indice)! + x.bandwidth() / 2} y={y(activa.total)} ancho={ancho} alto={ALTO}>
-            <strong>Confianza {activa.etiqueta}</strong>
+            <strong>Certeza {activa.etiqueta}</strong>
             <span>
               {plural(activa.total, 'análisis', 'análisis')}
               {total ? ` (${Math.round((activa.total / total) * 100)} % del total)` : ''}

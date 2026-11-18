@@ -58,7 +58,7 @@ describe('resumen', () => {
     const totales = screen.getByRole('list', { name: 'Totales' })
     expect(within(totales).getByText('Árboles').nextSibling).toHaveTextContent('3')
     expect(within(totales).getByText('Análisis').nextSibling).toHaveTextContent('5')
-    expect(screen.getByText(/Última captura: 8 oct 2026, 05:00/)).toBeInTheDocument()
+    expect(screen.getByText(/Última foto: 8 oct 2026, 05:00/)).toBeInTheDocument()
   })
 
   it('pluraliza y dice cuando no hay infestación', async () => {
@@ -79,12 +79,12 @@ describe('resumen', () => {
     abrir('#/')
     expect(
       await screen.findByRole('img', {
-        name: 'Resultado de los análisis: Sano 2 (40 %), Infestado 2 (40 %), No determinado 1 (20 %)',
+        name: 'Resultado de los análisis: Sano 2 (40 %), Infestado 2 (40 %), Sin diagnóstico claro 1 (20 %)',
       }),
     ).toBeInTheDocument()
     const tabla = screen.getByRole('table', { name: 'Resultado de los análisis' })
     expect(within(tabla).getByRole('row', { name: 'Infestado 2 40 %' })).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: /^Cromático promedio del follaje: Sano 55 %, Regular 15 %, Dañado 7.5 %, Incierto 22.5 %$/ })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /^Color promedio del follaje: Sano 55 %, Regular 15 %, Dañado 7.5 %, Incierto 22.5 %$/ })).toBeInTheDocument()
   })
 
   it('un error deja reintentar', async () => {
@@ -112,7 +112,7 @@ describe('análisis', () => {
     expect(filas[4]).toHaveTextContent('91 %')
     expect(filas[4]).toHaveTextContent('Galerías visibles')
     expect(within(filas[0]).getByText('Con error')).toBeInTheDocument()
-    expect(within(filas[3]).getByRole('img', { name: 'Cromático: Sano 80 %, Regular 10 %, Dañado 5 %, Incierto 5 %' })).toBeInTheDocument()
+    expect(within(filas[3]).getByRole('img', { name: 'Color del follaje: Sano 80 %, Regular 10 %, Dañado 5 %, Incierto 5 %' })).toBeInTheDocument()
     expect(llamadasA(fetchMock, '/analisis')).toEqual(['/api/analisis?limite=100'])
   })
 
@@ -122,7 +122,7 @@ describe('análisis', () => {
     abrir('#/analisis')
     const user = userEvent.setup()
     await screen.findByRole('table', { name: 'Análisis' })
-    await user.selectOptions(screen.getByLabelText('Tipo'), 'follaje')
+    await user.selectOptions(screen.getByLabelText('Tipo de foto'), 'follaje')
     await user.selectOptions(screen.getByLabelText('Resultado'), 'infestado')
     await user.type(screen.getByLabelText('Desde'), '2026-10-04')
     await user.type(screen.getByLabelText('Hasta'), '2026-10-07')
@@ -154,10 +154,10 @@ describe('análisis', () => {
     abrir('#/analisis')
     const user = userEvent.setup()
     await screen.findByText('Ningún análisis coincide con estos filtros.')
-    await user.selectOptions(screen.getByLabelText('Tipo'), 'corteza')
+    await user.selectOptions(screen.getByLabelText('Tipo de foto'), 'corteza')
     await user.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
     await user.click(await screen.findByRole('button', { name: 'Quitar filtros' }))
-    expect(screen.getByLabelText('Tipo')).toHaveValue('')
+    expect(screen.getByLabelText('Tipo de foto')).toHaveValue('')
     await waitFor(() => expect(llamadasA(fetchMock, '/analisis').at(-1)).toBe('/api/analisis?limite=100'))
   })
 })
@@ -181,7 +181,7 @@ describe('mapa', () => {
     expect(await within(plano).findByRole('button', { name: 'Oyamel del lago (Abies religiosa): Infestado' })).toBeInTheDocument()
     expect(within(plano).getByRole('button', { name: 'Ahuehuete de la calzada (Taxodium mucronatum): Sano' })).toBeInTheDocument()
     expect(within(plano).getByRole('button', { name: 'Pino del cerro (Pinus hartwegii): Sin análisis' })).toBeInTheDocument()
-    expect(within(plano).getByRole('button', { name: 'Zona lago menor, radio 50 m: No determinado' })).toBeInTheDocument()
+    expect(within(plano).getByRole('button', { name: 'Zona lago menor, radio 50 m: Sin diagnóstico claro' })).toBeInTheDocument()
     expect(within(plano).getByRole('button', { name: 'Zona calzada, sin radio: Infestado' })).toBeInTheDocument()
   })
 
@@ -192,11 +192,11 @@ describe('mapa', () => {
     })
     abrir('#/mapa')
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Zona lago menor, radio 50 m: No determinado' }))
+    await user.click(await screen.findByRole('button', { name: 'Zona lago menor, radio 50 m: Sin diagnóstico claro' }))
     const detalle = screen.getByRole('region', { name: 'Zona lago menor' })
     const items = await within(detalle).findAllByRole('listitem')
     expect(items).toHaveLength(2)
-    expect(items[0]).toHaveTextContent('No determinado')
+    expect(items[0]).toHaveTextContent('Sin diagnóstico claro')
     expect(items[1]).toHaveTextContent('Sano')
     expect(llamadasA(fetchMock, '/analisis')).toEqual(['/api/analisis?zona=c1&limite=50'])
     await user.click(within(detalle).getByRole('button', { name: 'Ver todos los puntos' }))
