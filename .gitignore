@@ -13,3 +13,6 @@ playwright-report/
 
 # Evidencia E2E (pnpm test:e2e:evidencia)
 evidencia-e2e/
+
+# MkDocs
+/site/
