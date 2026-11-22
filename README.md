@@ -6,6 +6,8 @@ b-sheet); lo único que escribe es la gestión de cuentas de Administración.
 
 > **Manual de usuario:** Consulta la guía paso a paso de la plataforma web en [docs/Manual_Usuario_Plataforma_Web.md](docs/Manual_Usuario_Plataforma_Web.md).
 
+> **Documentación navegable (MkDocs):** `python3.12 -m venv .venv && .venv/bin/pip install -r requirements-docs.txt` (Python 3.10 o más) y luego `.venv/bin/mkdocs serve` (http://127.0.0.1:8000). Las páginas de `docs/` incluyen secciones de este README: se edita aquí.
+
 | Ruta | Pantalla | Datos |
 |---|---|---|
 | `#/login` | Inicio de sesión; guarda el JWT y los `roles` en `sessionStorage` | `POST /auth/login` |
