@@ -6,7 +6,7 @@ import FotoEvidencia, { IconoFoto } from '../components/FotoEvidencia'
 import GraficaConfianza from '../components/GraficaConfianza'
 import MapaCampo, { type CapturaMapa, type ZonaMapa } from '../components/MapaCampo'
 import { Estado, TONO_RESULTADO, TONO_SINCRONIZACION } from '../components/Simbolo'
-import { Autor, Observaciones } from '../components/Campo'
+import { Autor, Observaciones, ObservacionesLugar } from '../components/Campo'
 import { buscarAnalisis, getArbol, getZona, type Analisis, type DatosSeguimiento, type Persona, type Seguidor, type TipoImagen } from '../lib/api'
 import { ETIQUETA_NIVEL, nivelConfianza, seguimientoDe } from '../lib/analisis'
 import { fraseResultado, fraseSeguimiento, partesFollaje, queHacer, TITULO_FOLLAJE } from '../lib/lenguaje'
@@ -139,7 +139,7 @@ function Contenido({ punto, analisis, registro }: { punto: Punto; analisis: Anal
             </dd>
           </div>
         </dl>
-        {punto.descripcion && <p className="detalle-descripcion">{punto.descripcion}</p>}
+        <ObservacionesLugar tipo={punto.tipo} descripcion={punto.descripcion} registradoPor={registro.registradoPor} className="detalle-descripcion" />
         {reciente && (
           <div className="que-hacer">
             <h2>Qué hacer</h2>

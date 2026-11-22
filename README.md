@@ -4,6 +4,8 @@ SPA (Vite + React 19 + TypeScript, sin librerías de UI; mapa con MapLibre GL JS
 monitoreo fitosanitario que la app móvil captura. Las pantallas de consulta son de solo lectura (`GET` a
 b-sheet); lo único que escribe es la gestión de cuentas de Administración.
 
+> **Manual de usuario:** Consulta la guía paso a paso de la plataforma web en [docs/Manual_Usuario_Plataforma_Web.md](docs/Manual_Usuario_Plataforma_Web.md).
+
 | Ruta | Pantalla | Datos |
 |---|---|---|
 | `#/login` | Inicio de sesión; guarda el JWT y los `roles` en `sessionStorage` | `POST /auth/login` |

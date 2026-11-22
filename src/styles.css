@@ -2317,6 +2317,7 @@ text.eje {
 .foto {
   width: min(56rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
   padding: 1rem 1.25rem 1.25rem;
   color: var(--text);
   background: var(--surface);
@@ -2361,6 +2362,10 @@ text.eje {
 
 .foto-imagen.foto-lista {
   opacity: 1;
+}
+
+.foto-observaciones {
+  margin-top: 0.875rem;
 }
 
 /* ---- Gestión de cuentas (Administración) ---------------------------------------------------- */
@@ -3827,10 +3832,41 @@ text.eje-valor {
 
 .autor {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.3rem;
   font-size: var(--t-xs);
   color: var(--text);
+}
+
+.autor-dispositivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-style: normal;
+  color: var(--muted);
+}
+
+.tabla-dispositivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.15rem;
+  font-size: var(--t-xs);
+  color: var(--muted);
+}
+
+.tabla-dispositivo .icono {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.foto-autor {
+  margin: 0.5rem 0 0;
 }
 
 .autor .icono {
@@ -3850,6 +3886,15 @@ text.eje-valor {
 .actividad-autor {
   display: flex;
   margin-top: 0.125rem;
+}
+
+.actividad-observaciones {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: var(--t-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .historial-autor,

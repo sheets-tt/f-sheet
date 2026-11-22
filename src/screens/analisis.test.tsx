@@ -142,6 +142,7 @@ describe('Análisis: vista de tarjetas, agrupación y detalle', () => {
     expect(e1).toHaveTextContent('Certeza del diagnóstico: alta · 91 %')
     // Quién la subió y las observaciones, marcadas como escritas en campo; e5 no tiene autor registrado.
     expect(e1).toHaveTextContent('Subido por Usuario Demo')
+    expect(e1).toHaveTextContent('Google Pixel 7 Pro · b71f')
     expect(e1).toHaveTextContent('Observaciones de campo · escritas por Usuario Demo')
     expect(within(tarjetas).getAllByRole('article')[0]).toHaveTextContent('Autor no registrado')
     expect(within(e1).getByRole('link', { name: 'Oyamel del lago' })).toHaveAttribute('href', '#/arbol/b1')
@@ -187,6 +188,7 @@ describe('Análisis: vista de tarjetas, agrupación y detalle', () => {
     expect(dialogo).toHaveTextContent('Qué hacerSigue con el monitoreo de costumbre.')
     expect(dialogo).toHaveTextContent('Certeza del diagnósticoAlta (95 %)')
     expect(dialogo).toHaveTextContent('Subido porUsuario Demo')
+    expect(dialogo).toHaveTextContent('DispositivoGoogle Pixel 7 Pro · b71f')
     expect(dialogo).toHaveTextContent('Envío desde el móvilEnviado')
     expect(dialogo).toHaveTextContent('Sin observaciones de campo')
     // Los valores crudos quedan en «Detalle técnico», plegado.

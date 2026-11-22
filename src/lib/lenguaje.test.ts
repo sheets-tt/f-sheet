@@ -5,6 +5,7 @@ import {
   ETIQUETA_CERTEZA,
   ETIQUETA_ENVIO,
   ETIQUETA_RESULTADO,
+  etiquetaDispositivo,
   fraseResultado,
   fraseSeguimiento,
   observacionesDe,
@@ -60,6 +61,9 @@ describe('lenguaje para agrónomos', () => {
     expect(observacionesDe({ observaciones: '  Galerías visibles \n' })).toBe('Galerías visibles')
     expect(observacionesDe({ observaciones: '   ' })).toBeNull()
     expect(observacionesDe({ observaciones: null })).toBeNull()
+    expect(etiquetaDispositivo({ id: 'd1', nombre: 'Google Pixel 7 Pro', codigo: 'b71f' })).toBe('Google Pixel 7 Pro · b71f')
+    expect(etiquetaDispositivo({ id: 'd2', nombre: 'Pixel 7 Pro', codigo: null })).toBe('Pixel 7 Pro')
+    expect(etiquetaDispositivo(null)).toBeNull()
   })
 
   it('cuántas personas le dan seguimiento', () => {

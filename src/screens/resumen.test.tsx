@@ -243,5 +243,12 @@ describe('Resumen: re-QA', () => {
     expect(within(lista).getByText('Análisis').parentElement).toHaveTextContent('Análisis500 o mássin comparar (periodo actual incompleto)')
     expect(screen.getByText(/este periodo puede estar incompleto y no se compara/)).toBeInTheDocument()
   })
+
+  it('muestra el resumen de observaciones en Actividad reciente cuando existen', async () => {
+    await abrir()
+    const actividad = await screen.findByRole('region', { name: 'Actividad reciente' })
+    expect(actividad).toHaveTextContent('Poca luz')
+    expect(actividad).toHaveTextContent('Galerías visibles')
+  })
 })
 

@@ -58,6 +58,7 @@ describe('seguimiento de un árbol', () => {
     abrir('#/arbol/b1')
     const ficha = await screen.findByRole('region', { name: 'Estado actual' })
     expect(ficha).toHaveTextContent('Infestado')
+    expect(ficha).toHaveTextContent('Observaciones del árbol · registradas por Usuario Demo')
     expect(ficha).toHaveTextContent('Junto al lago menor')
     expect(ficha).toHaveTextContent(/Análisis registrados\s*2\s*1 con infestación/)
 

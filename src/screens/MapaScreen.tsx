@@ -4,10 +4,10 @@ import { EsqueletoLista, EsqueletoMapa } from '../components/Esqueleto'
 import FotoEvidencia, { IconoFoto } from '../components/FotoEvidencia'
 import MapaCampo, { type ControlMapa, type MarcaMapa, type ZonaMapa } from '../components/MapaCampo'
 import Simbolo, { Estado, TONO_RESULTADO, type Tono } from '../components/Simbolo'
-import { buscarAnalisis, getArboles, getZonas, type Analisis, type Arbol, type UltimoAnalisis, type Zona } from '../lib/api'
+import { buscarAnalisis, getArboles, getZonas, type Analisis, type Arbol, type Persona, type UltimoAnalisis, type Zona } from '../lib/api'
 import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha, formatPorcentaje, haceCuanto } from '../lib/format'
 import { ETIQUETA_NIVEL, nivelConfianza } from '../lib/analisis'
-import { Autor, Observaciones } from '../components/Campo'
+import { Autor, Observaciones, ObservacionesLugar } from '../components/Campo'
 import { formatCoordenadas, limitesDe, type Limites } from '../lib/geo'
 import { hrefDe, navigate, useRutaId } from '../lib/router'
 import { useCarga } from '../lib/useCarga'
@@ -26,6 +26,7 @@ export interface Punto {
   ultimo: UltimoAnalisis | null
   descripcion: string | null
   fechaRegistro: string | null
+  registradoPor?: Persona | null
 }
 
 export function tonoDe(p: { ultimo: UltimoAnalisis | null }): Tono {
@@ -41,7 +42,7 @@ export function puntoDeArbol(a: Arbol): Punto {
     clave: `a-${a.id}`, tipo: 'arbol', id: a.id, nombre: a.nombreEspecifico, detalle: a.especie,
     etiqueta: `${a.nombreEspecifico} (${a.especie}): ${estadoDe({ ultimo: a.ultimoAnalisis })}`,
     lat: a.latitud, lon: a.longitud, radioMetros: null, ultimo: a.ultimoAnalisis,
-    descripcion: a.descripcion, fechaRegistro: a.fechaRegistro,
+    descripcion: a.descripcion, fechaRegistro: a.fechaRegistro, registradoPor: a.registradoPor,
   }
 }
 
@@ -51,7 +52,7 @@ export function puntoDeZona(z: Zona): Punto {
     clave: `z-${z.id}`, tipo: 'zona', id: z.id, nombre: z.nombreZona, detalle: `Zona de follaje, ${radio}`,
     etiqueta: `${z.nombreZona}, ${radio}: ${estadoDe({ ultimo: z.ultimoAnalisis })}`,
     lat: z.latitudCentro, lon: z.longitudCentro, radioMetros: z.radioMetros, ultimo: z.ultimoAnalisis,
-    descripcion: z.descripcion, fechaRegistro: z.fechaRegistro,
+    descripcion: z.descripcion, fechaRegistro: z.fechaRegistro, registradoPor: z.registradoPor,
   }
 }
 
@@ -356,7 +357,7 @@ function Detalle({ punto, onCerrar, tomarFoco }: { punto: Punto; onCerrar: () =>
         <Estado tono={tonoDe(punto)}>{estadoDe(punto)}</Estado>
         {punto.ultimo && <span className="muted">{haceCuanto(punto.ultimo.fechaCaptura)}</span>}
       </div>
-      {punto.descripcion && <p className="detalle-descripcion">{punto.descripcion}</p>}
+      <ObservacionesLugar tipo={punto.tipo} descripcion={punto.descripcion} registradoPor={punto.registradoPor} className="detalle-descripcion" />
       <p className="muted detalle-registro">
         Registrado el {formatFecha(punto.fechaRegistro)}
         {punto.lat !== null && punto.lon !== null && (

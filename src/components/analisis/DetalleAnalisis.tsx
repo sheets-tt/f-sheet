@@ -5,6 +5,7 @@ import { ETIQUETA_TIPO, formatFecha, formatPorcentaje } from '../../lib/format'
 import { hrefDe } from '../../lib/router'
 import {
   ETIQUETA_ENVIO,
+  etiquetaDispositivo,
   fraseResultado,
   partesFollaje,
   queHacer,
@@ -14,7 +15,7 @@ import {
   TITULO_FOLLAJE,
 } from '../../lib/lenguaje'
 import BarraSegmentada from '../BarraSegmentada'
-import { Autor, Observaciones } from '../Campo'
+import { Autor, Dispositivo, Observaciones } from '../Campo'
 import Dialogo from '../Dialogo'
 import { ImagenEvidencia } from '../FotoEvidencia'
 import { Estado, TONO_RESULTADO, TONO_SINCRONIZACION } from '../Simbolo'
@@ -98,6 +99,14 @@ export default function DetalleAnalisis({ analisis: a, todos, nombres, onCambiar
                 <Autor analisis={a} soloNombre />
               </dd>
             </div>
+            {etiquetaDispositivo(a.dispositivo) && (
+              <div>
+                <dt>Dispositivo</dt>
+                <dd>
+                  <Dispositivo analisis={a} />
+                </dd>
+              </div>
+            )}
             <div>
               <dt>{TITULO_ENVIO}</dt>
               <dd>
