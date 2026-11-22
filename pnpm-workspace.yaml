@@ -1,0 +1,5 @@
+overrides:
+  # Vulnerabilidades (OSV) en dependencias de desarrollo de ESLint; quitar cuando eslint y
+  # eslint-plugin-react-hooks ya traigan estas versiones.
+  minimatch: 11.0.5
+  zod: 4.6.6
