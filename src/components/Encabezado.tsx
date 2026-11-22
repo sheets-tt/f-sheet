@@ -46,9 +46,9 @@ export default function Encabezado({ ruta, esAdmin, username, onCerrarSesion }: 
 
   return (
     <header className="riel">
-      <a className="brand" href={hrefDe('resumen')} aria-label="Sheets TT, ir al resumen">
+      <a className="brand" href={hrefDe('resumen')} aria-label="Desco, ir al resumen">
         <Marca />
-        <span className="brand-texto">Sheets&nbsp;TT</span>
+        <span className="brand-texto">Desco</span>
       </a>
       <nav aria-label="Secciones" className="secciones">
         {SECCIONES.filter((s) => !s.soloAdmin || esAdmin).map((s) => (

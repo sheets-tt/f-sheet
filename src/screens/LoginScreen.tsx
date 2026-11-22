@@ -18,7 +18,7 @@ export default function LoginScreen({ onLoggedIn, notice, usuarioInicial = '' }:
   const errorRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    document.title = 'Iniciar sesión · Sheets TT'
+    document.title = 'Iniciar sesión · Desco'
     if (usuarioInicial) document.getElementById('password')?.focus()
     else userRef.current?.focus()
     // Solo al montar: después el foco lo maneja quien escribe.
