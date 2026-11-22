@@ -16,3 +16,4 @@ evidencia-e2e/
 
 # MkDocs
 /site/
+__pycache__/

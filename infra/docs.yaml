@@ -1,0 +1,246 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Documentación de sheets-tt (MkDocs de b-sheet y f-sheet): bucket S3 privado (OAC) + CloudFront con
+  dominio propio. Restringida: solo responde a peticiones que llegan por Cloudflare (docs.formyke.com,
+  proxied, detrás de Cloudflare Access), que agrega la cabecera secreta x-docs-origen. Pedirla directo a
+  *.cloudfront.net da 403. Rutas: /b-sheet/ y /f-sheet/ (los workflows docs.yml publican desde main).
+
+Parameters:
+  AliasDomainName:
+    Type: String
+    Default: docs.formyke.com
+    Description: Dominio de la documentación (CNAME proxied en Cloudflare hacia esta distribución).
+  AcmCertificateArn:
+    Type: String
+    AllowedPattern: '^arn:aws:acm:us-east-1:[0-9]{12}:certificate/.+$'
+    Description: Certificado ACM en us-east-1 para AliasDomainName (Cloudflare usa SSL "Full (strict)").
+  OrigenSecreto:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    AllowedPattern: '^[A-Za-z0-9]+$'
+    Description: >-
+      Valor de la cabecera x-docs-origen que Cloudflare agrega (Transform Rule). Sin ella, 403.
+      Solo letras y números, 32 o más (p. ej. openssl rand -hex 24).
+  RolGithubBSheet:
+    Type: String
+    Default: github-actions-sheets
+    Description: Rol OIDC de b-sheet; puede publicar solo en /b-sheet/.
+  RolGithubFSheet:
+    Type: String
+    Default: github-f-sheet-ci
+    Description: Rol OIDC de f-sheet; puede publicar solo en /f-sheet/.
+
+Resources:
+  DocsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  DocsOac:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AWS::StackName}-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  DocsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DocsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: SoloCloudFront
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${DocsBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+          - Sid: SoloHttps
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt DocsBucket.Arn
+              - !Sub '${DocsBucket.Arn}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  # Una sola función de entrada: (1) exige la cabecera que pone Cloudflare, (2) "/" lleva a f-sheet,
+  # (3) las URLs de MkDocs ("…/arquitectura/") se sirven como "…/arquitectura/index.html" (S3 con OAC no
+  # tiene documentos índice por carpeta).
+  DocsFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${AWS::StackName}-entrada'
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Documentación sheets-tt (origen Cloudflare + índices de MkDocs)
+        Runtime: cloudfront-js-2.0
+      FunctionCode: !Sub |
+        function handler(event) {
+          var req = event.request;
+          var h = req.headers['x-docs-origen'];
+          if (!h || h.value !== '${OrigenSecreto}') {
+            return { statusCode: 403, statusDescription: 'Forbidden' };
+          }
+          var uri = req.uri;
+          if (uri === '/' || uri === '') {
+            return { statusCode: 302, statusDescription: 'Found', headers: { location: { value: '/f-sheet/' } } };
+          }
+          if (uri === '/b-sheet' || uri === '/f-sheet') {
+            return { statusCode: 301, statusDescription: 'Moved Permanently', headers: { location: { value: uri + '/' } } };
+          }
+          if (uri.endsWith('/')) {
+            req.uri = uri + 'index.html';
+          } else if (uri.split('/').pop().indexOf('.') === -1) {
+            req.uri = uri + '/index.html';
+          }
+          return req;
+        }
+
+  # MkDocs Material necesita scripts y estilos inline (tema, búsqueda): CSP propia, más abierta que la
+  # de la web pero sin orígenes externos (las fuentes de Google están desactivadas en mkdocs.yml).
+  DocsHeaders:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub '${AWS::StackName}-cabeceras'
+        SecurityHeadersConfig:
+          ContentSecurityPolicy:
+            Override: true
+            ContentSecurityPolicy: >-
+              default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';
+              img-src 'self' data:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:;
+              object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: strict-origin-when-cross-origin
+            Override: true
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 31536000
+            IncludeSubdomains: false
+            Override: true
+        CustomHeadersConfig:
+          Items:
+            - Header: X-Robots-Tag
+              Value: noindex, nofollow
+              Override: true
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub 'sheets-tt docs (${AWS::StackName})'
+        Aliases: [!Ref AliasDomainName]
+        ViewerCertificate:
+          AcmCertificateArn: !Ref AcmCertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: docs-s3
+            DomainName: !GetAtt DocsBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt DocsOac.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: docs-s3
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          # CachingOptimized (política administrada de AWS)
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          ResponseHeadersPolicyId: !Ref DocsHeaders
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt DocsFunction.FunctionMetadata.FunctionARN
+        CustomErrorResponses:
+          # Con OAC, una ruta inexistente responde 403 desde S3: se muestra como 404.
+          - ErrorCode: 403
+            ResponseCode: 404
+            ResponsePagePath: /f-sheet/404.html
+            ErrorCachingMinTTL: 60
+
+  # Cada repo publica solo en su carpeta (OIDC, solo desde main: así confían ya los dos roles).
+  PublicarBSheet:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: publicar-docs-b-sheet
+      Roles: [!Ref RolGithubBSheet]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: s3:ListBucket
+            Resource: !GetAtt DocsBucket.Arn
+            Condition:
+              StringLike:
+                s3:prefix: ['b-sheet/*', 'b-sheet']
+          - Effect: Allow
+            Action: [s3:PutObject, s3:DeleteObject]
+            Resource: !Sub '${DocsBucket.Arn}/b-sheet/*'
+          - Effect: Allow
+            Action: cloudfront:CreateInvalidation
+            Resource: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+
+  PublicarFSheet:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: publicar-docs-f-sheet
+      Roles: [!Ref RolGithubFSheet]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: s3:ListBucket
+            Resource: !GetAtt DocsBucket.Arn
+            Condition:
+              StringLike:
+                s3:prefix: ['f-sheet/*', 'f-sheet']
+          - Effect: Allow
+            Action: [s3:PutObject, s3:DeleteObject]
+            Resource: !Sub '${DocsBucket.Arn}/f-sheet/*'
+          - Effect: Allow
+            Action: cloudfront:CreateInvalidation
+            Resource: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+
+Outputs:
+  BucketName:
+    Description: Bucket de la documentación (variable DOCS_BUCKET en GitHub).
+    Value: !Ref DocsBucket
+  DistributionId:
+    Description: Distribución (variable DOCS_DISTRIBUTION_ID en GitHub).
+    Value: !Ref Distribution
+  DistributionDomainName:
+    Description: Destino del CNAME proxied docs en Cloudflare.
+    Value: !GetAtt Distribution.DomainName
+  DocsUrl:
+    Value: !Sub 'https://${AliasDomainName}/'
