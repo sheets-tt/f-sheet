@@ -80,11 +80,11 @@ export default function App() {
       <div className="acceso">
         <a className="skip-link" href="#main">Saltar al contenido</a>
         {/* El único momento animado sin que nadie lo pida: la galería se excava al llegar. */}
-        <aside className="acceso-arte" aria-label="Sheets TT">
+        <aside className="acceso-arte" aria-label="Desco">
           <Galeria animada className="acceso-galeria" />
           <span className="brand brand-claro">
             <Marca />
-            Sheets&nbsp;TT
+            Desco
           </span>
           <div className="acceso-texto">
             <p className="acceso-titular">Sanidad del bosque, árbol por árbol.</p>

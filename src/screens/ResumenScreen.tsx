@@ -52,7 +52,7 @@ export default function ResumenScreen({ esAdmin = false }: Props) {
   }, [])
 
   useEffect(() => {
-    document.title = 'Resumen · Sheets TT'
+    document.title = 'Resumen · Desco'
   }, [])
 
   return (

@@ -87,7 +87,7 @@ export default function MapaScreen() {
   const seleccion = useRutaId()
 
   useEffect(() => {
-    document.title = 'Mapa · Sheets TT'
+    document.title = 'Mapa · Desco'
   }, [])
 
   const puntos = useMemo(
