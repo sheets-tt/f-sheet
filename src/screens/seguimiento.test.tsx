@@ -49,7 +49,7 @@ describe('seguimiento de un árbol', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Oyamel del lago' })).toBeInTheDocument()
     expect(llamadasA(fetchMock, '/arboles/b1')).toHaveLength(1)
     expect(llamadasA(fetchMock, '/analisis')).toEqual(['/api/analisis?arbol=b1&limite=200'])
-    await waitFor(() => expect(document.title).toBe('Oyamel del lago · Sheets TT'))
+    await waitFor(() => expect(document.title).toBe('Oyamel del lago · Desco'))
   })
 
   it('muestra el estado actual, la línea de tiempo y el cambio de resultado', async () => {

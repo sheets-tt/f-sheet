@@ -37,7 +37,7 @@ export default function AdminScreen({ username, onCorreoPropioCambiado }: Props)
   const ayudaPropiaId = useId()
 
   useEffect(() => {
-    document.title = 'Administración · Sheets TT'
+    document.title = 'Administración · Desco'
   }, [])
 
   const lista = editadas ?? cuentas.datos

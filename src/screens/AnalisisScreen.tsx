@@ -118,7 +118,7 @@ export default function AnalisisScreen() {
   const vista: Vista = estado.vista ?? vistaGuardada()
 
   useEffect(() => {
-    document.title = 'Análisis · Sheets TT'
+    document.title = 'Análisis · Desco'
   }, [])
 
   // URL canónica: valores inválidos (fechas que no existen, cajas repetidas o desconocidas) se

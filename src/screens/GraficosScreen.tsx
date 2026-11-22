@@ -67,7 +67,7 @@ export default function GraficosScreen() {
   )
 
   useEffect(() => {
-    document.title = 'Gráficos · Sheets TT'
+    document.title = 'Gráficos · Desco'
   }, [])
 
   return (

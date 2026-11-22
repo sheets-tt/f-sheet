@@ -47,7 +47,7 @@ export default function SeguimientoScreen({ tipo, id }: Props) {
   )
 
   useEffect(() => {
-    document.title = `${carga.datos?.punto.nombre ?? 'Seguimiento'} · Sheets TT`
+    document.title = `${carga.datos?.punto.nombre ?? 'Seguimiento'} · Desco`
   }, [carga.datos])
 
   return (
