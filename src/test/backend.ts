@@ -21,16 +21,17 @@ export const ZONAS: Zona[] = [
  */
 export const DEMO: Persona = { id: 'a1', nombre: 'Usuario Demo' }
 export const CAMPO: Persona = { id: 'a4', nombre: 'Experta de Campo Demo' }
+export const DISP_PIXEL = { id: 'd1', nombre: 'Google Pixel 7 Pro', codigo: 'b71f' }
 
-const base = { autor: null, tieneEvidencia: true, latitudCaptura: null, longitudCaptura: null, fechaSincronizacion: null, observaciones: null, idArbol: null, idZona: null, cromatico: null }
+const base = { autor: null, dispositivo: null, tieneEvidencia: true, latitudCaptura: null, longitudCaptura: null, fechaSincronizacion: null, observaciones: null, idArbol: null, idZona: null, cromatico: null }
 
 /** Orden del backend: captura más reciente primero (e5, e4, e2, e3, e1). */
 export const ANALISIS: Analisis[] = [
   { ...base, id: 'e5', tieneEvidencia: false, fechaCaptura: '2026-10-08T11:00:00Z', estadoSincronizacion: 'error', tipoImagen: 'follaje', resultadoClasificacion: 'infestado', confianza: 0.77, idZona: 'c2' },
   { ...base, id: 'e4', fechaCaptura: '2026-10-07T09:00:00Z', estadoSincronizacion: 'pendiente', tipoImagen: 'follaje', resultadoClasificacion: 'no_determinado', confianza: 0.42, observaciones: 'Poca luz', idZona: 'c1', autor: CAMPO, cromatico: { pctSano: 30, pctRegular: 20, pctDanado: 10, pctIncierto: 40 } },
-  { ...base, id: 'e2', fechaCaptura: '2026-10-06T10:00:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'corteza', resultadoClasificacion: 'sano', confianza: 0.88, idArbol: 'b2', autor: DEMO },
-  { ...base, id: 'e3', fechaCaptura: '2026-10-04T12:00:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'follaje', resultadoClasificacion: 'sano', confianza: 0.95, idZona: 'c1', autor: DEMO, cromatico: { pctSano: 80, pctRegular: 10, pctDanado: 5, pctIncierto: 5 } },
-  { ...base, id: 'e1', fechaCaptura: '2026-10-03T15:10:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'corteza', resultadoClasificacion: 'infestado', confianza: 0.91, observaciones: 'Galerías visibles', idArbol: 'b1', autor: DEMO },
+  { ...base, id: 'e2', fechaCaptura: '2026-10-06T10:00:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'corteza', resultadoClasificacion: 'sano', confianza: 0.88, idArbol: 'b2', autor: DEMO, dispositivo: DISP_PIXEL },
+  { ...base, id: 'e3', fechaCaptura: '2026-10-04T12:00:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'follaje', resultadoClasificacion: 'sano', confianza: 0.95, idZona: 'c1', autor: DEMO, dispositivo: DISP_PIXEL, cromatico: { pctSano: 80, pctRegular: 10, pctDanado: 5, pctIncierto: 5 } },
+  { ...base, id: 'e1', fechaCaptura: '2026-10-03T15:10:00Z', estadoSincronizacion: 'sincronizado', tipoImagen: 'corteza', resultadoClasificacion: 'infestado', confianza: 0.91, observaciones: 'Galerías visibles', idArbol: 'b1', autor: DEMO, dispositivo: DISP_PIXEL },
 ]
 
 export const ESTADISTICAS: Estadisticas = {

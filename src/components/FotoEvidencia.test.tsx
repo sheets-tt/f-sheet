@@ -41,6 +41,7 @@ describe('FotoEvidencia en un navegador real', () => {
       </StrictMode>,
     )
     expect(await screen.findByRole('img', { name: /Foto de corteza/ })).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toHaveTextContent('Galerías visibles')
     expect(screen.getByRole('dialog')).toHaveAttribute('open')
     expect(onCerrar).not.toHaveBeenCalled()
   })

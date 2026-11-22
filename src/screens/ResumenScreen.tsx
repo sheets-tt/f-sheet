@@ -10,7 +10,7 @@ import { ETIQUETA_RESULTADO, ETIQUETA_SINCRONIZACION, ETIQUETA_TIPO, formatFecha
 import { accesos, atencion, cambio, hrefDetalle, indicadoresPeriodo, lugaresInfestados, recientes, type Medida, type PuntoAtencion } from '../lib/resumen'
 import { hrefDe } from '../lib/router'
 import { useCarga, type Carga } from '../lib/useCarga'
-import { partesFollaje, SENTIDO_FOLLAJE, TITULO_ENVIO } from '../lib/lenguaje'
+import { observacionesDe, partesFollaje, SENTIDO_FOLLAJE, TITULO_ENVIO } from '../lib/lenguaje'
 import { Autor } from '../components/Campo'
 
 // Las gráficas (d3) en su propio chunk: los indicadores y la atención no esperan a que llegue.
@@ -414,6 +414,7 @@ function SeccionActividad({ analisis, lugares }: { analisis: CargaDe<Analisis[]>
         {recientes(analisis.datos).map((x) => {
           const l = lugarDe(x)
           const nombre = l ? (nombres.get(claveLugar(l)) ?? (l.tipo === 'arbol' ? 'Árbol' : 'Zona')) : null
+          const obs = observacionesDe(x)
           return (
             <li key={x.id}>
               <Estado tono={TONO_RESULTADO[x.resultadoClasificacion]}>{ETIQUETA_RESULTADO[x.resultadoClasificacion]}</Estado>
@@ -421,6 +422,11 @@ function SeccionActividad({ analisis, lugares }: { analisis: CargaDe<Analisis[]>
                 {l ? <a href={hrefDe(l.tipo, l.id)}>{nombre}</a> : <span className="muted">Sin árbol ni zona</span>}
                 <span className="muted"> · {ETIQUETA_TIPO[x.tipoImagen]}</span>
                 <Autor analisis={x} className="actividad-autor" />
+                {obs && (
+                  <span className="actividad-observaciones muted">
+                    <q className="observaciones-cita">{obs}</q>
+                  </span>
+                )}
               </span>
               <time className="muted actividad-cuando" dateTime={x.fechaCaptura}>
                 {haceCuanto(x.fechaCaptura)} · {formatFecha(x.fechaCaptura)}

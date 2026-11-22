@@ -190,6 +190,12 @@ export interface Cromatico {
   pctIncierto: number
 }
 
+export interface DispositivoEtiqueta {
+  id: string
+  nombre: string
+  codigo?: string | null
+}
+
 export interface Analisis {
   id: string
   /** Hay foto que se puede pedir con getEvidencia (la ruta interna de S3 no llega a la web). */
@@ -208,6 +214,8 @@ export interface Analisis {
   cromatico: Cromatico | null
   /** Quién subió la foto (cuenta de la app móvil); null o ausente en análisis antiguos. */
   autor?: Persona | null
+  /** Teléfono móvil desde el que se capturó la foto; null o ausente si no quedó registrado. */
+  dispositivo?: DispositivoEtiqueta | null
 }
 
 export interface Estadisticas {

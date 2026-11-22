@@ -3,6 +3,7 @@ import CajasCategoria from '../components/analisis/CajasCategoria'
 import DetalleAnalisis from '../components/analisis/DetalleAnalisis'
 import TarjetaAnalisis from '../components/analisis/TarjetaAnalisis'
 import BarraSegmentada from '../components/BarraSegmentada'
+import { Dispositivo } from '../components/Campo'
 import { ErrorCarga } from '../components/EstadoCarga'
 import { EsqueletoTabla } from '../components/Esqueleto'
 import FotoEvidencia, { IconoFoto } from '../components/FotoEvidencia'
@@ -431,7 +432,10 @@ function TablaAnalisis({
                   {a.confianza !== null && <span className="muted"> · {formatPorcentaje(a.confianza)}</span>}
                 </span>
               </td>
-              <td data-label="Subido por">{a.autor ? a.autor.nombre : <span className="muted">{SIN_AUTOR}</span>}</td>
+              <td data-label="Subido por">
+                {a.autor ? a.autor.nombre : <span className="muted">{SIN_AUTOR}</span>}
+                <Dispositivo analisis={a} comoSubtitulo />
+              </td>
               <td className="observaciones" data-label={TITULO_OBSERVACIONES}>
                 {observacionesDe(a) ? <q className="observaciones-cita">{observacionesDe(a)}</q> : <span className="muted">—</span>}
               </td>

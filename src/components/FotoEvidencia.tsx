@@ -1,7 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { getEvidencia, type Analisis } from '../lib/api'
 import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha } from '../lib/format'
+import { observacionesDe } from '../lib/lenguaje'
 import { useCarga } from '../lib/useCarga'
+import { Autor, Observaciones } from './Campo'
 import { ErrorCarga } from './EstadoCarga'
 
 interface Props {
@@ -43,6 +45,14 @@ export default function FotoEvidencia({ analisis, onCerrar }: Props) {
       </header>
 
       <ImagenEvidencia analisis={analisis} />
+      <p className="foto-autor">
+        <Autor analisis={analisis} />
+      </p>
+      {observacionesDe(analisis) && (
+        <div className="foto-observaciones">
+          <Observaciones analisis={analisis} />
+        </div>
+      )}
     </dialog>
   )
 }

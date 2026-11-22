@@ -107,7 +107,18 @@ export const SIN_AUTOR = 'Autor no registrado'
 /** "Subido por Ana López" o "Autor no registrado" (análisis anteriores a que se guardara). */
 export const subidoPor = (a: Pick<Analisis, 'autor'>) => (a.autor ? `Subido por ${a.autor.nombre}` : SIN_AUTOR)
 
+/** Nombre del dispositivo más un código corto para distinguir modelos iguales (p. ej. "Pixel 7 Pro · b71f"). */
+export function etiquetaDispositivo(d: Analisis['dispositivo']): string | null {
+  const nombre = d?.nombre?.trim()
+  if (!nombre) return null
+  const codigo = d?.codigo?.trim()
+  return codigo ? `${nombre} · ${codigo}` : nombre
+}
+
 export const TITULO_OBSERVACIONES = 'Observaciones de campo'
+
+export const tituloObservacionesLugar = (tipo: 'arbol' | 'zona') =>
+  tipo === 'arbol' ? 'Observaciones del árbol' : 'Observaciones de la zona'
 
 /** Las observaciones sin espacios sobrantes; null si no hay nada escrito. */
 export function observacionesDe(a: Pick<Analisis, 'observaciones'>): string | null {
