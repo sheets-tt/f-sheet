@@ -96,9 +96,11 @@ La plataforma web **Sheets TT** es el módulo de consulta, seguimiento históric
 > - La sesión web se resguarda únicamente mientras la pestaña del navegador permanezca abierta (`sessionStorage`) y el token de acceso tiene una vigencia de **1 hora** (`3,600 s`).
 > - Al cerrar la pestaña o expirar el token, el sistema cerrará la sesión automáticamente por seguridad y mostrará la pantalla de inicio de sesión.
 
-![Pantalla de inicio de sesión web de Sheets TT con campos Usuario, Contraseña y botón Entrar](photos/login.png)
-
-*Figura 1. Pantalla de inicio de sesión de la plataforma web Sheets TT.*
+<p align="center">
+  <img src="photos/login.png" alt="Pantalla de inicio de sesión web de Sheets TT con campos Usuario, Contraseña y botón Entrar" width="600" />
+  <br />
+  <em>Figura 1. Pantalla de inicio de sesión de la plataforma web Sheets TT.</em>
+</p>
 
 ### 2.2 Cierre de Sesión
 
@@ -120,9 +122,11 @@ Una vez iniciada la sesión, la barra de navegación (lateral en escritorio y su
    - **Administración** *(solo visible para rol Administrador)*: Gestión de cuentas de usuario y tabla de dispositivos registrados.
 3. **Bloque de Cuenta:** Muestra sus iniciales, nombre completo y el botón **Cerrar sesión**.
 
-![Interfaz principal de Sheets TT mostrando la barra de navegación lateral y el tablero Resumen con Estado del bosque y Necesita tu atención](photos/resumen.png)
-
-*Figura 2. Anatomía de la interfaz web y vista general de Resumen en Sheets TT.*
+<p align="center">
+  <img src="photos/resumen.png" alt="Interfaz principal de Sheets TT mostrando la barra de navegación lateral y el tablero Resumen con Estado del bosque y Necesita tu atención" width="600" />
+  <br />
+  <em>Figura 2. Anatomía de la interfaz web y vista general de Resumen en Sheets TT.</em>
+</p>
 
 ---
 
@@ -163,9 +167,11 @@ Una vez iniciada la sesión, la barra de navegación (lateral en escritorio y su
 
 **Resultado esperado:** Ubicación espacial clara de ejemplares sanos, indeterminados, infestados y polígonos de follaje a escala.
 
-![Pantalla Mapa con barra de filtros por estado y tipo, marcadores geográficos sobre el mapa y panel lateral Puntos registrados](photos/mapa.png)
-
-*Figura 3. Pantalla Mapa con filtros sanitarios, marcadores y lista lateral de puntos registrados.*
+<p align="center">
+  <img src="photos/mapa.png" alt="Pantalla Mapa con barra de filtros por estado y tipo, marcadores geográficos sobre el mapa y panel lateral Puntos registrados" width="600" />
+  <br />
+  <em>Figura 3. Pantalla Mapa con filtros sanitarios, marcadores y lista lateral de puntos registrados.</em>
+</p>
 
 ---
 
@@ -186,9 +192,11 @@ Una vez iniciada la sesión, la barra de navegación (lateral en escritorio y su
 
 **Resultado esperado:** Trazabilidad cronológica completa de un ejemplar o zona hasta sus 200 análisis más recientes.
 
-![Vista de seguimiento individual de árbol mostrando estado actual, recomendación Qué hacer, mini-mapa de ubicación, gráfica de certeza y evolución del color del follaje](photos/web_seguimiento.png)
-
-*Figura 4. Seguimiento individual de un ejemplar con ubicación, historial de certeza y evolución cromática.*
+<p align="center">
+  <img src="photos/web_seguimiento.png" alt="Vista de seguimiento individual de árbol mostrando estado actual, recomendación Qué hacer, mini-mapa de ubicación, gráfica de certeza y evolución del color del follaje" width="600" />
+  <br />
+  <em>Figura 4. Seguimiento individual de un ejemplar con ubicación, historial de certeza y evolución cromática.</em>
+</p>
 
 ---
 
@@ -209,9 +217,11 @@ Una vez iniciada la sesión, la barra de navegación (lateral en escritorio y su
 
 **Resultado esperado:** Localización precisa de capturas históricas con inspección visual de la evidencia almacenada en la nube.
 
-![Pantalla Análisis en vista de tarjetas mostrando fotografías, diagnóstico, certeza, autor, dispositivo y observaciones de campo](photos/analisis.png)
-
-*Figura 5. Catálogo de Análisis en vista de tarjetas con fotografías de evidencia y metadatos.*
+<p align="center">
+  <img src="photos/analisis.png" alt="Pantalla Análisis en vista de tarjetas mostrando fotografías, diagnóstico, certeza, autor, dispositivo y observaciones de campo" width="600" />
+  <br />
+  <em>Figura 5. Catálogo de Análisis en vista de tarjetas con fotografías de evidencia y metadatos.</em>
+</p>
 
 ---
 
@@ -233,9 +243,11 @@ Una vez iniciada la sesión, la barra de navegación (lateral en escritorio y su
 
 **Resultado esperado:** Análisis visual dinámico con filtrado cruzado en tiempo real.
 
-![Pantalla Gráficos mostrando histograma de certeza del diagnóstico, comparativa apilada por árbol y zona, y mapa de calor de actividad](photos/graficos.png)
-
-*Figura 6. Panel analítico Gráficos con visualizaciones interactivas con filtro cruzado.*
+<p align="center">
+  <img src="photos/graficos.png" alt="Pantalla Gráficos mostrando histograma de certeza del diagnóstico, comparativa apilada por árbol y zona, y mapa de calor de actividad" width="600" />
+  <br />
+  <em>Figura 6. Panel analítico Gráficos con visualizaciones interactivas con filtro cruzado.</em>
+</p>
 
 ---
 
@@ -268,13 +280,17 @@ Una vez iniciada la sesión, la barra de navegación (lateral en escritorio y su
 
 **Resultado esperado:** Control centralizado de accesos, roles y trazabilidad de dispositivos vinculados al sistema.
 
-![Pantalla Administración mostrando filtros y tabla de Cuentas junto con la tabla inferior de Dispositivos vinculados](photos/admin.png)
+<p align="center">
+  <img src="photos/admin.png" alt="Pantalla Administración mostrando filtros y tabla de Cuentas junto con la tabla inferior de Dispositivos vinculados" width="600" />
+  <br />
+  <em>Figura 7. Módulo de Administración: gestión de cuentas de usuario y tabla de dispositivos vinculados.</em>
+</p>
 
-*Figura 7. Módulo de Administración: gestión de cuentas de usuario y tabla de dispositivos vinculados.*
-
-![Ventana modal Crear cuenta con campos Nombre completo, Correo, Rol, Contraseña y Confirmar contraseña](photos/admin_crearcuenta.png)
-
-*Figura 8. Formulario modal para dar de alta una nueva cuenta de usuario.*
+<p align="center">
+  <img src="photos/admin_crearcuenta.png" alt="Ventana modal Crear cuenta con campos Nombre completo, Correo, Rol, Contraseña y Confirmar contraseña" width="360" />
+  <br />
+  <em>Figura 8. Formulario modal para dar de alta una nueva cuenta de usuario.</em>
+</p>
 
 ---
 
