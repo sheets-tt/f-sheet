@@ -1,11 +1,15 @@
-# Manual de usuario de Desco con MkDocs (Material). El sitio es SOLO el manual: cada página incluye una
-# sección de docs/Manual_Usuario_Plataforma_Web.md (mkdocs-include-markdown-plugin), que sigue siendo la
-# única fuente (se lee igual en GitHub). La portada (docs/index.md) es lo único escrito aparte.
+# Manuales de usuario de Desco con MkDocs (Material): la plataforma web y la app móvil, más la sección de
+# pruebas. Cada página incluye una sección de su manual (mkdocs-include-markdown-plugin), que sigue siendo la
+# única fuente y se lee igual en GitHub:
+#   web:    docs/Manual_Usuario_Plataforma_Web.md
+#   móvil:  docs/movil/Manual_Usuario_App_Movil.md + docs/movil/photos/  (copia de mbl-sheet/docs: al
+#           actualizar el manual de la app, vuelve a copiarlos aquí)
+# La portada (docs/index.md) y docs/pruebas/ son lo único escrito aparte.
 #   python3.12 -m venv .venv && .venv/bin/pip install -r requirements-docs.txt   (Python 3.10 o más)
 #   .venv/bin/mkdocs serve          # http://127.0.0.1:8000
 #   .venv/bin/mkdocs build --strict # lo mismo que corre el workflow docs.yml
 site_name: Desco · Manual de usuario
-site_description: Manual de usuario de la plataforma web Desco (EcoVerde) para expertos de campo y administradores
+site_description: Manuales de usuario de Desco (EcoVerde) - plataforma web y app móvil - para expertos de campo y administradores
 copyright: Trabajo Terminal 2026-B161 · ESCOM · IPN
 # Se publica en https://docs.formyke.com/f-sheet/ (CloudFront + Cloudflare Access; ver f-sheet/infra/docs.yaml).
 site_url: https://docs.formyke.com/f-sheet/
@@ -19,6 +23,7 @@ exclude_docs: |
   e2e-cobertura.md
 not_in_nav: |
   Manual_Usuario_Plataforma_Web.md
+  movil/Manual_Usuario_App_Movil.md
 
 theme:
   name: material
@@ -32,6 +37,7 @@ theme:
       note: material/information-outline
       warning: material/alert-outline
   features:
+    - navigation.tabs
     - navigation.instant
     - navigation.instant.progress
     - navigation.sections
@@ -100,21 +106,37 @@ markdown_extensions:
 
 nav:
   - Inicio: index.md
-  - Empezar:
-      - Introducción: introduccion.md
-      - Primeros pasos: primeros-pasos.md
-      - La interfaz: interfaz.md
-  - Guías por pantalla:
-      - Resumen: guias/resumen.md
-      - Mapa: guias/mapa.md
-      - Seguimiento: guias/seguimiento.md
-      - Análisis: guias/analisis.md
-      - Gráficos: guias/graficos.md
-      - Administración: guias/administracion.md
-  - Ayuda:
-      - Problemas y preguntas: problemas.md
-      - Glosario y soporte: glosario.md
-      - Acerca de este manual: acerca.md
+  - Plataforma web:
+      - Empezar:
+          - Introducción: introduccion.md
+          - Primeros pasos: primeros-pasos.md
+          - La interfaz: interfaz.md
+      - Guías por pantalla:
+          - Resumen: guias/resumen.md
+          - Mapa: guias/mapa.md
+          - Seguimiento: guias/seguimiento.md
+          - Análisis: guias/analisis.md
+          - Gráficos: guias/graficos.md
+          - Administración: guias/administracion.md
+      - Ayuda:
+          - Problemas y preguntas: problemas.md
+          - Glosario y soporte: glosario.md
+          - Acerca de este manual: acerca.md
+  - App móvil:
+      - Empezar:
+          - Introducción: movil/introduccion.md
+          - Primeros pasos: movil/primeros-pasos.md
+          - La interfaz: movil/interfaz.md
+      - Guías por pantalla:
+          - Inicio: movil/guias/inicio.md
+          - Nueva captura: movil/guias/nueva-captura.md
+          - Mapa sin conexión: movil/guias/mapa.md
+          - Alertas y sincronización: movil/guias/alertas.md
+          - Perfil: movil/guias/perfil.md
+      - Ayuda:
+          - Problemas y preguntas: movil/problemas.md
+          - Glosario y soporte: movil/glosario.md
+          - Acerca de este manual: movil/acerca.md
   - Pruebas:
       - TDD y Clean Architecture: pruebas/index.md
       - Rendimiento: pruebas/rendimiento.md

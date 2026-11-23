@@ -1,4 +1,4 @@
-"""Hooks de MkDocs.
+r"""Hooks de MkDocs.
 
 1. Los enlaces internos del README («#gestión-de-cuentas») llevan a la página del sitio donde quedó ese
    encabezado.
@@ -7,6 +7,9 @@
    carpeta (…/Manual_Usuario_Plataforma_Web/), así que «photos/login.png» tiene que ser «../photos/…».
 3. Las notas del manual («> **Nota:** …», «> **Importante:** …») se muestran como recuadros de MkDocs
    Material (admonitions). El manual no cambia: en GitHub siguen siendo citas.
+4. Los manuales se escriben para GitHub: sub-listas con 2–3 espacios de sangría (MkDocs pide 4) y algo de
+   notación LaTeX ($\le 75\%$, $1,000\text{ m}^2$). Aquí las sub-listas pasan a 4 espacios y esas
+   expresiones a texto (≤ 75 %, 1,000 m²); no se carga MathJax porque la CSP no admite scripts externos.
 
 En GitHub el README es una sola página; en el sitio cada sección es su propia página (incluida con
 include-markdown), que reescribe «#ancla» como «..#ancla». El mapa ancla → página se arma con los
@@ -28,7 +31,40 @@ _anclas: dict[str, str] = {}
 def on_page_markdown(markdown, page, **kwargs):
     for titulo in _ENCABEZADO.findall(markdown):
         _anclas.setdefault(_slug(titulo, "-"), page.file.src_uri)
-    return _notas_como_recuadros(markdown)
+    return _notas_como_recuadros(_latex_a_texto(_sublistas_a_4_espacios(markdown)))
+
+
+_MARCA_LISTA = re.compile(r"^( +)([-*+] |\d+\. )")
+
+
+def _sublistas_a_4_espacios(markdown):
+    """Sangría de 2–3 espacios (nivel 1) → 4, de 5–7 (nivel 2) → 8; solo en renglones de viñeta o número."""
+    lineas, en_codigo = [], False
+    for linea in markdown.split("\n"):
+        if linea.lstrip().startswith("```"):
+            en_codigo = not en_codigo
+        m = None if en_codigo else _MARCA_LISTA.match(linea)
+        if m and len(m.group(1)) % 4:
+            nivel = (len(m.group(1)) + 3) // 4
+            linea = " " * (4 * nivel) + linea[len(m.group(1)):]
+        lineas.append(linea)
+    return "\n".join(lineas)
+
+
+_LATEX = re.compile(r"\$([^$\n]*\\[^$\n]*)\$")
+_SIMBOLOS = [(r"\le", "≤"), (r"\ge", "≥"), (r"\times", "×"), (r"\%", "%"), (r"\,", " "), ("^2", "²"), ("^3", "³")]
+
+
+def _latex_a_texto(markdown):
+    def convertir(m):
+        t = re.sub(r"\\text\{([^}]*)\}", r"\1", m.group(1))
+        for latex, texto in _SIMBOLOS:
+            t = t.replace(latex, texto)
+        t = re.sub(r"([≤≥<>×])\s*", r"\1 ", t)        # «≤75 %» → «≤ 75 %»
+        t = re.sub(r"\s*×\s*", "×", t)                 # 300×300
+        t = re.sub(r"(\d)%", r"\1 %", t)
+        return re.sub(r"\s{2,}", " ", t).strip()
+    return _LATEX.sub(convertir, markdown)
 
 
 # Cita al inicio de línea cuyo primer renglón empieza con «**Nota…:**» o «**Importante…:**».
