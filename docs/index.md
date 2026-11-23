@@ -6,19 +6,58 @@ hide:
 
 <div class="portada" markdown>
 
-<p class="portada-etiqueta">Manual de usuario · plataforma web</p>
+<p class="portada-etiqueta">Manual de usuario · app móvil y plataforma web</p>
 
-# Consulta la salud del bosque, árbol por árbol
+# Cuida la salud del bosque, árbol por árbol
 
-Desco reúne en el navegador lo que los brigadistas capturan con la app móvil en el Bosque de
-Chapultepec: el estado de cada árbol y zona, sus fotos de evidencia, mapas y gráficas.
+En el **bosque**, la app móvil fotografía la corteza y el follaje y los clasifica aun sin señal. En la
+**oficina**, la plataforma web reúne lo que sincronizan los brigadistas: el estado de cada árbol y zona,
+sus fotos, mapas y gráficas.
 
-[Empezar :material-arrow-right:](primeros-pasos.md){ .md-button .md-button--primary }
-[Ver las guías](guias/resumen.md){ .md-button }
+[App móvil :material-cellphone:](movil/primeros-pasos.md){ .md-button .md-button--primary }
+[Plataforma web :material-monitor:](primeros-pasos.md){ .md-button }
 
 </div>
 
-## ¿Qué quieres hacer?
+## En el bosque, con la app móvil
+
+<div class="grid cards" markdown>
+
+-   :material-camera-outline:{ .lg } **Analizar un árbol o zona**
+
+    ---
+
+    Asistente de 4 pasos: foto, encuadre de la corteza o el follaje y diagnóstico con su certeza.
+
+    [:octicons-arrow-right-24: Nueva captura](movil/guias/nueva-captura.md)
+
+-   :material-map-outline:{ .lg } **Ubicarme sin señal**
+
+    ---
+
+    Mapa forestal sin conexión con tu posición GPS y los árboles por estado.
+
+    [:octicons-arrow-right-24: Mapa sin conexión](movil/guias/mapa.md)
+
+-   :material-sync:{ .lg } **Enviar lo capturado**
+
+    ---
+
+    Alertas cercanas, historial y la cola de sincronización cuando vuelve la conexión.
+
+    [:octicons-arrow-right-24: Alertas y sincronización](movil/guias/alertas.md)
+
+-   :material-lock-reset:{ .lg } **Entrar o recuperar la contraseña**
+
+    ---
+
+    Instalación, permisos, inicio de sesión y código de recuperación.
+
+    [:octicons-arrow-right-24: Primeros pasos](movil/primeros-pasos.md)
+
+</div>
+
+## En la oficina, con la plataforma web
 
 <div class="grid cards" markdown>
 
@@ -78,16 +117,16 @@ Chapultepec: el estado de cada árbol y zona, sus fotos de evidencia, mapas y gr
 <div class="grid" markdown>
 
 !!! tip "Experto de campo"
-    Consultas el estado del bosque, el mapa, el historial completo, las gráficas y las fotos de
-    evidencia. Empieza por [Primeros pasos](primeros-pasos.md) y [La interfaz](interfaz.md).
+    Capturas y analizas en campo con la [app móvil](movil/primeros-pasos.md) y consultas el estado del
+    bosque, el historial y las fotos en la [plataforma web](primeros-pasos.md).
 
 !!! example "Administrador"
-    Todo lo del experto de campo y, además, la gestión de cuentas y dispositivos. Revisa
+    Todo lo del experto de campo y, además, crea y administra las cuentas y los dispositivos desde
     [Administración](guias/administracion.md).
 
 </div>
 
 ## ¿Algo no funciona?
 
-Revisa [Problemas y preguntas frecuentes](problemas.md): ahí están los errores más comunes, como una
-sesión que se cerró o una foto que no carga, y cómo resolverlos.
+Revisa los problemas más comunes y cómo resolverlos: [en la app móvil](movil/problemas.md) (sincronización,
+GPS, cámara) o [en la plataforma web](problemas.md) (sesión, fotos, mapa).
