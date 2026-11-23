@@ -170,6 +170,53 @@
 @media (forced-colors: active) {
   .grafica .m-antes, .grafica .m-despues, .grafica .p50, .grafica .p95, .grafica .p99 { stroke: CanvasText; }
 }
+/* Barras, umbrales y rampas de usuarios */
+.grafica .barra { fill: var(--g-despues); }
+.grafica .barra-antes { fill: var(--g-antes); }
+.grafica .umbral { stroke: var(--g-t1); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.grafica .vu-area { fill: var(--g-despues); fill-opacity: 0.16; }
+.grafica .vu-linea { fill: none; stroke: var(--g-despues); stroke-width: 2; stroke-linejoin: round; }
+.multiplos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.8rem 1.2rem;
+  margin: 1rem 0 1.2rem;
+}
+/* Mapa de calor: un solo verde, de claro (rápido) a oscuro (lento). En modo oscuro, lo rápido se funde
+   con el fondo y lo lento brilla. */
+:root {
+  --h0: #eaf5ef; --h1: #c4e4d3; --h2: #8ccaa9; --h3: #4fa97f; --h4: #1f8a5c; --h5: #00603f;
+  --h-texto-claro: #1e3932; --h-texto-oscuro: #ffffff;
+}
+[data-md-color-scheme="slate"] {
+  --h0: #1d3a30; --h1: #24543f; --h2: #2d6f52; --h3: #3a8c67; --h4: #5cb08a; --h5: #a6dcc2;
+  --h-texto-claro: #eef3f0; --h-texto-oscuro: #10201a;
+}
+.grafica .h0 { fill: var(--h0); } .grafica .h1 { fill: var(--h1); } .grafica .h2 { fill: var(--h2); }
+.grafica .h3 { fill: var(--h3); } .grafica .h4 { fill: var(--h4); } .grafica .h5 { fill: var(--h5); }
+.grafica .ho { fill: var(--h-texto-claro); }
+.grafica .hc { fill: var(--h-texto-oscuro); font-weight: 600; }
+.grafica .celda:hover rect { stroke: var(--g-t1); stroke-width: 1.5; }
+/* Pirámide */
+.grafica .nivel-0 { fill: var(--h5); } .grafica .nivel-1 { fill: var(--h3); } .grafica .nivel-2 { fill: var(--h1); }
+.grafica .nivel-t-0, .grafica .nivel-t-1 { fill: var(--h-texto-oscuro); }
+.grafica .nivel-t-2 { fill: var(--h-texto-claro); }
+/* Mapa de pruebas */
+.grafica .punto-si { fill: var(--g-despues); stroke: var(--g-fondo); stroke-width: 2; }
+.grafica .punto-no { fill: none; stroke: var(--g-tramo); stroke-width: 1.5; }
+.grafica .caja-capa { stroke-width: 1.5; stroke: var(--g-despues); fill: rgba(0, 112, 74, 0.06); }
+.grafica .caja-e2e { fill: rgba(141, 73, 37, 0.08); stroke: #8d4925; }
+.grafica .caja-db { fill: transparent; stroke: var(--g-tramo); stroke-dasharray: 4 3; }
+.grafica .caja-prueba { fill: var(--g-fondo); stroke: var(--g-tramo); stroke-width: 1; }
+.grafica .conector-v { stroke: var(--g-tramo); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.grafica .paso-cadena:hover .caja-prueba { stroke: var(--g-despues); stroke-width: 2; }
+/* Catálogo */
+.md-typeset .ok { color: var(--md-primary-fg-color); }
+[data-md-color-scheme="slate"] .md-typeset .ok { color: #5cc79a; }
+.md-typeset .omitida { color: var(--md-default-fg-color--light); }
+@media (forced-colors: active) {
+  .grafica .barra, .grafica .barra-antes, .grafica .punto-si { fill: CanvasText; }
+}
 /* Material centra las figuras con ancho ajustado al contenido: las gráficas van a todo el ancho. */
 .md-typeset figure.figura-grafica { display: block; width: 100%; max-width: 100%; }
 .md-typeset figure.figura-grafica > svg { width: 100%; max-width: 100%; }
