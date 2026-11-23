@@ -5,8 +5,8 @@ import FotoEvidencia, { IconoFoto } from '../components/FotoEvidencia'
 import MapaCampo, { type ControlMapa, type MarcaMapa, type ZonaMapa } from '../components/MapaCampo'
 import Simbolo, { Estado, TONO_RESULTADO, type Tono } from '../components/Simbolo'
 import { buscarAnalisis, getArboles, getZonas, type Analisis, type Arbol, type Persona, type UltimoAnalisis, type Zona } from '../lib/api'
-import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha, formatPorcentaje, haceCuanto } from '../lib/format'
-import { ETIQUETA_NIVEL, nivelConfianza } from '../lib/analisis'
+import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha, haceCuanto } from '../lib/format'
+import { respaldoDiagnostico } from '../lib/analisis'
 import { Autor, Observaciones, ObservacionesLugar } from '../components/Campo'
 import { formatCoordenadas, limitesDe, type Limites } from '../lib/geo'
 import { hrefDe, navigate, useRutaId } from '../lib/router'
@@ -403,8 +403,7 @@ function Historial({ punto }: { punto: Punto }) {
           <li key={a.id}>
             <Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{ETIQUETA_RESULTADO[a.resultadoClasificacion]}</Estado>
             <span className="muted">
-              {ETIQUETA_TIPO[a.tipoImagen]}, certeza {ETIQUETA_NIVEL[nivelConfianza(a.confianza)].toLowerCase()}
-              {a.confianza !== null && ` (${formatPorcentaje(a.confianza)})`}
+              {ETIQUETA_TIPO[a.tipoImagen]}, {respaldoDiagnostico(a)}
             </span>
             <span className="historial-fecha">{formatFecha(a.fechaCaptura)}</span>
             <Autor analisis={a} className="historial-autor" />

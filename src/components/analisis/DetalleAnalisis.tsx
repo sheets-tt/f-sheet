@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { Analisis } from '../../lib/api'
-import { claveLugar, ETIQUETA_NIVEL, lugarDe, motivosAtencion, nivelConfianza, vecinos } from '../../lib/analisis'
+import { certezaDe, claveLugar, ETIQUETA_NIVEL, lugarDe, motivosAtencion, nivelConfianza, usaCerteza, vecinos } from '../../lib/analisis'
 import { ETIQUETA_TIPO, formatFecha, formatPorcentaje } from '../../lib/format'
 import { hrefDe } from '../../lib/router'
 import {
@@ -38,7 +38,7 @@ export default function DetalleAnalisis({ analisis: a, todos, nombres, onCambiar
   const nombre = l ? (nombres.get(claveLugar(l)) ?? (l.tipo === 'arbol' ? 'Árbol' : 'Zona')) : null
   const { anterior, siguiente } = vecinos(todos, a)
   const motivos = motivosAtencion(a)
-  const nivel = nivelConfianza(a.confianza)
+  const nivel = nivelConfianza(certezaDe(a))
   const fecha = formatFecha(a.fechaCaptura)
   const cerrar = useRef<HTMLButtonElement>(null)
 
@@ -73,14 +73,25 @@ export default function DetalleAnalisis({ analisis: a, todos, nombres, onCambiar
           </div>
 
           <dl className="detalle-datos">
-            <div>
-              <dt>{TITULO_CERTEZA}</dt>
-              <dd>
-                {ETIQUETA_NIVEL[nivel]}
-                {a.confianza !== null && <span className="muted"> ({formatPorcentaje(a.confianza)})</span>}
-                <Medidor fraccion={a.confianza ?? 0} />
-              </dd>
-            </div>
+            {usaCerteza(a) ? (
+              <div>
+                <dt>{TITULO_CERTEZA}</dt>
+                <dd>
+                  {ETIQUETA_NIVEL[nivel]}
+                  {a.confianza !== null && <span className="muted"> ({formatPorcentaje(a.confianza)})</span>}
+                  <Medidor fraccion={a.confianza ?? 0} />
+                </dd>
+              </div>
+            ) : (
+              // El follaje se diagnostica por su color, no por una certeza: sus porcentajes van en
+              // «Color del follaje» (más abajo). Aquí solo se avisa si no llegaron.
+              !a.cromatico && (
+                <div>
+                  <dt>{TITULO_FOLLAJE}</dt>
+                  <dd className="muted">Sin datos de color</dd>
+                </div>
+              )
+            )}
             <div>
               <dt>Tipo de foto</dt>
               <dd>{ETIQUETA_TIPO[a.tipoImagen]}</dd>
@@ -197,10 +208,12 @@ function DetalleTecnico({ analisis: a }: { analisis: Analisis }) {
             <code>{a.resultadoClasificacion}</code>
           </dd>
         </div>
-        <div>
-          <dt>Confianza del modelo</dt>
-          <dd>{a.confianza === null ? 'sin dato' : <code>{decimal.format(a.confianza)}</code>}</dd>
-        </div>
+        {usaCerteza(a) && (
+          <div>
+            <dt>Confianza del modelo</dt>
+            <dd>{a.confianza === null ? 'sin dato' : <code>{decimal.format(a.confianza)}</code>}</dd>
+          </div>
+        )}
         {a.cromatico && (
           <div>
             <dt>Análisis cromático</dt>

@@ -11,7 +11,7 @@ describe('necesita tu atención', () => {
     expect(a.hrefTodos).toBe('#/analisis?atencion=1')
     expect(a.puntos.map((p) => [p.clave, p.n, p.href])).toEqual([
       ['infestado', 2, '#/analisis?caja_resultado=infestado'],
-      ['baja', 1, '#/analisis?caja_confianza=baja'],
+      ['baja', 0, '#/analisis?caja_confianza=baja'], // e4 es follaje: su 42 % no es certeza del diagnóstico
       ['no_determinado', 1, '#/analisis?caja_resultado=no_determinado'],
       ['error', 1, '#/analisis?estado=error'],
     ])

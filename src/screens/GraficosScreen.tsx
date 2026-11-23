@@ -1,5 +1,5 @@
 import { ETIQUETA_CERTEZA, SIN_AUTOR } from '../lib/lenguaje'
-import { nivelConfianza } from '../lib/analisis'
+import { nivelConfianza, respaldoDiagnostico, usaCerteza } from '../lib/analisis'
 import { utcDay } from 'd3-time'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react'
 import { ErrorCarga } from '../components/EstadoCarga'
@@ -688,10 +688,14 @@ function ListaSeleccion({ analisis, nombres }: { analisis: Analisis[]; nombres: 
                       <td>
                         <Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{ETIQUETA_RESULTADO[a.resultadoClasificacion]}</Estado>
                       </td>
-                      <td className="nowrap">
-                        {ETIQUETA_CERTEZA[nivelConfianza(a.confianza)]}
-                        {a.confianza !== null && <span className="muted"> · {formatPorcentaje(a.confianza)}</span>}
-                      </td>
+                      {usaCerteza(a) ? (
+                        <td className="nowrap">
+                          {ETIQUETA_CERTEZA[nivelConfianza(a.confianza)]}
+                          {a.confianza !== null && <span className="muted"> · {formatPorcentaje(a.confianza)}</span>}
+                        </td>
+                      ) : (
+                        <td className="muted">{respaldoDiagnostico(a)}</td>
+                      )}
                       <td>{a.autor ? a.autor.nombre : <span className="muted">{SIN_AUTOR}</span>}</td>
                     </tr>
                   )

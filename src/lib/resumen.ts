@@ -1,5 +1,5 @@
 import type { Analisis, Arbol, Resultado, Zona } from './api'
-import { claveDiaCdmx, claveLugar, lugarDe, nivelConfianza, requiereAtencion, type LugarAnalisis } from './analisis'
+import { certezaDe, claveDiaCdmx, claveLugar, lugarDe, nivelConfianza, requiereAtencion, usaCerteza, type LugarAnalisis } from './analisis'
 
 // Datos del Resumen (dashboard): qué necesita atención, indicadores con su cambio, lugares con
 // infestación reciente y actividad. Puro, sin DOM ni d3 (las gráficas van en su propio chunk).
@@ -49,7 +49,7 @@ export function atencion(analisis: Analisis[], erroresTotales: number | null = n
       clave: 'baja',
       titulo: 'Certeza baja',
       descripcion: 'Diagnósticos con certeza menor a 50 %: conviene repetir la foto',
-      n: contar((a) => nivelConfianza(a.confianza) === 'baja'),
+      n: contar((a) => usaCerteza(a) && nivelConfianza(a.confianza) === 'baja'),
       href: '#/analisis?caja_confianza=baja',
       tono: 'aviso',
     },
@@ -135,11 +135,11 @@ export interface IndicadoresPeriodo {
 
 function medidas(lista: Analisis[]) {
   const n = lista.length
-  const conConfianza = lista.filter((a) => a.confianza !== null)
+  const conConfianza = lista.map(certezaDe).filter((c): c is number => c !== null)
   return {
     analisis: n,
     pctInfestado: n ? lista.filter((a) => a.resultadoClasificacion === 'infestado').length / n : null,
-    confianzaMedia: conConfianza.length ? conConfianza.reduce((s, a) => s + (a.confianza ?? 0), 0) / conConfianza.length : null,
+    confianzaMedia: conConfianza.length ? conConfianza.reduce((s, c) => s + c, 0) / conConfianza.length : null,
     lugares: new Set(lista.map(lugarDe).filter((l): l is LugarAnalisis => !!l).map(claveLugar)).size,
   }
 }

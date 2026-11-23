@@ -14,7 +14,8 @@ test.describe('Gráficos', () => {
     await page.getByRole('navigation', { name: 'Secciones' }).getByRole('link', { name: 'Gráficos' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'Gráficos' })).toBeVisible()
     await expect(grafica(page, /^Análisis por día: 6 análisis en 6 periodos/)).toBeVisible()
-    await expect(grafica(page, /^Certeza de 6 diagnósticos en tramos de 10 %/)).toBeVisible()
+    // Certeza: solo la corteza (e1 91 %, e2 88 %, e6 86 %); el follaje se diagnostica por su color.
+    await expect(grafica(page, /^Certeza de 3 diagnósticos en tramos de 10 %; la más frecuente, 80–90 % con 2\./)).toBeVisible()
     await expect(grafica(page, /^Análisis por árbol y zona: 4 lugares con análisis de 5/)).toBeVisible()
     await expect(grafica(page, /^Mapa de calor de 5 lugares por 6 periodos/)).toBeVisible()
     await expect(page.getByRole('table', { name: 'Análisis de la selección' }).getByRole('row')).toHaveCount(7)
@@ -88,9 +89,10 @@ test.describe('Gráficos', () => {
     await expect(page).toHaveURL(/#\/graficos$/)
 
     // "Ver como tabla"
-    const panel = page.getByRole('region', { name: 'Certeza del diagnóstico' })
+    const panel = page.getByRole('region', { name: 'Certeza del diagnóstico (corteza)' })
     await panel.getByRole('button', { name: 'Ver como tabla' }).click()
-    await expect(panel.getByRole('table').getByRole('row', { name: /90–100 %/ })).toContainText('2')
+    // 90–100 %: total 1 (e1, infestado) → Total 1 · Sano 0 · Infestado 1 · Sin diagnóstico claro 0.
+    await expect(panel.getByRole('table').getByRole('row', { name: /90–100 %/ })).toHaveText(/^90–100 %\s*1\s*0\s*1\s*0$/)
   })
 
   test('arrastrar en la vista general elige el rango (pincel)', async ({ page }) => {

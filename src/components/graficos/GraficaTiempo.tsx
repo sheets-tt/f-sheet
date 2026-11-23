@@ -166,7 +166,8 @@ export default function GraficaTiempo(props: Props) {
             let base = y(0)
             const etiqueta =
               `${p.etiqueta}: ${plural(p.total, 'análisis', 'análisis')}` +
-              (p.total ? `. ${desglose(p.conteos, ETIQUETA_RESULTADO)}. Certeza promedio ${formatPromedio(p.confianzaMedia)}` : '') +
+              (p.total ? `. ${desglose(p.conteos, ETIQUETA_RESULTADO)}` : '') +
+              (p.confianzaMedia !== null ? `. Certeza promedio ${formatPromedio(p.confianzaMedia)}` : '') +
               (p.lugares.length ? `. ${p.lugares.join(', ')}` : '') +
               '.'
             return (
@@ -211,7 +212,8 @@ export default function GraficaTiempo(props: Props) {
                 {ETIQUETA_RESULTADO[r]}: {activo.conteos[r]} ({Math.round((activo.conteos[r] / activo.total) * 100)} %)
               </span>
             ))}
-            {activo.total > 0 && <span>Certeza promedio: {formatPromedio(activo.confianzaMedia)}</span>}
+            {/* Solo con corteza: el follaje no tiene certeza (se diagnostica por su color). */}
+            {activo.confianzaMedia !== null && <span>Certeza promedio: {formatPromedio(activo.confianzaMedia)}</span>}
             {activo.lugares.length > 0 && (
               <span className="muted">
                 {activo.lugares.slice(0, 3).join(', ')}

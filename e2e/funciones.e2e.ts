@@ -74,7 +74,8 @@ test.describe('Resumen', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Gráficos' })).toBeVisible()
     await evidencia(page, 'actividad-en-graficos')
     await page.goBack()
-    await grafica(page, /^Certeza de 6 diagnósticos/).getByRole('button', { name: /^Certeza 90–100 %/ }).click()
+    // Solo la corteza tiene certeza: e1, e2 y e6 (el follaje se diagnostica por su color).
+    await grafica(page, /^Certeza de 3 diagnósticos/).getByRole('button', { name: /^Certeza 90–100 %/ }).click()
     await expect(page).toHaveURL(/#\/graficos\?confianza=9$/)
     await expect(page.getByRole('region', { name: 'Filtros activos' })).toContainText('Certeza: 90–100 %')
     await evidencia(page, 'decena-en-graficos')
@@ -182,13 +183,16 @@ test.describe('Análisis', () => {
     await evidencia(page, 'siguiente-del-lugar')
   })
 
-  test('cajas › filtran por certeza baja', async ({ page }) => {
+  test('cajas › filtran por certeza, solo con la corteza', async ({ page }) => {
     await ir(page, '#/analisis', 'Análisis')
-    await page.getByRole('button', { name: /^Baja: 1 análisis/ }).click()
-    await expect(page).toHaveURL(/caja_confianza=baja$/)
-    await expect(tablaAnalisis(page)).toHaveCount(2)
-    await expect(tablaAnalisis(page).nth(1)).toContainText('Sin diagnóstico claro')
-    await evidencia(page, 'certeza-baja')
+    // e4 (follaje, 42 %) ya no es «certeza baja»: la certeza solo aplica a la corteza (e1, e2, e6: todas altas).
+    await expect(page.getByRole('heading', { name: 'Por certeza del diagnóstico (solo corteza)' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Baja: 0 análisis/ })).toBeVisible()
+    await page.getByRole('button', { name: /^Alta: 3 análisis, 100 %/ }).click()
+    await expect(page).toHaveURL(/caja_confianza=alta$/)
+    await expect(tablaAnalisis(page)).toHaveCount(4)
+    for (let i = 1; i <= 3; i++) await expect(tablaAnalisis(page).nth(i)).toContainText('Corteza')
+    await evidencia(page, 'certeza-solo-corteza')
   })
 
   test('cajas › "Requieren atención" junta infestados, sin diagnóstico claro, certeza baja y errores', async ({ page }) => {
@@ -265,10 +269,11 @@ test.describe('Gráficos', () => {
   })
 
   test('certeza › clic en una decena filtra las demás gráficas', async ({ page }) => {
-    await grafica(page, /^Certeza de 6 diagnósticos/).getByRole('button', { name: /^Certeza 90–100 %: 2 análisis/ }).click()
+    // 90–100 %: solo e1 (corteza, 91 %); e3 (follaje, 95 %) no tiene certeza.
+    await grafica(page, /^Certeza de 3 diagnósticos/).getByRole('button', { name: /^Certeza 90–100 %: 1 análisis/ }).click()
     await expect(page).toHaveURL(/confianza=9$/)
-    await expect(page.getByRole('table', { name: 'Análisis de la selección' }).getByRole('row')).toHaveCount(3)
-    await expect(grafica(page, /^Análisis por día: 2 análisis/)).toBeVisible()
+    await expect(page.getByRole('table', { name: 'Análisis de la selección' }).getByRole('row')).toHaveCount(2)
+    await expect(grafica(page, /^Análisis por día: 1 análisis/)).toBeVisible()
     await evidencia(page, 'decena-elegida')
   })
 
@@ -297,7 +302,7 @@ test.describe('Gráficos', () => {
   })
 
   test('tablas › cada gráfica tiene "Ver como tabla"', async ({ page }) => {
-    for (const titulo of ['Análisis en el tiempo', 'Certeza del diagnóstico', 'Por árbol y zona', 'Actividad por árbol y zona']) {
+    for (const titulo of ['Análisis en el tiempo', 'Certeza del diagnóstico (corteza)', 'Por árbol y zona', 'Actividad por árbol y zona']) {
       const panel = page.getByRole('region', { name: titulo, exact: true })
       await panel.getByRole('button', { name: 'Ver como tabla' }).click()
       await expect(panel.getByRole('table')).toBeVisible()

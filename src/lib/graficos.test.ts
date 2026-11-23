@@ -78,7 +78,8 @@ describe('crossfilter', () => {
 
   it('por lugar y por decena de confianza', () => {
     expect(filtrar(ANALISIS, { ...SIN_FILTROS, lugar: { tipo: 'zona', id: 'c1' } }).map((a) => a.id)).toEqual(['e4', 'e3'])
-    expect(filtrar(ANALISIS, { ...SIN_FILTROS, confianza: 9 }).map((a) => a.id)).toEqual(['e3', 'e1'])
+    // e3 (follaje, 95 %) no entra: el follaje no tiene certeza del diagnóstico.
+    expect(filtrar(ANALISIS, { ...SIN_FILTROS, confianza: 9 }).map((a) => a.id)).toEqual(['e1'])
     expect(decenaConfianza(1)).toBe(9)
     expect(decenaConfianza(0.8)).toBe(8)
     expect(decenaConfianza(null)).toBeNull()
@@ -109,8 +110,9 @@ describe('agregados', () => {
 
   it('histograma de confianza en decenas', () => {
     const { decenas, sinConfianza } = histogramaConfianza(ANALISIS)
-    expect(decenas.map((d) => d.total)).toEqual([0, 0, 0, 0, 1, 0, 0, 1, 1, 2])
-    expect(decenas[9].conteos).toEqual({ sano: 1, infestado: 1, no_determinado: 0 })
+    // Solo corteza (e1 91 %, e2 88 %); el follaje ni siquiera cuenta como «sin dato».
+    expect(decenas.map((d) => d.total)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 1, 1])
+    expect(decenas[9].conteos).toEqual({ sano: 0, infestado: 1, no_determinado: 0 })
     expect(sinConfianza).toBe(0)
   })
 
@@ -138,7 +140,7 @@ describe('agregados', () => {
   it('indicadores de la selección', () => {
     const ind = indicadores(ANALISIS)
     expect(ind).toMatchObject({ total: 5, infestados: 2, pctInfestado: 0.4, lugares: 4 })
-    expect(ind.confianzaMedia).toBeCloseTo(0.786)
+    expect(ind.confianzaMedia).toBeCloseTo(0.895) // promedio de la corteza: (0.91 + 0.88) / 2
     expect(nombresDeLugares(ARBOLES, ZONAS).get('zona:c1')).toBe('Zona lago menor')
   })
 })
