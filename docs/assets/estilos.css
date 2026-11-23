@@ -1,0 +1,175 @@
+/* Manual de usuario de Desco: colores de la app (src/styles.css) sobre MkDocs Material. */
+:root {
+  --md-primary-fg-color: #00704a;          /* --verde */
+  --md-primary-fg-color--light: #2e8b67;
+  --md-primary-fg-color--dark: #005c3d;    /* --verde-hondo */
+  --md-accent-fg-color: #8d4925;           /* --cafe-2 */
+  --desco-tinta: #1e3932;                  /* --tinta-oscura */
+  --desco-tinte: #ffb48a;                  /* --cafe-tinte */
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #1e3932;
+  --md-primary-fg-color--light: #5cc79a;
+  --md-accent-fg-color: #e29a70;
+  --md-default-bg-color: #14261f;
+  /* Enlaces y menú activo: verde claro legible sobre el fondo oscuro. */
+  --md-typeset-a-color: #5cc79a;
+}
+[data-md-color-scheme="slate"] .md-nav__link--active,
+[data-md-color-scheme="slate"] .md-nav__item--active > .md-nav__link {
+  color: #5cc79a;
+}
+
+/* Portada */
+.portada {
+  margin: 0 0 2rem;
+  padding: 2.4rem 2rem 2rem;
+  border-radius: 1rem;
+  color: #fff;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(255, 180, 138, 0.35), transparent 45%),
+    linear-gradient(135deg, var(--desco-tinta) 0%, #00704a 100%);
+}
+.portada h1 {
+  margin: 0.3rem 0 0.8rem;
+  color: #fff;
+  font-weight: 700;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+.portada p {
+  max-width: 38rem;
+  font-size: 0.85rem;
+}
+.portada .portada-etiqueta {
+  margin: 0;
+  color: var(--desco-tinte);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.portada .md-button {
+  margin: 0.6rem 0.4rem 0 0;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.7);
+}
+.portada .md-button--primary {
+  color: var(--desco-tinta);
+  background: #fff;
+  border-color: #fff;
+}
+.portada .md-button:hover,
+.portada .md-button:focus-visible {
+  color: var(--desco-tinta);
+  background: var(--desco-tinte);
+  border-color: var(--desco-tinte);
+}
+
+/* Tarjetas de la portada */
+.md-typeset .grid.cards > ul > li {
+  border-radius: 0.8rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.md-typeset .grid.cards > ul > li:hover {
+  border-color: var(--md-primary-fg-color);
+  box-shadow: 0 0.2rem 0.8rem rgba(0, 0, 0, 0.08);
+}
+.md-typeset .grid.cards .lg {
+  color: var(--md-primary-fg-color);
+}
+[data-md-color-scheme="slate"] .md-typeset .grid.cards .lg {
+  color: #e29a70;
+}
+
+/* Capturas del manual: centradas, con borde y pie de figura */
+.md-typeset p[align="center"] img {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.6rem;
+  box-shadow: 0 0.3rem 1.2rem rgba(0, 0, 0, 0.12);
+}
+.md-typeset p[align="center"] em {
+  display: inline-block;
+  margin-top: 0.4rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.75rem;
+}
+
+/* Las secciones del manual terminan con «---»: en el sitio cada sección es su página. */
+.md-content .md-typeset > hr:last-child {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-typeset .grid.cards > ul > li {
+    transition: none;
+  }
+}
+
+/* ---------- Sección de pruebas: cifras y gráficas (SVG en la página, sin JS: CSP) ---------- */
+/* Paletas validadas con el validador de dataviz:
+   antes/después: claro #eb6834 / #00704a, oscuro #d95926 / #2e9e70 (CVD ΔE ≥ 9.2)
+   percentiles (ordinal, un solo verde): claro #6dbb94 #00704a #003d28, oscuro #1f7a55 #3fae80 #a6dcc2 */
+:root {
+  --g-antes: #eb6834; --g-despues: #00704a;
+  --g-p50: #6dbb94; --g-p95: #00704a; --g-p99: #003d28;
+  --g-t1: #1e3932; --g-t2: #3f5a51; --g-t3: #66756f;
+  --g-rejilla: #e3e8e5; --g-tramo: #b9c4bf; --g-fondo: #ffffff;
+}
+[data-md-color-scheme="slate"] {
+  --g-antes: #d95926; --g-despues: #2e9e70;
+  --g-p50: #1f7a55; --g-p95: #3fae80; --g-p99: #a6dcc2;
+  --g-t1: #eef3f0; --g-t2: #c6d2cc; --g-t3: #9fb0a8;
+  --g-rejilla: #26413a; --g-tramo: #4a6359; --g-fondo: #14261f;
+}
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.8rem;
+  margin: 1.2rem 0 1.6rem;
+}
+.cifra {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-left: 4px solid var(--md-primary-fg-color);
+  border-radius: 0.6rem;
+}
+.cifra-valor { color: var(--g-t1); font-size: 1.4rem; font-weight: 700; line-height: 1.15; }
+.cifra-nombre { color: var(--md-default-fg-color--light); font-size: 0.72rem; }
+.figura-grafica { margin: 1rem 0 0.6rem; }
+.figura-grafica figcaption { color: var(--md-default-fg-color--light); font-size: 0.72rem; }
+.grafica { display: block; width: 100%; height: auto; font-family: inherit; }
+.grafica .t1 { fill: var(--g-t1); }
+.grafica .t2 { fill: var(--g-t2); }
+.grafica .t3 { fill: var(--g-t3); }
+.grafica .rejilla { stroke: var(--g-rejilla); stroke-width: 1; }
+.grafica .tramo { stroke: var(--g-tramo); stroke-width: 2; }
+.grafica .m-antes { fill: var(--g-fondo); stroke: var(--g-antes); stroke-width: 2.5; }
+.grafica .m-despues { fill: var(--g-despues); stroke: var(--g-fondo); stroke-width: 2; }
+.grafica .p50 { fill: var(--g-p50); stroke: var(--g-fondo); stroke-width: 2; }
+.grafica .p95 { fill: var(--g-p95); stroke: var(--g-fondo); stroke-width: 2; }
+.grafica .p99 { fill: var(--g-p99); stroke: var(--g-fondo); stroke-width: 2; }
+.grafica .zona-hover { fill: transparent; }
+.grafica .fila:hover .zona-hover { fill: var(--md-default-fg-color--lightest); }
+.grafica .fila-destacada .zona-hover { fill: rgba(235, 104, 52, 0.06); }
+/* Diagramas (TDD y capas) */
+.grafica .paso rect { stroke-width: 2; }
+.grafica .paso-rojo rect { fill: rgba(235, 104, 52, 0.10); stroke: var(--g-antes); }
+.grafica .paso-verde rect { fill: rgba(0, 112, 74, 0.10); stroke: var(--g-despues); }
+.grafica .paso-refactor rect { fill: rgba(141, 73, 37, 0.08); stroke: #8d4925; }
+.grafica .conector path { stroke: var(--g-t3); stroke-width: 1.5; }
+.grafica .flecha-punta { fill: var(--g-t3); }
+.grafica .capa rect { stroke: var(--g-despues); stroke-width: 1.5; }
+.grafica .capa-4 rect { fill: rgba(0, 112, 74, 0.04); }
+.grafica .capa-3 rect { fill: rgba(0, 112, 74, 0.07); }
+.grafica .capa-2 rect { fill: rgba(0, 112, 74, 0.11); }
+.grafica .capa-1 rect { fill: rgba(0, 112, 74, 0.18); stroke-width: 2.5; }
+@media (forced-colors: active) {
+  .grafica .m-antes, .grafica .m-despues, .grafica .p50, .grafica .p95, .grafica .p99 { stroke: CanvasText; }
+}
+/* Material centra las figuras con ancho ajustado al contenido: las gráficas van a todo el ancho. */
+.md-typeset figure.figura-grafica { display: block; width: 100%; max-width: 100%; }
+.md-typeset figure.figura-grafica > svg { width: 100%; max-width: 100%; }
