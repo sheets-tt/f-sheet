@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { getEvidencia, type Analisis } from '../../lib/api'
-import { claveLugar, ETIQUETA_NIVEL, lugarDe, motivosAtencion, nivelConfianza } from '../../lib/analisis'
+import { claveLugar, ETIQUETA_NIVEL, lugarDe, motivosAtencion, nivelConfianza, usaCerteza } from '../../lib/analisis'
 import { ETIQUETA_RESULTADO, ETIQUETA_TIPO, formatFecha, formatPorcentaje } from '../../lib/format'
 import { hrefDe } from '../../lib/router'
 import { useCarga } from '../../lib/useCarga'
-import { TITULO_CERTEZA } from '../../lib/lenguaje'
+import { partesFollaje, TITULO_CERTEZA, TITULO_FOLLAJE } from '../../lib/lenguaje'
+import BarraSegmentada from '../BarraSegmentada'
 import { Autor, Observaciones } from '../Campo'
 import { Estado, TONO_RESULTADO } from '../Simbolo'
 import { Medidor } from './CajasCategoria'
@@ -104,13 +105,22 @@ export default function TarjetaAnalisis({ analisis: a, nombres, onAbrir }: Props
           <Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{ETIQUETA_RESULTADO[a.resultadoClasificacion]}</Estado>
           <span className="muted">· {ETIQUETA_TIPO[a.tipoImagen]}</span>
         </p>
-        <div className="tarjeta-confianza">
-          <span>
-            {TITULO_CERTEZA}: <strong>{ETIQUETA_NIVEL[nivel].toLowerCase()}</strong>
-            {a.confianza !== null && <span className="muted"> · {formatPorcentaje(a.confianza)}</span>}
-          </span>
-          <Medidor fraccion={a.confianza ?? 0} />
-        </div>
+        {usaCerteza(a) ? (
+          <div className="tarjeta-confianza">
+            <span>
+              {TITULO_CERTEZA}: <strong>{ETIQUETA_NIVEL[nivel].toLowerCase()}</strong>
+              {a.confianza !== null && <span className="muted"> · {formatPorcentaje(a.confianza)}</span>}
+            </span>
+            <Medidor fraccion={a.confianza ?? 0} />
+          </div>
+        ) : a.cromatico ? (
+          // El follaje se diagnostica por su color, no por una certeza.
+          <div className="tarjeta-confianza">
+            <BarraSegmentada titulo={TITULO_FOLLAJE} modo="porcentaje" variante="delgada" partes={partesFollaje(a.cromatico)} />
+          </div>
+        ) : (
+          <p className="tarjeta-confianza muted">{TITULO_FOLLAJE}: sin datos</p>
+        )}
         <p className="tarjeta-lugar">
           {l ? (
             <a href={hrefDe(l.tipo, l.id)} className="tarjeta-enlace">

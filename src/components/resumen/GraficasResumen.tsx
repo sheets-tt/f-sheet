@@ -108,7 +108,7 @@ export default function GraficasResumen({ analisis, arboles, zonas }: Props) {
         elegida={null}
         onElegir={(i) => ir(aGraficos({ confianza: i }))}
         onQuitarFiltros={() => {}}
-        descripcion="Cuántos diagnósticos hay en cada tramo de certeza, de 10 en 10 %. Clic o Enter en una barra lo abre en Gráficos."
+        descripcion="Cuántos diagnósticos de corteza hay en cada tramo de certeza, de 10 en 10 % (el follaje se diagnostica por su color). Clic o Enter en una barra lo abre en Gráficos."
         enlace={{ href: aGraficos({}), texto: 'Ver en Gráficos', etiqueta: 'Ver la certeza del diagnóstico en Gráficos' }}
         nivel={3}
       />

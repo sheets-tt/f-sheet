@@ -2,6 +2,7 @@ import { mean } from 'd3-array'
 import { utcDay, utcMonday, utcMonth, utcYear, type CountableTimeInterval } from 'd3-time'
 import { timeFormatLocale } from 'd3-time-format'
 import type { Analisis, Arbol, Resultado, TipoImagen, Zona } from './api'
+import { certezaDe, usaCerteza } from './analisis'
 import { esDia } from './dia'
 
 // Transformaciones de datos de la sección Gráficos: puras, sin DOM, probadas aparte.
@@ -277,7 +278,7 @@ export function filtrar(analisis: Analisis[], f: Filtros, excepto: Dimension[] =
       const l = lugarDe(a)
       if (!l || l.tipo !== f.lugar.tipo || l.id !== f.lugar.id) return false
     }
-    if (usa('confianza') && f.confianza !== null && decenaConfianza(a.confianza) !== f.confianza) return false
+    if (usa('confianza') && f.confianza !== null && decenaConfianza(certezaDe(a)) !== f.confianza) return false
     return true
   })
 }
@@ -290,7 +291,7 @@ export type Conteos = Record<Resultado, number>
 const ceros = (): Conteos => ({ sano: 0, infestado: 0, no_determinado: 0 })
 
 function confianzaMedia(analisis: Analisis[]): number | null {
-  const m = mean(analisis, (a) => a.confianza ?? undefined)
+  const m = mean(analisis, (a) => certezaDe(a) ?? undefined)
   return m === undefined ? null : m
 }
 
@@ -351,7 +352,7 @@ export interface Decena {
   total: number
 }
 
-/** Histograma de confianza en decenas (0–10 %, …, 90–100 %) y cuántos no traen confianza. */
+/** Histograma de certeza en decenas (0–10 %, …, 90–100 %) de la corteza, y cuántos no traen certeza. */
 export function histogramaConfianza(analisis: Analisis[]): { decenas: Decena[]; sinConfianza: number } {
   const decenas: Decena[] = Array.from({ length: 10 }, (_, i) => ({
     indice: i,
@@ -361,6 +362,7 @@ export function histogramaConfianza(analisis: Analisis[]): { decenas: Decena[]; 
   }))
   let sinConfianza = 0
   for (const a of analisis) {
+    if (!usaCerteza(a)) continue // follaje: se diagnostica por color, no tiene certeza
     const i = decenaConfianza(a.confianza)
     if (i === null) {
       sinConfianza++

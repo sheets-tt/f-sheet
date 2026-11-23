@@ -10,8 +10,10 @@ import {
   filtrarCajas,
   FORM_VACIO,
   leerEstado,
+  certezaDe,
   motivosAtencion,
   nivelConfianza,
+  respaldoDiagnostico,
   RESULTADOS,
   vecinos,
 } from './analisis'
@@ -32,7 +34,9 @@ describe('categorías', () => {
   it('"requieren atención" con sus motivos', () => {
     const e = (id: string) => ANALISIS.find((a) => a.id === id)!
     expect(motivosAtencion(e('e5'))).toEqual(['Infestado', 'Error al enviar desde el móvil'])
-    expect(motivosAtencion(e('e4'))).toEqual(['Sin diagnóstico claro', 'Certeza baja'])
+    // e4 es follaje: su diagnóstico sale del color, así que su «confianza» (42 %) no cuenta como certeza baja.
+    expect(motivosAtencion(e('e4'))).toEqual(['Sin diagnóstico claro'])
+    expect(motivosAtencion({ ...e('e4'), tipoImagen: 'corteza' })).toEqual(['Sin diagnóstico claro', 'Certeza baja'])
     expect(motivosAtencion(e('e2'))).toEqual([])
   })
 
@@ -41,7 +45,8 @@ describe('categorías', () => {
       total: 5,
       resultado: { sano: 2, infestado: 2, no_determinado: 1 },
       tipo: { corteza: 2, follaje: 3 },
-      confianza: { alta: 3, media: 1, baja: 1, sin: 0 },
+      // Solo corteza (e1, e2): el follaje no tiene certeza del diagnóstico.
+      confianza: { alta: 2, media: 0, baja: 0, sin: 0 },
       // Por más análisis (empate: por nombre); «Autor no registrado» (e5) al final.
       autores: [
         { id: 'a1', nombre: 'Usuario Demo', n: 3 },
@@ -50,6 +55,25 @@ describe('categorías', () => {
       ],
       atencion: 3,
     })
+  })
+
+  it('la certeza solo aplica a corteza; el follaje se diagnostica por su color', () => {
+    const e = (id: string) => ANALISIS.find((a) => a.id === id)!
+    expect(certezaDe(e('e1'))).toBe(0.91)
+    expect(certezaDe(e('e3'))).toBeNull()
+    // Elegir una caja de certeza deja fuera al follaje.
+    expect(ids(filtrarCajas(ANALISIS, { ...CAJAS_VACIAS, confianza: ['alta'] }))).toEqual(['e2', 'e1'])
+  })
+
+  it('el respaldo del diagnóstico: certeza en corteza, porcentajes de color en follaje', () => {
+    const e = (id: string) => ANALISIS.find((a) => a.id === id)!
+    expect(respaldoDiagnostico(e('e1'))).toBe('certeza alta (91 %)')
+    expect(respaldoDiagnostico({ ...e('e1'), confianza: null })).toBe('certeza sin dato')
+    expect(respaldoDiagnostico(e('e3'))).toBe('color: 80 % sano · 10 % regular · 5 % dañado · 5 % incierto')
+    expect(respaldoDiagnostico({ ...e('e3'), cromatico: { pctSano: 62.5, pctRegular: 37.5, pctDanado: 0, pctIncierto: 0 } })).toBe(
+      'color: 62.5 % sano · 37.5 % regular',
+    )
+    expect(respaldoDiagnostico(e('e5'))).toBe('sin datos de color') // follaje sin análisis de color: su 77 % no se muestra
   })
 
   it('dentro de un grupo suman; entre grupos se cruzan', () => {

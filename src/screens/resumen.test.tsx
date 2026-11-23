@@ -51,7 +51,7 @@ describe('Resumen (dashboard)', () => {
       'Siguen con infestación en su último análisis',
       'Análisis en el tiempo',
       'Dónde hay más infestación',
-      'Certeza del diagnóstico',
+      'Certeza del diagnóstico (corteza)',
       'Resultado de los análisis',
       'Color promedio del follaje',
       'Envío desde el móvil',
@@ -67,7 +67,8 @@ describe('Resumen (dashboard)', () => {
     await within(seccion).findByText('3 análisis requieren atención, de los 5 más recientes.')
     const enlace = (n: RegExp) => within(seccion).getByRole('link', { name: n })
     expect(enlace(/^Infestados: 2\./)).toHaveAttribute('href', '#/analisis?caja_resultado=infestado')
-    expect(enlace(/^Certeza baja: 1\./)).toHaveAttribute('href', '#/analisis?caja_confianza=baja')
+    // e4 (42 %) es follaje: no cuenta como certeza baja.
+    expect(enlace(/^Certeza baja: 0\./)).toHaveAttribute('href', '#/analisis?caja_confianza=baja')
     expect(enlace(/^Sin diagnóstico claro: 1\./)).toHaveAttribute('href', '#/analisis?caja_resultado=no_determinado')
     expect(enlace(/^Errores al enviar: 1\./)).toHaveAttribute('href', '#/analisis?estado=error')
     expect(within(seccion).getByRole('link', { name: 'Ver los 3 en Análisis' })).toHaveAttribute('href', '#/analisis?atencion=1')

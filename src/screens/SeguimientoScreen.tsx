@@ -8,14 +8,13 @@ import MapaCampo, { type CapturaMapa, type ZonaMapa } from '../components/MapaCa
 import { Estado, TONO_RESULTADO, TONO_SINCRONIZACION } from '../components/Simbolo'
 import { Autor, Observaciones, ObservacionesLugar } from '../components/Campo'
 import { buscarAnalisis, getArbol, getZona, type Analisis, type DatosSeguimiento, type Persona, type Seguidor, type TipoImagen } from '../lib/api'
-import { ETIQUETA_NIVEL, nivelConfianza, seguimientoDe } from '../lib/analisis'
+import { certezaDe, nivelConfianza, respaldoDiagnostico, seguimientoDe, usaCerteza } from '../lib/analisis'
 import { fraseResultado, fraseSeguimiento, partesFollaje, queHacer, TITULO_FOLLAJE } from '../lib/lenguaje'
 import {
   ETIQUETA_RESULTADO,
   ETIQUETA_SINCRONIZACION,
   ETIQUETA_TIPO,
   formatFecha,
-  formatPorcentaje,
   haceCuanto,
 } from '../lib/format'
 import { distanciaMetros, formatCoordenadas, limitesDe } from '../lib/geo'
@@ -83,6 +82,8 @@ function Contenido({ punto, analisis, registro }: { punto: Punto; analisis: Anal
     [analisis, tipoVisible],
   )
   const conCromatico = useMemo(() => analisis.filter((a) => a.cromatico), [analisis])
+  // La certeza solo aplica a la corteza; el follaje se sigue por su color (más abajo).
+  const deCorteza = useMemo(() => analisis.filter(usaCerteza), [analisis])
   const infestados = analisis.filter((a) => a.resultadoClasificacion === 'infestado').length
   const seguidores = useMemo(() => seguimientoDe(registro.seguimiento, analisis), [registro.seguimiento, analisis])
   // El más reciente (los análisis llegan del más reciente al más antiguo): de él sale «Qué hacer».
@@ -145,7 +146,7 @@ function Contenido({ punto, analisis, registro }: { punto: Punto; analisis: Anal
             <h2>Qué hacer</h2>
             <p>
               <span className="que-hacer-por">Según el análisis más reciente ({fraseResultado(reciente.resultadoClasificacion).toLowerCase()}):</span>{' '}
-              {queHacer(reciente.resultadoClasificacion, nivelConfianza(reciente.confianza), punto.tipo)}
+              {queHacer(reciente.resultadoClasificacion, nivelConfianza(certezaDe(reciente)), punto.tipo)}
             </p>
           </div>
         )}
@@ -163,13 +164,18 @@ function Contenido({ punto, analisis, registro }: { punto: Punto; analisis: Anal
 
         <section className="panel" aria-labelledby="titulo-confianza">
           <h2 id="titulo-confianza">Resultado de cada análisis</h2>
-          <p className="muted bloque-nota">Qué tan seguro fue cada diagnóstico, foto por foto</p>
-          {analisis.length ? (
+          <p className="muted bloque-nota">Qué tan seguro fue cada diagnóstico de corteza, foto por foto</p>
+          {deCorteza.length ? (
             <GraficaConfianza
-              analisis={analisis}
+              analisis={deCorteza}
               elegido={capturaElegida}
               onElegir={setCapturaElegida}
             />
+          ) : analisis.length ? (
+            <p className="muted">
+              Sus análisis son de follaje: se diagnostican por el color de las hojas, no por una certeza. Mira su{' '}
+              {TITULO_FOLLAJE.toLowerCase()} más abajo.
+            </p>
           ) : (
             <p className="muted">Todavía no tiene análisis. Aparecerán aquí cuando se sincronicen desde la app móvil.</p>
           )}
@@ -296,8 +302,7 @@ function EventoLinea({
           </p>
         )}
         <p className="muted evento-datos">
-          {ETIQUETA_TIPO[a.tipoImagen]}, certeza {ETIQUETA_NIVEL[nivelConfianza(a.confianza)].toLowerCase()}
-          {a.confianza !== null && ` (${formatPorcentaje(a.confianza)})`}
+          {ETIQUETA_TIPO[a.tipoImagen]}, {respaldoDiagnostico(a)}
           {lejos !== null && lejos >= 5 && `, tomada a ${lejos} m ${punto.tipo === 'arbol' ? 'del árbol' : 'del centro'}`}
         </p>
         <p className="evento-autor">

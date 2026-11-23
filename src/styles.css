@@ -1683,6 +1683,20 @@ input:disabled {
   height: 18rem;
 }
 
+/* Pantalla completa (botón del mapa): se expande .mapa-campo, así que el lienzo debe llenarlo en vez
+   de conservar su altura normal (si no, el mapa queda en una franja y el resto de la pantalla vacío).
+   .maplibregl-pseudo-fullscreen es el modo de respaldo de MapLibre donde no hay Fullscreen API (iOS). */
+.mapa-campo:fullscreen,
+.mapa-campo.maplibregl-pseudo-fullscreen {
+  border: 0;
+  border-radius: 0;
+}
+
+.mapa-campo:fullscreen .mapa-lienzo,
+.mapa-campo.maplibregl-pseudo-fullscreen .mapa-lienzo {
+  height: 100%;
+}
+
 .mapa-cargando {
   position: absolute;
   inset: 0;

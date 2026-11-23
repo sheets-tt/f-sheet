@@ -201,3 +201,19 @@ test.describe('Seguimiento', () => {
     await expect(page.getByRole('list', { name: 'Línea de tiempo' })).toContainText('Cambió de sano a sin diagnóstico claro')
   })
 })
+
+test.describe('Mapa', () => {
+  test('pantalla completa: el mapa llena toda la pantalla, no solo su altura normal', async ({ page }) => {
+    await ir(page, '#/mapa', 'Mapa')
+    const lienzo = page.getByRole('group', { name: /^Mapa de campo/ })
+    await expect(lienzo).toBeVisible()
+    await page.getByRole('button', { name: 'Pantalla completa' }).click()
+    await expect.poll(() => page.evaluate(() => document.fullscreenElement?.className ?? '')).toContain('mapa-campo')
+    const alto = page.viewportSize()!.height
+    await expect.poll(async () => (await lienzo.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(alto - 2)
+    // Los marcadores siguen ahí, y se sale con el mismo botón.
+    await expect(lienzo.getByRole('button', { name: 'Pino del cerro (Pinus hartwegii): Sin análisis' })).toBeVisible()
+    await page.getByRole('button', { name: 'Salir de pantalla completa' }).click()
+    await expect.poll(() => page.evaluate(() => document.fullscreenElement)).toBeNull()
+  })
+})

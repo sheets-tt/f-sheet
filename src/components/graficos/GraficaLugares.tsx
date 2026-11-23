@@ -97,7 +97,8 @@ export default function GraficaLugares({
             const atenuada = elegidoClave !== null && elegidoClave !== f.clave
             const etiqueta =
               `${f.nombre} (${f.lugar.tipo === 'arbol' ? 'árbol' : 'zona'}): ${plural(f.total, 'análisis', 'análisis')}` +
-              (f.total ? `. ${desglose(f.conteos, ETIQUETA_RESULTADO)}. Certeza promedio ${formatPromedio(f.confianzaMedia)}` : '') +
+              (f.total ? `. ${desglose(f.conteos, ETIQUETA_RESULTADO)}` : '') +
+              (f.confianzaMedia !== null ? `. Certeza promedio ${formatPromedio(f.confianzaMedia)}` : '') +
               '. Abre su seguimiento.'
             return (
               <g
@@ -149,7 +150,8 @@ export default function GraficaLugares({
                 {ETIQUETA_RESULTADO[r]}: {activa.conteos[r]} ({Math.round((activa.conteos[r] / activa.total) * 100)} %)
               </span>
             ))}
-            {activa.total > 0 && <span>Certeza promedio: {formatPromedio(activa.confianzaMedia)}</span>}
+            {/* Solo con corteza: el follaje no tiene certeza (se diagnostica por su color). */}
+            {activa.confianzaMedia !== null && <span>Certeza promedio: {formatPromedio(activa.confianzaMedia)}</span>}
             {activa.ultimo && <span className="muted">Último: {formatFecha(activa.ultimo.fechaCaptura)}</span>}
             <span className="muted">Clic o Enter: ver seguimiento</span>
           </Tooltip>

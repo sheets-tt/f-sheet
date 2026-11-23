@@ -81,7 +81,9 @@ test.describe('Análisis', () => {
     const boton = page.getByRole('button', { name: 'Ver detalle del 7 oct 2026, 03:00' })
     await boton.click()
     const dialogo = page.getByRole('dialog', { name: 'Análisis del 7 oct 2026, 03:00' })
-    await expect(dialogo).toContainText('Sin diagnóstico claro, Certeza baja')
+    // e4 es follaje: su 42 % no es «Certeza baja» (el follaje se diagnostica por su color).
+    await expect(dialogo).toContainText('Requiere atenciónSin diagnóstico claro')
+    await expect(dialogo).not.toContainText('Certeza baja')
     await dialogo.getByRole('button', { name: 'Anterior de este lugar' }).click()
     await expect(page.getByRole('dialog', { name: 'Análisis del 4 oct 2026, 06:00' })).toBeVisible()
     await page.keyboard.press('Escape')
