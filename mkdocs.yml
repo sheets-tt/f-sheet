@@ -1,45 +1,65 @@
-# Documentación de f-sheet con MkDocs (Material). Las páginas incluyen secciones del README
-# (mkdocs-include-markdown-plugin): el README sigue siendo la única fuente.
+# Manual de usuario de Desco con MkDocs (Material). El sitio es SOLO el manual: cada página incluye una
+# sección de docs/Manual_Usuario_Plataforma_Web.md (mkdocs-include-markdown-plugin), que sigue siendo la
+# única fuente (se lee igual en GitHub). La portada (docs/index.md) es lo único escrito aparte.
 #   python3.12 -m venv .venv && .venv/bin/pip install -r requirements-docs.txt   (Python 3.10 o más)
 #   .venv/bin/mkdocs serve          # http://127.0.0.1:8000
 #   .venv/bin/mkdocs build --strict # lo mismo que corre el workflow docs.yml
-site_name: f-sheet · web de Desco
-site_description: Web de sheets-tt (React + TypeScript + Vite)
-repo_url: https://github.com/sheets-tt/f-sheet
-repo_name: sheets-tt/f-sheet
-edit_uri: edit/testing/
+site_name: Desco · Manual de usuario
+site_description: Manual de usuario de la plataforma web Desco (EcoVerde) para expertos de campo y administradores
+copyright: Trabajo Terminal 2026-B161 · ESCOM · IPN
 # Se publica en https://docs.formyke.com/f-sheet/ (CloudFront + Cloudflare Access; ver f-sheet/infra/docs.yaml).
 site_url: https://docs.formyke.com/f-sheet/
 docs_dir: docs
 site_dir: site
 
+# Guías técnicas del repo: siguen en docs/ (el README las enlaza) pero no son parte del manual.
+exclude_docs: |
+  correr-en-local.md
+  ambiente-testing.md
+  e2e-cobertura.md
+not_in_nav: |
+  Manual_Usuario_Plataforma_Web.md
+
 theme:
   name: material
   language: es
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
   # Sin Google Fonts: la CSP de la documentación solo permite recursos del mismo dominio.
   font: false
+  icon:
+    admonition:
+      note: material/information-outline
+      warning: material/alert-outline
   features:
+    - navigation.instant
+    - navigation.instant.progress
     - navigation.sections
     - navigation.top
     - navigation.footer
+    - navigation.indexes
     - toc.follow
+    - search.suggest
     - search.highlight
-    - content.code.copy
+    - content.tooltips
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: green
-      accent: brown
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-night
         name: Modo oscuro
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: green
-      accent: brown
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-sunny
         name: Modo claro
+
+extra_css:
+  - assets/estilos.css
 
 hooks:
   - docs_hooks.py
@@ -48,14 +68,28 @@ plugins:
   - search:
       lang: es
   - include-markdown
+  # Clic en una captura = se amplía (los archivos de glightbox se sirven desde el propio sitio).
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      width: 100%
+      height: auto
+      zoomable: true
+      draggable: true
 
 markdown_extensions:
   - admonition
   - attr_list
+  - md_in_html
   - tables
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
-      # Mismos ids que GitHub (conservan acentos): los enlaces del README siguen funcionando.
+      # Mismos ids que GitHub (conservan acentos).
       slugify: !!python/object/apply:pymdownx.slugs.slugify
         kwds:
           case: lower
@@ -66,15 +100,21 @@ markdown_extensions:
 
 nav:
   - Inicio: index.md
-  - Manual de usuario: Manual_Usuario_Plataforma_Web.md
-  - Funcionalidades: funcionalidades.md
-  - Identidad visual: identidad-visual.md
-  - Desarrollo:
-      - Requisitos y desarrollo: desarrollo.md
-      - Correr en local: correr-en-local.md
-      - Ambiente de testing: ambiente-testing.md
+  - Empezar:
+      - Introducción: introduccion.md
+      - Primeros pasos: primeros-pasos.md
+      - La interfaz: interfaz.md
+  - Guías por pantalla:
+      - Resumen: guias/resumen.md
+      - Mapa: guias/mapa.md
+      - Seguimiento: guias/seguimiento.md
+      - Análisis: guias/analisis.md
+      - Gráficos: guias/graficos.md
+      - Administración: guias/administracion.md
+  - Ayuda:
+      - Problemas y preguntas: problemas.md
+      - Glosario y soporte: glosario.md
+      - Acerca de este manual: acerca.md
   - Pruebas:
-      - Pruebas: pruebas.md
-      - Cobertura E2E: e2e-cobertura.md
-  - Decisiones de diseño: decisiones.md
-  - Infraestructura y despliegue: despliegue.md
+      - TDD y Clean Architecture: pruebas/index.md
+      - Rendimiento: pruebas/rendimiento.md
