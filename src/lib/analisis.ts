@@ -1,6 +1,7 @@
 import type { Analisis, EstadoSincronizacion, Resultado, Seguidor, TipoImagen } from './api'
 import { esDia } from './dia'
-import { ETIQUETA_CERTEZA, ETIQUETA_RESULTADO, RANGO_CERTEZA, type NivelCerteza } from './lenguaje'
+import { formatPorcentaje } from './format'
+import { ETIQUETA_CERTEZA, ETIQUETA_RESULTADO, partesFollaje, RANGO_CERTEZA, type NivelCerteza } from './lenguaje'
 
 // Lógica de la pantalla Análisis: cajas por categoría, vistas, agrupación y vecinos. Pura (sin DOM),
 // probada aparte. El estado completo vive en la URL: #/analisis?tipo=…&caja_resultado=…&vista=…
@@ -30,18 +31,43 @@ export function nivelConfianza(c: number | null): NivelConfianza {
   return 'baja'
 }
 
+/**
+ * La certeza del diagnóstico solo aplica a la corteza (la da el modelo). El follaje se diagnostica por
+ * su color (`cromatico`: sano, regular, dañado, incierto), así que su «confianza» no se muestra ni se
+ * cuenta en cajas, promedios, histogramas ni en «Certeza baja».
+ */
+export const usaCerteza = (a: Pick<Analisis, 'tipoImagen'>) => a.tipoImagen === 'corteza'
+
+export const certezaDe = (a: Pick<Analisis, 'tipoImagen' | 'confianza'>): number | null => (usaCerteza(a) ? a.confianza : null)
+
+const pctColor = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 })
+
+/**
+ * En qué se apoya el diagnóstico, en una línea: «certeza alta (91 %)» en corteza; en follaje, sus
+ * porcentajes de color (solo las partes que aparecen): «color: 80 % sano · 10 % regular».
+ */
+export function respaldoDiagnostico(a: Pick<Analisis, 'tipoImagen' | 'confianza' | 'cromatico'>): string {
+  if (usaCerteza(a)) {
+    const nivel = ETIQUETA_CERTEZA[nivelConfianza(a.confianza)].toLowerCase()
+    return a.confianza === null ? `certeza ${nivel}` : `certeza ${nivel} (${formatPorcentaje(a.confianza)})`
+  }
+  if (!a.cromatico) return 'sin datos de color'
+  const partes = partesFollaje(a.cromatico).filter((p) => p.valor > 0)
+  return `color: ${partes.map((p) => `${pctColor.format(p.valor)} % ${p.etiqueta.toLowerCase()}`).join(' · ')}`
+}
+
 // ---------------------------------------------------------------------------------------------
 // "Requieren atención"
 // ---------------------------------------------------------------------------------------------
 /**
- * Un análisis requiere atención si: salió infestado, no se pudo determinar, la confianza es baja
- * (< 50 %) o falló su sincronización. Devuelve los motivos, en ese orden (vacío = no requiere).
+ * Un análisis requiere atención si: salió infestado, no se pudo determinar, la certeza es baja
+ * (< 50 %, solo corteza) o falló su sincronización. Devuelve los motivos, en ese orden (vacío = no requiere).
  */
 export function motivosAtencion(a: Analisis): string[] {
   const motivos: string[] = []
   if (a.resultadoClasificacion === 'infestado') motivos.push('Infestado')
   if (a.resultadoClasificacion === 'no_determinado') motivos.push('Sin diagnóstico claro')
-  if (nivelConfianza(a.confianza) === 'baja') motivos.push('Certeza baja')
+  if (usaCerteza(a) && nivelConfianza(a.confianza) === 'baja') motivos.push('Certeza baja')
   if (a.estadoSincronizacion === 'error') motivos.push('Error al enviar desde el móvil')
   return motivos
 }
@@ -152,7 +178,7 @@ export function filtrarCajas(analisis: Analisis[], c: Cajas): Analisis[] {
     (a) =>
       (!c.resultado.length || c.resultado.includes(a.resultadoClasificacion)) &&
       (!c.tipo.length || c.tipo.includes(a.tipoImagen)) &&
-      (!c.confianza.length || c.confianza.includes(nivelConfianza(a.confianza))) &&
+      (!c.confianza.length || (usaCerteza(a) && c.confianza.includes(nivelConfianza(a.confianza)))) &&
       (!c.autor.length || c.autor.includes(autorId(a))) &&
       (!c.atencion || requiereAtencion(a)),
   )
@@ -188,7 +214,7 @@ export function conteosCajas(analisis: Analisis[]): ConteosCajas {
     autores.set(id, actual)
     c.resultado[a.resultadoClasificacion]++
     c.tipo[a.tipoImagen]++
-    c.confianza[nivelConfianza(a.confianza)]++
+    if (usaCerteza(a)) c.confianza[nivelConfianza(a.confianza)]++
     if (requiereAtencion(a)) c.atencion++
   }
   c.autores = [...autores.values()].sort(

@@ -50,8 +50,10 @@ describe('Análisis: cajas por categoría', () => {
     expect(caja(/^Sin diagnóstico claro: 1 análisis, 20 %$/)).toBeInTheDocument()
     expect(caja(/^Corteza: 2 análisis, 40 %$/)).toBeInTheDocument()
     expect(caja(/^Follaje: 3 análisis, 60 %$/)).toBeInTheDocument()
-    expect(caja(/^Alta: 3 análisis, 60 % \(80 % o más\)$/)).toBeInTheDocument()
-    expect(caja(/^Baja: 1 análisis, 20 % \(menos de 50 %\)$/)).toBeInTheDocument()
+    // La certeza solo aplica a la corteza (e1, e2): los porcentajes son sobre esos 2.
+    expect(screen.getByRole('heading', { name: 'Por certeza del diagnóstico (solo corteza)' })).toBeInTheDocument()
+    expect(caja(/^Alta: 2 análisis, 100 % \(80 % o más\)$/)).toBeInTheDocument()
+    expect(caja(/^Baja: 0 análisis, 0 % \(menos de 50 %\)$/)).toBeInTheDocument()
     expect(caja(/^Sin dato: 0 análisis, 0 %/)).toBeInTheDocument()
     expect(caja(/^Requieren atención: 3 análisis, 60 % \(infestados, sin diagnóstico claro, certeza baja o con error al enviar\)$/)).toBeInTheDocument()
     // La tabla sigue siendo la vista por defecto, con la misma consulta de siempre.
@@ -82,12 +84,12 @@ describe('Análisis: cajas por categoría', () => {
     expect(filas()).toHaveLength(5)
   })
 
-  it('"Requieren atención" y confianza baja desde la URL; sin coincidencias ofrece quitar la selección', async () => {
-    const user = await abrir('#/analisis?atencion=1&caja_confianza=baja')
+  it('"Requieren atención" y certeza alta desde la URL; sin coincidencias ofrece quitar la selección', async () => {
+    const user = await abrir('#/analisis?atencion=1&caja_confianza=alta')
     expect(filas()).toHaveLength(1)
-    expect(filas()[0]).toHaveTextContent('Sin diagnóstico claro')
+    expect(filas()[0]).toHaveTextContent('Infestado')
     await user.click(caja(/^Sin dato:/))
-    await user.click(caja(/^Baja:/))
+    await user.click(caja(/^Alta:/))
     expect(await screen.findByText('Ninguno de los análisis cargados cumple las cajas elegidas.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Quitar selección' }))
     await waitFor(() => expect(window.location.hash).toBe('#/analisis'))
@@ -186,7 +188,9 @@ describe('Análisis: vista de tarjetas, agrupación y detalle', () => {
     expect(await within(dialogo).findByRole('img', { name: /^Foto de follaje capturada el 4 oct 2026, 06:00/ })).toBeInTheDocument()
     expect(dialogo).toHaveTextContent('Sano: sin señales de descortezador')
     expect(dialogo).toHaveTextContent('Qué hacerSigue con el monitoreo de costumbre.')
-    expect(dialogo).toHaveTextContent('Certeza del diagnósticoAlta (95 %)')
+    // Follaje: se diagnostica por su color; su «confianza» (0.95) no se muestra en ningún lado.
+    expect(dialogo).not.toHaveTextContent('Certeza del diagnóstico')
+    expect(dialogo).not.toHaveTextContent('95 %')
     expect(dialogo).toHaveTextContent('Subido porUsuario Demo')
     expect(dialogo).toHaveTextContent('DispositivoGoogle Pixel 7 Pro · b71f')
     expect(dialogo).toHaveTextContent('Envío desde el móvilEnviado')
@@ -194,7 +198,7 @@ describe('Análisis: vista de tarjetas, agrupación y detalle', () => {
     // Los valores crudos quedan en «Detalle técnico», plegado.
     const tecnico = within(dialogo).getByText('Detalle técnico').closest('details')!
     expect(tecnico).not.toHaveAttribute('open')
-    expect(tecnico).toHaveTextContent('Confianza del modelo0.95')
+    expect(tecnico).not.toHaveTextContent('Confianza del modelo')
     expect(tecnico).toHaveTextContent('pct_sano 80')
     expect(dialogo).toHaveTextContent('Requiere atenciónNo')
     expect(within(dialogo).getByRole('img', { name: /^Color del follaje/ })).toBeInTheDocument()
@@ -203,7 +207,8 @@ describe('Análisis: vista de tarjetas, agrupación y detalle', () => {
     expect(within(dialogo).getByRole('button', { name: 'Anterior de este lugar' })).toBeDisabled()
     expect(dialogo).toHaveTextContent('Es el más antiguo de este lugar entre los cargados. Solo se recorren los análisis que trajeron los filtros de arriba.')
     await user.click(within(dialogo).getByRole('button', { name: 'Siguiente de este lugar' }))
-    expect(screen.getByRole('dialog', { name: 'Análisis del 7 oct 2026, 03:00' })).toHaveTextContent('Sin diagnóstico claro, Certeza baja')
+    // e4 es follaje: su 42 % no es «Certeza baja».
+    expect(screen.getByRole('dialog', { name: 'Análisis del 7 oct 2026, 03:00' })).toHaveTextContent('Requiere atenciónSin diagnóstico claro')
     // El botón usado queda deshabilitado (último de ese lugar): el foco pasa a Cerrar.
     await waitFor(() => expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cerrar' })).toHaveFocus())
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cerrar' }))
@@ -363,7 +368,7 @@ describe('Análisis: quién subió la foto, observaciones de campo y lenguaje', 
     const tecnico = within(dialogo).getByText('Detalle técnico').closest('details')!
     const copia = dialogo.cloneNode(true) as HTMLElement
     copia.querySelector('details.detalle-tecnico')!.remove()
-    expect(tecnico).toHaveTextContent('Confianza del modelo')
+    expect(tecnico).toHaveTextContent('pct_sano') // e4 es follaje: su dato crudo es el color, no la confianza
     const fuera = copia.textContent ?? ''
     expect(fuera).not.toMatch(jerga)
     expect(dialogo).toHaveTextContent('Sin diagnóstico claro: conviene repetir la foto')

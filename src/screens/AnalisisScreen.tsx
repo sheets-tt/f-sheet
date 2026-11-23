@@ -11,6 +11,7 @@ import { Estado, TONO_RESULTADO, TONO_SINCRONIZACION } from '../components/Simbo
 import {
   AGRUPAR,
   agrupar,
+  usaCerteza,
   alternar,
   CAJAS_VACIAS,
   conteosCajas,
@@ -427,10 +428,15 @@ function TablaAnalisis({
               <td data-label="Tipo">{ETIQUETA_TIPO[a.tipoImagen]}</td>
               <td data-label="Resultado"><Estado tono={TONO_RESULTADO[a.resultadoClasificacion]}>{ETIQUETA_RESULTADO[a.resultadoClasificacion]}</Estado></td>
               <td className="nowrap" data-label="Certeza">
-                <span>
-                  {ETIQUETA_CERTEZA[nivelConfianza(a.confianza)]}
-                  {a.confianza !== null && <span className="muted"> · {formatPorcentaje(a.confianza)}</span>}
-                </span>
+                {usaCerteza(a) ? (
+                  <span>
+                    {ETIQUETA_CERTEZA[nivelConfianza(a.confianza)]}
+                    {a.confianza !== null && <span className="muted"> · {formatPorcentaje(a.confianza)}</span>}
+                  </span>
+                ) : (
+                  // El follaje se diagnostica por su color: sus porcentajes van en la columna «Color del follaje».
+                  <span className="muted">Por color</span>
+                )}
               </td>
               <td data-label="Subido por">
                 {a.autor ? a.autor.nombre : <span className="muted">{SIN_AUTOR}</span>}

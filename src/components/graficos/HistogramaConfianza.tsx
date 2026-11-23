@@ -36,7 +36,7 @@ interface Props {
 /** Distribución de la certeza del diagnóstico (la «confianza» del modelo), en decenas. Un clic filtra las demás gráficas. */
 export default function HistogramaConfianza({
   decenas, sinConfianza, elegida, onElegir, onQuitarFiltros,
-  descripcion = 'Cuántos diagnósticos hay en cada tramo de certeza, de 10 en 10 %. Clic o Enter en una barra filtra las demás gráficas por ese tramo.',
+  descripcion = 'Cuántos diagnósticos de corteza hay en cada tramo de certeza, de 10 en 10 % (el follaje se diagnostica por su color). Clic o Enter en una barra filtra las demás gráficas por ese tramo.',
   enlace,
   nivel,
 }: Props) {
@@ -62,7 +62,7 @@ export default function HistogramaConfianza({
   return (
     <MarcoGrafica
       id="titulo-confianza"
-      titulo="Certeza del diagnóstico"
+      titulo="Certeza del diagnóstico (corteza)"
       descripcion={descripcion}
       enlace={enlace}
       nivel={nivel}

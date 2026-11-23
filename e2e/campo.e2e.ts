@@ -130,13 +130,15 @@ test.describe('Campo y lenguaje', () => {
     await expect(dialogo).toContainText('Sin diagnóstico claro: conviene repetir la foto')
     await expect(dialogo.getByRole('heading', { name: 'Qué hacer' })).toBeVisible()
     await expect(dialogo).toContainText('Repite la foto con buena luz')
-    await expect(dialogo).toContainText('Certeza del diagnósticoBaja (42 %)')
+    // Follaje: el diagnóstico sale del color, no de una certeza.
+    await expect(dialogo).not.toContainText('Certeza del diagnóstico')
+    await expect(dialogo.getByRole('img', { name: /^Color del follaje/ })).toBeVisible()
     await expect(dialogo).toContainText('Envío desde el móvilPendiente')
     expect(await dialogo.innerText()).not.toMatch(JERGA)
 
     const tecnico = dialogo.locator('details.detalle-tecnico')
     await tecnico.locator('summary').click()
-    await expect(tecnico).toContainText('Confianza del modelo')
+    await expect(tecnico).not.toContainText('Confianza del modelo')
     await expect(tecnico).toContainText('pct_incierto 40')
     await evidencia(page, 'campo-detalle-tecnico')
   })

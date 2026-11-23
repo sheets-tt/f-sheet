@@ -84,6 +84,8 @@ function Caja({
  */
 export default function CajasCategoria({ conteos, cajas, onCambiar }: Props) {
   const t = conteos.total
+  // La certeza solo aplica a la corteza: sus porcentajes son sobre los análisis de corteza.
+  const tCorteza = NIVELES.reduce((s, n) => s + conteos.confianza[n], 0)
   return (
     <section className="cajas" aria-labelledby="titulo-cajas">
       <h2 id="titulo-cajas" className="visually-hidden">
@@ -128,7 +130,7 @@ export default function CajasCategoria({ conteos, cajas, onCambiar }: Props) {
       </div>
 
       <div className="cajas-grupo" role="group" aria-labelledby="cajas-confianza">
-        <h3 id="cajas-confianza">Por {TITULO_CERTEZA.toLowerCase()}</h3>
+        <h3 id="cajas-confianza">Por {TITULO_CERTEZA.toLowerCase()} (solo corteza)</h3>
         <div className="cajas-fila">
           {NIVELES.map((nivel) => (
             <Caja
@@ -136,7 +138,7 @@ export default function CajasCategoria({ conteos, cajas, onCambiar }: Props) {
               activa={cajas.confianza.includes(nivel)}
               etiqueta={ETIQUETA_NIVEL[nivel]}
               n={conteos.confianza[nivel]}
-              total={t}
+              total={tCorteza}
               detalle={RANGO_NIVEL[nivel]}
               medidor
               icono={null}
