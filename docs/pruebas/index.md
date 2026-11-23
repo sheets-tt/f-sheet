@@ -6,12 +6,15 @@ hide:
 # Cómo se prueba Desco
 
 Cada función de Desco nace de una prueba que falla (TDD), y la arquitectura en capas (Clean Architecture)
-hace que cada capa se pueda probar sola. El resultado: **584 pruebas automáticas** que corren en cada cambio.
+hace que cada capa se pueda probar sola. El resultado: **608 pruebas automáticas, todas en verde**. El
+detalle está en [Resultados](resultados.md), qué prueba cubre cada parte en el [Mapa de pruebas](mapa.md)
+y cada prueba, una por una, en el [Catálogo](catalogo.md).
 
 <div class="cifras" markdown>
 <div class="cifra"><span class="cifra-valor">200</span><span class="cifra-nombre">pruebas del backend (JUnit), por capa</span></div>
-<div class="cifra"><span class="cifra-valor">283</span><span class="cifra-nombre">pruebas de la web (Vitest), en unos 12 s</span></div>
-<div class="cifra"><span class="cifra-valor">101</span><span class="cifra-nombre">pruebas de punta a punta (Playwright), en unos 3 min</span></div>
+<div class="cifra"><span class="cifra-valor">285</span><span class="cifra-nombre">pruebas de la web (Vitest), en unos 12 s</span></div>
+<div class="cifra"><span class="cifra-valor">102</span><span class="cifra-nombre">pruebas de punta a punta (Playwright), en unos 3 min</span></div>
+<div class="cifra"><span class="cifra-valor">21</span><span class="cifra-nombre">pruebas de la app móvil (JUnit)</span></div>
 </div>
 
 ## TDD: primero la prueba, después el código
@@ -66,9 +69,9 @@ dominio no sabe nada de la base de datos ni de AWS; los casos de uso piden lo qu
 <text class="t2" x="652" y="136" text-anchor="end" font-size="12.5">27 pruebas · puertos falsos en memoria</text></g>
 <g class="capa capa-1"><rect x="120" y="154" width="520" height="90" rx="10"/>
 <text class="t1" x="380" y="190" text-anchor="middle" font-size="14" font-weight="700">Dominio · reglas del negocio</text>
-<text class="t2" x="380" y="214" text-anchor="middle" font-size="12.5">10 pruebas · sin base de datos ni red, milisegundos</text></g>
+<text class="t2" x="380" y="214" text-anchor="middle" font-size="12.5">23 pruebas · sin base de datos ni red, milisegundos</text></g>
 </svg>
-<figcaption>Las dependencias apuntan hacia el centro. Más 14 pruebas de configuración (188 escritas; 200 al expandir las parametrizadas).</figcaption>
+<figcaption>Las dependencias apuntan hacia el centro. Más 14 pruebas de configuración y esquema: 201 ejecuciones, 200 pasan y 1 se omite (la de Neon, que requiere sus credenciales).</figcaption>
 </figure>
 
 ## Por qué encajan tan bien

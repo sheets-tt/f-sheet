@@ -103,6 +103,8 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
 
 nav:
   - Inicio: index.md
@@ -139,4 +141,7 @@ nav:
           - Acerca de este manual: movil/acerca.md
   - Pruebas:
       - TDD y Clean Architecture: pruebas/index.md
+      - Resultados: pruebas/resultados.md
+      - Mapa de pruebas: pruebas/mapa.md
       - Rendimiento: pruebas/rendimiento.md
+      - Catálogo completo: pruebas/catalogo.md
