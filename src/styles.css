@@ -3637,7 +3637,8 @@ text.eje-valor {
 
 .actividad li {
   display: grid;
-  grid-template-columns: 9rem minmax(0, 1fr) auto auto;
+  /* El resultado toma su ancho real («Sin diagnóstico claro» no cabe en 9rem y se encimaba con el lugar). */
+  grid-template-columns: max-content minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.25rem 1rem;
   padding: 0.625rem 0;
@@ -3647,6 +3648,29 @@ text.eje-valor {
 
 .actividad li:last-child {
   border-bottom: 0;
+}
+
+.actividad li > :first-child {
+  white-space: nowrap;
+}
+
+/* El lugar, el autor y las observaciones se recortan con «…» en vez de salirse del panel. */
+.actividad-lugar {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.actividad-lugar > a {
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+.actividad-lugar > a,
+.actividad-autor {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .actividad-cuando {
@@ -3659,9 +3683,9 @@ text.eje-valor {
   color: var(--accent);
 }
 
-/* Teléfono: resultado y «Detalle» arriba, el lugar en su propia línea y la fecha abajo
-   (antes el resultado se encimaba con el enlace del lugar). */
-@media (max-width: 40rem) {
+/* Teléfono y tableta angosta: resultado y «Detalle» arriba, el lugar en su propia línea y la fecha
+   abajo (antes el resultado se encimaba con el enlace del lugar). */
+@media (max-width: 48rem) {
   .actividad li {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
